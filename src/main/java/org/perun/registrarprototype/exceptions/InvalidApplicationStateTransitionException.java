@@ -2,7 +2,7 @@ package org.perun.registrarprototype.exceptions;
 
 import org.perun.registrarprototype.models.Application;
 
-public class InvalidApplicationStateTransitionException extends RuntimeException {
+public class InvalidApplicationStateTransitionException extends Exception {
   private final Application application;
   public InvalidApplicationStateTransitionException(String message, Application application) {
     super(message);

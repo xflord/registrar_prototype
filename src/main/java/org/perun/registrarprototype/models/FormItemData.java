@@ -28,4 +28,9 @@ public class FormItemData {
   public boolean matches(String regex) {
     return data != null && data.matches(regex);
   }
+
+  @Override
+  public String toString() {
+    return "FormItemData [itemId=" + itemId + ", data=" + data + "]";
+  }
 }

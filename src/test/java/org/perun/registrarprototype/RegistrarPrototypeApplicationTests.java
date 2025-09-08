@@ -41,7 +41,7 @@ class RegistrarPrototypeApplicationTests {
     FormItemData formItemData1 = new FormItemData(item1.getId(), "test1");
     FormItemData formItemData2 = new FormItemData(item2.getId(), "test2");
 
-    Application application = applicationService.registerUserToGroup(userId, groupId, form.getId(),
+    Application application = applicationService.registerUserToGroup(userId, groupId,
         List.of(formItemData1, formItemData2));
 
     assert application.getState() == ApplicationState.APPROVED;

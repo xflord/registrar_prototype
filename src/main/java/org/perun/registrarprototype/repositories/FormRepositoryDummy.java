@@ -17,6 +17,11 @@ public class FormRepositoryDummy implements FormRepository {
   }
 
   @Override
+  public Optional<Form> findByGroupId(int groupId) {
+    return forms.stream().filter(form -> form.getGroupId() == groupId).findFirst();
+  }
+
+  @Override
   public int getNextId() {
     return currId++;
   }

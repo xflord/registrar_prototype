@@ -58,14 +58,14 @@ public class Application {
     this.state = ApplicationState.PENDING;
   }
 
-  public void approve() {
+  public void approve() throws InvalidApplicationStateTransitionException {
     if (state != ApplicationState.PENDING) {
       throw new InvalidApplicationStateTransitionException("Application has already been approved or rejected", this);
     }
     this.state = ApplicationState.APPROVED;
   }
 
-  public void reject(String reason) {
+  public void reject(String reason) throws InvalidApplicationStateTransitionException {
     if (state != ApplicationState.PENDING) {
       throw new InvalidApplicationStateTransitionException("Application has already been approved or rejected", this);
     }

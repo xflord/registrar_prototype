@@ -2,6 +2,7 @@ package org.perun.registrarprototype.repositories;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import org.perun.registrarprototype.models.Application;
 
 // in-memory dummy implementation of persistent storage
@@ -12,6 +13,12 @@ public class ApplicationRepositoryDummy implements ApplicationRepository {
   @Override
   public void save(Application application) {
     applications.add(application);
+    System.out.println("Created application " + application);
+  }
+
+  @Override
+  public Optional<Application> findById(int id) {
+    return applications.stream().filter(application -> application.getId() == id).findFirst();
   }
 
   @Override
