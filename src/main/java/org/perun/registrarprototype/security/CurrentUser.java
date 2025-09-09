@@ -1,4 +1,4 @@
-package org.perun.registrarprototype.models;
+package org.perun.registrarprototype.security;
 
 import java.util.Set;
 

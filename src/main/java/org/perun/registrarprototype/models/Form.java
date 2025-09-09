@@ -34,4 +34,8 @@ public class Form {
   public int getGroupId() {
     return groupId;
   }
+
+  public List<FormItem> getItems() {
+    return items;
+  }
 }

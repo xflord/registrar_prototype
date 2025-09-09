@@ -1,12 +1,15 @@
 package org.perun.registrarprototype.controllers;
 
 import jakarta.servlet.http.HttpServletRequest;
+import org.perun.registrarprototype.exceptions.InsufficientRightsException;
+import org.perun.registrarprototype.exceptions.InvalidApplicationDataException;
 import org.perun.registrarprototype.models.Application;
-import org.perun.registrarprototype.models.CurrentUser;
+import org.perun.registrarprototype.security.CurrentUser;
 import org.perun.registrarprototype.models.FormItemData;
+import org.perun.registrarprototype.security.CurrentUserProvider;
 import org.perun.registrarprototype.services.ApplicationService;
-import org.perun.registrarprototype.services.AuthorizationService;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -17,11 +20,11 @@ import java.util.List;
 public class ApplicationController {
 
     private final ApplicationService applicationService;
-    private final AuthorizationService authorizationService;
+    private final CurrentUserProvider currentUserProvider;
 
-    public ApplicationController(ApplicationService applicationService, AuthorizationService authorizationService) {
+    public ApplicationController(ApplicationService applicationService, CurrentUserProvider currentUserProvider) {
         this.applicationService = applicationService;
-        this.authorizationService = authorizationService;
+        this.currentUserProvider = currentUserProvider;
     }
 
     // --- User applies for membership ---
@@ -31,8 +34,14 @@ public class ApplicationController {
             @RequestBody List<FormItemData> itemData, HttpServletRequest request
     ) {
       String authHeader = request.getHeader(HttpHeaders.AUTHORIZATION); // replace with spring security/filter after done with testing
-      CurrentUser user = authorizationService.fetchPrincipal(authHeader);
-      Application app = applicationService.applyForMembership(user.id(), groupId, itemData);
+      CurrentUser user = currentUserProvider.getCurrentUser(authHeader);
+      Application app;
+      try {
+        app = applicationService.applyForMembership(user.id(), groupId, itemData);
+      } catch (InvalidApplicationDataException e) {
+        // probably modify to return ValidationErrors/Result
+        throw new RuntimeException(e);
+      }
       return ResponseEntity.ok(app);
     }
 
@@ -40,8 +49,12 @@ public class ApplicationController {
     @PostMapping("/{applicationId}/approve")
     public ResponseEntity<Void> approveApplication(@PathVariable int applicationId, HttpServletRequest request) {
       String authHeader = request.getHeader(HttpHeaders.AUTHORIZATION); // replace with spring security/filter after done with testing
-      CurrentUser user = authorizationService.fetchPrincipal(authHeader);
-      applicationService.approveApplication(applicationId);
+      CurrentUser sess = currentUserProvider.getCurrentUser(authHeader);
+      try {
+        applicationService.approveApplication(sess, applicationId);
+      } catch (InsufficientRightsException e) {
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+      }
       return ResponseEntity.ok().build();
     }
 
@@ -52,7 +65,13 @@ public class ApplicationController {
             @RequestParam int groupId,
             @RequestBody List<FormItemData> itemData
     ) {
-        Application app = applicationService.registerUserToGroup(userId, groupId, itemData);
-        return ResponseEntity.ok(app);
+      Application app;
+      try {
+        app = applicationService.registerUserToGroup(userId, groupId, itemData);
+      } catch (InvalidApplicationDataException e) {
+        // probably modify to return ValidationErrors/Result
+        throw new RuntimeException(e);
+      }
+      return ResponseEntity.ok(app);
     }
 }

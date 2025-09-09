@@ -25,4 +25,10 @@ public class ApplicationRepositoryDummy implements ApplicationRepository {
   public int getNextId() {
     return currId++;
   }
+
+  // for testing purposes
+  public void reset()  {
+    applications.clear();
+    currId = 0;
+  }
 }

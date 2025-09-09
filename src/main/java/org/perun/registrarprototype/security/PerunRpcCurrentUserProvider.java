@@ -1,31 +1,27 @@
-package org.perun.registrarprototype.services;
+package org.perun.registrarprototype.security;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.HashSet;
 import java.util.Set;
-import org.perun.registrarprototype.models.CurrentUser;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.ResponseEntity;
-import org.springframework.stereotype.Service;
+import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestTemplate;
-
-@Service
-public class AuthorizationServiceDummy implements AuthorizationService {
-  @Override
-  public boolean canApprove(int applicationId) {
-    return true;
-  }
 
   // temporary testing IDM principal retrieval (either replace with own principal creation + role management or implement provider + caching)
   // this would result in coupling, harder for kubernetes. Can still be simplified by spring security and filtering pre-call,
   // What are the options if we want async calls to core? Initial load of managers, then audit event polling to hold own list of managers?
+@Component
+public class PerunRpcCurrentUserProvider implements CurrentUserProvider {
+  private final RestTemplate restTemplate = new RestTemplate();
+  private final ObjectMapper objectMapper = new ObjectMapper();
+
   @Override
-  public CurrentUser fetchPrincipal(String authHeader) {
-    RestTemplate restTemplate = new RestTemplate();
+  public CurrentUser getCurrentUser(String authHeader) {
     HttpHeaders headers = new HttpHeaders();
     headers.set(HttpHeaders.AUTHORIZATION, authHeader);
 
@@ -38,7 +34,7 @@ public class AuthorizationServiceDummy implements AuthorizationService {
         String.class
     );
     try {
-      JsonNode root = new ObjectMapper().readTree(response.getBody());
+      JsonNode root = objectMapper.readTree(response.getBody());
 
       int userId = root.path("user").path("id").asInt();
       JsonNode managedGroupsNode = root.path("roles").path("GROUPADMIN").path("Group");

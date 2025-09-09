@@ -30,4 +30,10 @@ public class FormRepositoryDummy implements FormRepository {
   public void save(Form form) {
     forms.add(form);
   }
+
+  // for testing purposes
+  public void reset()  {
+    forms.clear();
+    currId = 0;
+  }
 }

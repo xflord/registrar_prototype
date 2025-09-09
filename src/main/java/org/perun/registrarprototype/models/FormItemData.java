@@ -1,5 +1,7 @@
 package org.perun.registrarprototype.models;
 
+import java.util.regex.Pattern;
+
 public class FormItemData {
   private final int itemId;
   private String data;
@@ -26,7 +28,8 @@ public class FormItemData {
   }
 
   public boolean matches(String regex) {
-    return data != null && data.matches(regex);
+    Pattern pattern = Pattern.compile(regex);
+    return data != null && pattern.matcher(data).matches();
   }
 
   @Override

@@ -1,9 +1,9 @@
 package org.perun.registrarprototype.services;
 
-import org.perun.registrarprototype.models.CurrentUser;
+import org.perun.registrarprototype.security.CurrentUser;
 
 public interface AuthorizationService {
-  boolean canApprove(int applicationId);
+  // in the future make more granular via policies or multiple methods/operation argument
+  boolean isAuthorized(CurrentUser sess, int groupId);
 
-  CurrentUser fetchPrincipal(String auth);
 }

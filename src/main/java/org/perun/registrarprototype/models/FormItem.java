@@ -15,6 +15,14 @@ public class FormItem {
     this.type = type;
   }
 
+  public FormItem(int id, String type, String label, boolean required, String constraint) {
+    this.id = id;
+    this.type = type;
+    this.label = label;
+    this.required = required;
+    this.constraint = constraint;
+  }
+
   public int getId() {
     return id;
   }
@@ -30,14 +38,26 @@ public class FormItem {
   public List<ValidationError> validate(FormItemData response) {
     List<ValidationError> errors = new ArrayList<>();
     if (required && (response == null || response.isEmpty())) {
-        errors.add(new ValidationError(id, "Field is required"));
+        errors.add(new ValidationError(id, "Field " + label + " is required"));
     }
     if (response != null && constraint != null) {
         if (!response.matches(constraint)) {
-            errors.add(new ValidationError(id, "Does not match required format"));
+            errors.add(new ValidationError(id, "Item " + label + " must match constraint " + constraint));
         }
     }
 
     return errors;
+  }
+
+  public boolean isRequired() {
+    return required;
+  }
+
+  public String getConstraint() {
+    return constraint;
+  }
+
+  public String getLabel() {
+    return label;
   }
 }
