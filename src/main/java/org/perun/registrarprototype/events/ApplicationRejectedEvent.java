@@ -1,11 +1,11 @@
 package org.perun.registrarprototype.events;
 
-public class ApplicationSubmittedEvent extends Event {
+public class ApplicationRejectedEvent extends Event {
   private final int applicationId;
   private final int userId;
   private final int groupId;
 
-  public ApplicationSubmittedEvent(int applicationId, int userId, int groupId) {
+  public ApplicationRejectedEvent(int applicationId, int userId, int groupId) {
     this.applicationId = applicationId;
     this.userId = userId;
     this.groupId = groupId;

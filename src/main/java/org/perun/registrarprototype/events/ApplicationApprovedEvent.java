@@ -1,6 +1,6 @@
 package org.perun.registrarprototype.events;
 
-public class ApplicationApprovedEvent {
+public class ApplicationApprovedEvent extends Event {
   private final int applicationId;
   private final int userId;
   private final int groupId;
@@ -21,5 +21,10 @@ public class ApplicationApprovedEvent {
 
   public int getGroupId() {
     return groupId;
+  }
+
+  @Override
+  public String getEventMessage() {
+    return "";
   }
 }

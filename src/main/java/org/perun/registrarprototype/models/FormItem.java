@@ -1,12 +1,15 @@
 package org.perun.registrarprototype.models;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
+import java.util.Map;
 
 public class FormItem {
   private final int id;
   private String type; // replace with enum/inheritance
-  private String label; // extend with localization
+  private Map<Locale, ItemTexts> texts = new HashMap<>();
   private boolean required;
   private String constraint; // regex or similar
 
@@ -15,10 +18,18 @@ public class FormItem {
     this.type = type;
   }
 
+  public FormItem(int id, String type, Map<Locale, ItemTexts> texts, boolean required, String constraint) {
+    this.id = id;
+    this.type = type;
+    this.texts = texts;
+    this.required = required;
+    this.constraint = constraint;
+  }
+
   public FormItem(int id, String type, String label, boolean required, String constraint) {
     this.id = id;
     this.type = type;
-    this.label = label;
+    this.texts.put(Locale.ENGLISH, new ItemTexts(label, null, null));
     this.required = required;
     this.constraint = constraint;
   }
@@ -36,13 +47,14 @@ public class FormItem {
   }
 
   public List<ValidationError> validate(FormItemData response) {
+    // Ideally replace hardcoded strings with enums/inheritance and let GUI translate them
     List<ValidationError> errors = new ArrayList<>();
     if (required && (response == null || response.isEmpty())) {
-        errors.add(new ValidationError(id, "Field " + label + " is required"));
+        errors.add(new ValidationError(id, "Field " + getLabel() + " is required"));
     }
     if (response != null && constraint != null) {
         if (!response.matches(constraint)) {
-            errors.add(new ValidationError(id, "Item " + label + " must match constraint " + constraint));
+            errors.add(new ValidationError(id, "Item " + getLabel() + " must match constraint " + constraint));
         }
     }
 
@@ -58,6 +70,6 @@ public class FormItem {
   }
 
   public String getLabel() {
-    return label;
+    return texts.get(Locale.ENGLISH).getLabel();
   }
 }

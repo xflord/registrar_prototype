@@ -2,7 +2,10 @@ package org.perun.registrarprototype.security;
 
 import java.util.Set;
 
-// temporary session object
+/**
+ * Temporary class to encapsulate user data.
+ * This will likely be replaced by an extension of the Spring security principal class
+ */
 public class CurrentUser {
   private final int id;
   private final Set<Integer> managedGroups;

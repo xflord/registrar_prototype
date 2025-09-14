@@ -10,7 +10,9 @@ import org.perun.registrarprototype.models.FormItem;
 import org.perun.registrarprototype.repositories.FormRepository;
 import org.perun.registrarprototype.repositories.FormRepositoryDummy;
 import org.perun.registrarprototype.security.CurrentUser;
+import org.springframework.stereotype.Service;
 
+@Service
 public class FormService {
   private final FormRepository formRepository = new FormRepositoryDummy();
   private AuthorizationService authorizationService = new AuthorizationServiceImpl();

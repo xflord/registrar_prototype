@@ -58,6 +58,19 @@ public class ApplicationController {
       return ResponseEntity.ok().build();
     }
 
+    // --- Manager rejects an application ---
+    @PostMapping("/{applicationId}/reject")
+    public ResponseEntity<Void> rejectApplication(@PathVariable int applicationId, HttpServletRequest request) {
+      String authHeader = request.getHeader(HttpHeaders.AUTHORIZATION); // replace with spring security/filter after done with testing
+      CurrentUser sess = currentUserProvider.getCurrentUser(authHeader);
+      try {
+        applicationService.rejectApplication(sess, applicationId);
+      } catch (InsufficientRightsException e) {
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+      }
+      return ResponseEntity.ok().build();
+    }
+
     // --- Direct register (apply + auto-approve) ---
     @PostMapping("/register")
     public ResponseEntity<Application> registerUserToGroup(
