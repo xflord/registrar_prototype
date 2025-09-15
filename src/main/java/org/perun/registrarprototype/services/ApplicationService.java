@@ -15,6 +15,7 @@ import org.perun.registrarprototype.repositories.ApplicationRepositoryDummy;
 import org.perun.registrarprototype.repositories.FormRepository;
 import org.perun.registrarprototype.repositories.FormRepositoryDummy;
 import org.perun.registrarprototype.security.CurrentUser;
+import org.perun.registrarprototype.services.tempImpl.PerunIntegrationDummy;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -55,7 +56,7 @@ public class ApplicationService {
     System.out.println(itemData);
     Form form = formRepository.findByGroupId(groupId).orElseThrow(() -> new IllegalArgumentException("Form not found"));
 
-    // TODO prefill form with data from principal
+    // TODO prefill form with data from principal (and potentially IdM attributes?)
 
     Application app = new Application(applicationRepository.getNextId(), groupId, userId, form.getId(), itemData);
     try {

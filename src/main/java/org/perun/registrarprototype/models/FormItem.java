@@ -47,7 +47,7 @@ public class FormItem {
   }
 
   public List<ValidationError> validate(FormItemData response) {
-    // Ideally replace hardcoded strings with enums/inheritance and let GUI translate them
+    // TODO ideally replace hardcoded strings with enums/inheritance and let GUI translate them
     List<ValidationError> errors = new ArrayList<>();
     if (required && (response == null || response.isEmpty())) {
         errors.add(new ValidationError(id, "Field " + getLabel() + " is required"));

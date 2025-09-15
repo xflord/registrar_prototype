@@ -1,6 +1,7 @@
-package org.perun.registrarprototype.services;
+package org.perun.registrarprototype.services.tempImpl;
 
 import org.perun.registrarprototype.events.Event;
+import org.perun.registrarprototype.services.NotificationService;
 
 public class NotificationServiceDummy implements NotificationService {
 
