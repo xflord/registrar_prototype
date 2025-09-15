@@ -15,6 +15,7 @@ import org.perun.registrarprototype.repositories.ApplicationRepositoryDummy;
 import org.perun.registrarprototype.repositories.FormRepository;
 import org.perun.registrarprototype.repositories.FormRepositoryDummy;
 import org.perun.registrarprototype.security.CurrentUser;
+import org.perun.registrarprototype.services.tempImpl.PerunIntegrationDummy;
 import org.springframework.stereotype.Service;
 
 @Service

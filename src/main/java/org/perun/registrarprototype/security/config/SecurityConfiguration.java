@@ -25,7 +25,7 @@ public class SecurityConfiguration {
 
   @Bean
   public OpaqueTokenIntrospector introspector() {
-    // replace with spring config options
+    // TODO replace with spring property values
     return new UserInfoTokenIntrospector("http://localhost:8080/oauth/introspect", "clientId", "clientSecret", "http://localhost:8080/userinfo");
   }
 }

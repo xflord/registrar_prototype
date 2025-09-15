@@ -18,7 +18,7 @@ public class OauthCurrentUserProvider implements CurrentUserProvider {
     String groupsClaim = principal.getAttributes().get("entitlements") == null ? "" : principal.getAttributes().get("entitlements").toString();
     for (String group : groupsClaim.split(",")) {
       // example entitlement: urn:perun:group:einfra:managers
-      // find out how to get the group id from the urn
+      // TODO find out how to get the group id from the urn
       managedGroups.add(Integer.parseInt(group));
     }
 

@@ -1,6 +1,8 @@
 package org.perun.registrarprototype.services;
 
 import org.perun.registrarprototype.events.Event;
+import org.perun.registrarprototype.services.tempImpl.AuditingServiceDummy;
+import org.perun.registrarprototype.services.tempImpl.NotificationServiceDummy;
 
 public class EventServiceImpl implements EventService {
 

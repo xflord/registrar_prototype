@@ -1,9 +1,10 @@
-package org.perun.registrarprototype.services;
+package org.perun.registrarprototype.services.tempImpl;
 
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import org.perun.registrarprototype.services.PerunIntegrationService;
 
 // in-memory dummy implementation of Perun IDM integration
 public class PerunIntegrationDummy implements PerunIntegrationService {

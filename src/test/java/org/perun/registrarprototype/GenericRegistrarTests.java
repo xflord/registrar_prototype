@@ -7,7 +7,7 @@ import org.perun.registrarprototype.repositories.FormRepository;
 import org.perun.registrarprototype.repositories.FormRepositoryDummy;
 import org.perun.registrarprototype.services.ApplicationService;
 import org.perun.registrarprototype.services.FormService;
-import org.perun.registrarprototype.services.PerunIntegrationDummy;
+import org.perun.registrarprototype.services.tempImpl.PerunIntegrationDummy;
 import org.springframework.boot.test.context.SpringBootTest;
 
 @SpringBootTest
