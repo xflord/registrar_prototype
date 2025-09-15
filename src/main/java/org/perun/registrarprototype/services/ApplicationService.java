@@ -56,10 +56,12 @@ public class ApplicationService {
     System.out.println(itemData);
     Form form = formRepository.findByGroupId(groupId).orElseThrow(() -> new IllegalArgumentException("Form not found"));
 
-    // TODO prefill form with data from principal (and potentially IdM attributes?)
+    // TODO prefill form with data from principal (and potentially IdM attributes?) -> this will likely need to be done when initially retrieving the form for GUI,
+    //  a check that FormItems flagged as prefilled have not been modified / are ignored here
 
     Application app = new Application(applicationRepository.getNextId(), groupId, userId, form.getId(), itemData);
     try {
+      // TODO how to implement `canBeSubmitted` module hook currently async in Perun? Same with `canBeApproved`, `beforeApprove`, etc.
       app.submit(form);
     } catch (InvalidApplicationDataException e) {
       // handle logs, feedback to GUI
