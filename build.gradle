@@ -17,12 +17,15 @@ java {
 
 repositories {
     mavenCentral()
+    maven { url = uri("https://gitlab.ics.muni.cz/api/v4/projects/5975/packages/maven")}
 }
 
 dependencies {
+    implementation 'cz.metacentrum.perun:perun-openapi:0.0.0-development'
     implementation 'org.springframework.boot:spring-boot-starter-security'
     implementation 'org.springframework.boot:spring-boot-starter-oauth2-resource-server'
     implementation 'org.springframework.boot:spring-boot-starter-webflux'
+    implementation 'org.springframework.boot:spring-boot-starter-oauth2-client'
     testImplementation 'org.springframework.security:spring-security-test'
     implementation 'org.springframework.boot:spring-boot-starter-web'
     testImplementation 'io.projectreactor:reactor-test'

@@ -61,7 +61,7 @@ public class ApplicationService {
 
     Application app = new Application(applicationRepository.getNextId(), groupId, userId, form.getId(), itemData);
     try {
-      // TODO how to implement `canBeSubmitted` module hook currently async in Perun? Same with `canBeApproved`, `beforeApprove`, etc.
+      // TODO how to implement `canBeSubmitted` module hook currently sync in Perun? Same with `canBeApproved`, `beforeApprove`, etc.
       app.submit(form);
     } catch (InvalidApplicationDataException e) {
       // handle logs, feedback to GUI
