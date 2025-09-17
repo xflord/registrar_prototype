@@ -11,6 +11,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import org.perun.registrarprototype.services.idmIntegration.IdMService;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestClientException;
@@ -20,8 +21,8 @@ import org.springframework.web.client.RestClientException;
 public class PerunIdMService implements IdMService {
   private final List<String> GROUP_MANAGER_ROLES = List.of("GROUPADMIN", "GROUPMEMBERSHIPMANAGER");
   private final List<String> VO_MANAGER_ROLES = List.of("VOADMIN", "ORGANIZATIONMEMBERSHIPMANAGER");
-  // TODO autowire this
-  private String idmExtSourceName;
+  @Value( "${idm.extSourceName}")
+  private String idmExtSourceName = "test-ext-source";
 
   private final PerunRPC rpc;
 
@@ -33,7 +34,7 @@ public class PerunIdMService implements IdMService {
   public User getUserByIdentifier(String identifier) throws Exception {
     User user;
     try {
-      user = rpc.getUsersManager().getUserByExtSourceNameAndExtLogin(idmExtSourceName, identifier);
+      user = rpc.getUsersManager().getUserByExtSourceNameAndExtLogin(identifier, idmExtSourceName);
     } catch (HttpClientErrorException ex) {
       throw PerunException.to(ex);
     } catch (RestClientException ex) {

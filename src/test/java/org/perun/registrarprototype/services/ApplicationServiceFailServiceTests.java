@@ -1,4 +1,4 @@
-package org.perun.registrarprototype;
+package org.perun.registrarprototype.services;
 
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
@@ -10,7 +10,7 @@ import org.perun.registrarprototype.models.FormItemData;
 import org.springframework.boot.test.context.SpringBootTest;
 
 @SpringBootTest
-public class ApplicationServiceFailTests extends GenericRegistrarTests {
+public class ApplicationServiceFailServiceTests extends GenericRegistrarServiceTests {
 
 
   @Test

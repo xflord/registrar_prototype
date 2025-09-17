@@ -1,4 +1,4 @@
-package org.perun.registrarprototype;
+package org.perun.registrarprototype.services;
 
 import java.util.List;
 import org.junit.jupiter.api.Test;
@@ -7,7 +7,7 @@ import org.perun.registrarprototype.models.FormItem;
 import org.springframework.boot.test.context.SpringBootTest;
 
 @SpringBootTest
-public class FormServiceTests extends GenericRegistrarTests {
+public class FormServiceServiceTests extends GenericRegistrarServiceTests {
 
 
   @Test

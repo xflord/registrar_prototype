@@ -1,4 +1,4 @@
-package org.perun.registrarprototype;
+package org.perun.registrarprototype.services;
 
 import java.util.List;
 import org.junit.jupiter.api.Test;
@@ -11,7 +11,7 @@ import org.perun.registrarprototype.models.FormItemData;
 import org.springframework.boot.test.context.SpringBootTest;
 
 @SpringBootTest
-class ApplicationServiceTests extends GenericRegistrarTests {
+class ApplicationServiceServiceTests extends GenericRegistrarServiceTests {
 
   @Test
   void registerUserIntoGroup() throws Exception {

@@ -1,7 +1,6 @@
 package org.perun.registrarprototype.services.idmIntegration.perun;
 
 import cz.metacentrum.perun.openapi.PerunRPC;
-import java.io.File;
 import java.util.List;
 import javax.net.ssl.SSLContext;
 import org.apache.hc.client5.http.classic.HttpClient;
@@ -13,9 +12,10 @@ import org.apache.hc.core5.ssl.SSLContextBuilder;
 import org.perun.registrarprototype.services.idmIntegration.perun.oauth.BearerTokenInterceptor;
 import org.perun.registrarprototype.services.idmIntegration.perun.oauth.ClientAccessTokenService;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Profile;
+import org.springframework.core.io.ClassPathResource;
 import org.springframework.http.client.HttpComponentsClientHttpRequestFactory;
 import org.springframework.web.client.RestTemplate;
 
@@ -28,9 +28,16 @@ public class PerunRPCConfig {
   @Value("${idm.password}")
   private String idmPassword;
 
+  @Value("${idm.ssl.keystore-password}")
+  private String keyStorePassword;
+  @Value("${idm.ssl.key-password}")
+  private String keyPassword;
+  @Value("${idm.ssl.truststore-password}")
+  private String trustStorePassword;
+
   // Bean for Basic Authentication
   @Bean
-  @ConditionalOnProperty(name = "perun.auth.method", havingValue = "basic-auth")
+  @Profile("basic-auth")
   public PerunRPC perunRpcBasicAuth() {
       return new PerunRPC(idmUrl, idmUsername, idmPassword);
   }
@@ -38,25 +45,25 @@ public class PerunRPCConfig {
   // Bean for X.509 Certificate Authentication
   // Note: this is not tested, use at your own risk!
   @Bean
-  @ConditionalOnProperty(name = "perun.auth.method", havingValue = "x509")
+  @Profile("x509")
   public PerunRPC perunRpcX509() throws Exception {
 
-      PerunRPC certRpc = new PerunRPC(generateRestTemplate());
+      PerunRPC certRpc = new PerunRPC(generateCertRestTemplate());
       certRpc.getApiClient().setBasePath(idmUrl);
       return certRpc;
   }
 
-  private RestTemplate generateRestTemplate() throws Exception {
+  private RestTemplate generateCertRestTemplate() throws Exception {
     SSLContext sslContext = SSLContextBuilder.create()
                 .loadKeyMaterial(
                     // TODO encrypt all the passwords in vault
-                        new File("client-keystore.p12"),   // path to client keystore
-                        "keystorePassword".toCharArray(),  // keystore password
-                        "keyPassword".toCharArray()        // key password
+                        new ClassPathResource("client-keystore.p12").getFile(),   // path to client keystore
+                        keyStorePassword.toCharArray(),  // keystore password
+                        keyPassword.toCharArray()        // key password
                 )
                 .loadTrustMaterial(
-                        new File("truststore.jks"),        // truststore with server CA
-                        "truststorePassword".toCharArray()
+                        new ClassPathResource("truststore.jks").getFile(),        // truststore with server CA
+                        trustStorePassword.toCharArray()
                 )
                 .build();
 
@@ -79,7 +86,7 @@ public class PerunRPCConfig {
 
   // Bean for OAuth2 Authentication
   @Bean
-  @ConditionalOnProperty(name = "perun.auth.method", havingValue = "oauth")
+  @Profile("oauth")
   public PerunRPC perunRpcOAuth(ClientAccessTokenService tokenService) {
       // Same as in PerunRPC
       RestTemplate restTemplate = new RestTemplate(new HttpComponentsClientHttpRequestFactory());

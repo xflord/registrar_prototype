@@ -1,17 +1,15 @@
-package org.perun.registrarprototype;
+package org.perun.registrarprototype.services;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.perun.registrarprototype.repositories.ApplicationRepository;
 import org.perun.registrarprototype.repositories.ApplicationRepositoryDummy;
 import org.perun.registrarprototype.repositories.FormRepository;
 import org.perun.registrarprototype.repositories.FormRepositoryDummy;
-import org.perun.registrarprototype.services.ApplicationService;
-import org.perun.registrarprototype.services.FormService;
 import org.perun.registrarprototype.services.tempImpl.PerunIntegrationDummy;
 import org.springframework.boot.test.context.SpringBootTest;
 
 @SpringBootTest
-public class GenericRegistrarTests {
+public class GenericRegistrarServiceTests {
   // lets ignore spring autowiring for now
    protected PerunIntegrationDummy perunIntegrationService;
    protected ApplicationService applicationService;

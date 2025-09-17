@@ -1,4 +1,4 @@
-package org.perun.registrarprototype;
+package org.perun.registrarprototype.services;
 
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
@@ -7,7 +7,7 @@ import org.junit.jupiter.api.Test;
 import org.perun.registrarprototype.exceptions.FormItemRegexNotValid;
 import org.perun.registrarprototype.models.FormItem;
 
-public class FormServiceFailTests extends GenericRegistrarTests {
+public class FormServiceFailServiceTests extends GenericRegistrarServiceTests {
 
   @Test
   void createFormIncorrectConstraints() throws Exception {

@@ -1,7 +1,6 @@
-package org.perun.registrarprototype;
+package org.perun.registrarprototype.services;
 
 import org.perun.registrarprototype.security.CurrentUser;
-import org.perun.registrarprototype.services.AuthorizationService;
 
 public class AuthorizationServiceDummy implements AuthorizationService {
   @Override
