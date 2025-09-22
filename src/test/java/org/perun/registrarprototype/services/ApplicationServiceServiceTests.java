@@ -49,7 +49,6 @@ class ApplicationServiceServiceTests extends GenericRegistrarServiceTests {
 
     assert createdApp == app;
     assert createdApp.getState() == ApplicationState.PENDING;
-    assert createdApp.getGroupId() == groupId;
   }
 
   @Test

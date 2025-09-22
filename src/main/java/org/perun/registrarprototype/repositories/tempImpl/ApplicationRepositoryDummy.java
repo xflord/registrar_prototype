@@ -1,11 +1,14 @@
-package org.perun.registrarprototype.repositories;
+package org.perun.registrarprototype.repositories.tempImpl;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import org.perun.registrarprototype.models.Application;
+import org.perun.registrarprototype.repositories.ApplicationRepository;
+import org.springframework.stereotype.Component;
 
 // in-memory dummy implementation of persistent storage
+@Component
 public class ApplicationRepositoryDummy implements ApplicationRepository {
   private static List<Application> applications = new ArrayList<>();
   private static int currId = 0;
@@ -19,6 +22,11 @@ public class ApplicationRepositoryDummy implements ApplicationRepository {
   @Override
   public Optional<Application> findById(int id) {
     return applications.stream().filter(application -> application.getId() == id).findFirst();
+  }
+
+  @Override
+  public List<Application> findByFormId(int formId) {
+    return applications.stream().filter(application -> application.getFormId() == formId).toList();
   }
 
   @Override

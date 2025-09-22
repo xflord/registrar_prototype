@@ -5,8 +5,10 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import org.perun.registrarprototype.services.PerunIntegrationService;
+import org.springframework.stereotype.Service;
 
 // in-memory dummy implementation of Perun IDM integration
+@Service
 public class PerunIntegrationDummy implements PerunIntegrationService {
   private static final Map<Integer, List<Integer>> memberships = new HashMap<>();
 

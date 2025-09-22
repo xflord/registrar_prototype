@@ -2,7 +2,9 @@ package org.perun.registrarprototype.services.tempImpl;
 
 import org.perun.registrarprototype.events.Event;
 import org.perun.registrarprototype.services.NotificationService;
+import org.springframework.stereotype.Service;
 
+@Service
 public class NotificationServiceDummy implements NotificationService {
 
   @Override

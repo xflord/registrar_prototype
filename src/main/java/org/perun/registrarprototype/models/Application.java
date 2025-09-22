@@ -1,21 +1,23 @@
 package org.perun.registrarprototype.models;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import org.perun.registrarprototype.exceptions.InvalidApplicationDataException;
 import org.perun.registrarprototype.exceptions.InvalidApplicationStateTransitionException;
 
 public class Application {
-  private int id;
-  private final int groupId;
+  private final int id;
   private final int userId;
   private final int formId;
   private final List<FormItemData> formItemData;
   private ApplicationState state = ApplicationState.PENDING;
   private String rejectionReason;
+  private Map<String, String> externalAttributes = new HashMap<>();
+  private String redirectUrl;
 
-  public Application(int id, int groupId, int userId, int formId, List<FormItemData> formItemData) {
+  public Application(int id, int userId, int formId, List<FormItemData> formItemData) {
     this.id = id;
-    this.groupId = groupId;
     this.userId = userId;
     this.formId = formId;
     this.formItemData = formItemData;
@@ -23,10 +25,6 @@ public class Application {
 
   public int getId() {
     return id;
-  }
-
-  public int getGroupId() {
-    return groupId;
   }
 
   public int getUserId() {
@@ -47,6 +45,14 @@ public class Application {
 
   public String getRejectionReason() {
     return rejectionReason;
+  }
+
+  public Map<String, String> getExternalAttributes() {
+    return externalAttributes;
+  }
+
+  public String getRedirectUrl() {
+    return redirectUrl;
   }
 
   public void submit(Form form) throws InvalidApplicationDataException {
@@ -76,5 +82,12 @@ public class Application {
     this.rejectionReason = reason;
   }
 
+  public void setExternalAttributes(Map<String, String> externalAttributes) {
+    this.externalAttributes = externalAttributes;
+  }
+
+  public void setRedirectUrl(String redirectUrl) {
+    this.redirectUrl = redirectUrl;
+  }
 }
 

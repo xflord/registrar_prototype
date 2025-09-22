@@ -1,11 +1,14 @@
-package org.perun.registrarprototype.repositories;
+package org.perun.registrarprototype.repositories.tempImpl;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import org.perun.registrarprototype.models.Form;
+import org.perun.registrarprototype.repositories.FormRepository;
+import org.springframework.stereotype.Component;
 
 // in-memory dummy implementation of persistent storage
+@Component
 public class FormRepositoryDummy implements FormRepository {
   private static List<Form> forms = new ArrayList<>();
   private static int currId = 0;
