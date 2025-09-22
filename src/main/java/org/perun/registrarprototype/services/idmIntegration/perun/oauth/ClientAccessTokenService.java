@@ -1,5 +1,6 @@
 package org.perun.registrarprototype.services.idmIntegration.perun.oauth;
 
+import org.springframework.context.annotation.Profile;
 import org.springframework.security.authentication.AnonymousAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.authority.AuthorityUtils;
@@ -14,6 +15,7 @@ import org.springframework.security.oauth2.client.web.OAuth2AuthorizedClientRepo
 import org.springframework.stereotype.Service;
 
 @Service
+@Profile( "oauth")
 public class ClientAccessTokenService {
     private final OAuth2AuthorizedClientManager manager;
     private final Authentication principal;

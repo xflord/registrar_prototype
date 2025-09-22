@@ -1,5 +1,6 @@
 package org.perun.registrarprototype.services.idmIntegration.perun.oauth;
 
+import org.springframework.context.annotation.Profile;
 import org.springframework.http.HttpRequest;
 import org.springframework.http.client.ClientHttpRequestExecution;
 import org.springframework.http.client.ClientHttpRequestInterceptor;
@@ -7,6 +8,7 @@ import org.springframework.http.client.ClientHttpResponse;
 import org.springframework.http.HttpHeaders;
 import java.io.IOException;
 
+@Profile( "oauth")
 public class BearerTokenInterceptor implements ClientHttpRequestInterceptor {
 
     private final ClientAccessTokenService tokenService;
