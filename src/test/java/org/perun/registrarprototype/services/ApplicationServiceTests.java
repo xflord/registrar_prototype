@@ -11,7 +11,7 @@ import org.perun.registrarprototype.models.FormItemData;
 import org.springframework.boot.test.context.SpringBootTest;
 
 @SpringBootTest
-class ApplicationServiceServiceTests extends GenericRegistrarServiceTests {
+class ApplicationServiceTests extends GenericRegistrarServiceTests {
 
   @Test
   void registerUserIntoGroup() throws Exception {

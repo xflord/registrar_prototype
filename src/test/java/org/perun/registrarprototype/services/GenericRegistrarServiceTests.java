@@ -11,10 +11,12 @@ import org.springframework.boot.autoconfigure.ImportAutoConfiguration;
 import org.springframework.boot.autoconfigure.security.oauth2.client.OAuth2ClientAutoConfiguration;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Import;
+import org.springframework.test.context.ActiveProfiles;
 
 @SpringBootTest
 @ImportAutoConfiguration(exclude = OAuth2ClientAutoConfiguration.class) // this is so that autowiring the oauth client does not break all the tests
 @Import(TestConfig.class)
+@ActiveProfiles( {"test", "basic-auth"} )
 public class GenericRegistrarServiceTests {
    protected PerunIntegrationDummy perunIntegrationService;
    @Autowired

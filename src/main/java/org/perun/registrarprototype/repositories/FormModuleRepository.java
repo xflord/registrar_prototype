@@ -9,4 +9,6 @@ public interface FormModuleRepository {
    * @return
    */
   List<AssignedFormModule> findAllByFormId(int formId);
+
+  void saveAll(List<AssignedFormModule> modules);
 }

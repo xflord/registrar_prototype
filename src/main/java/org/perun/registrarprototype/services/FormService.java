@@ -1,5 +1,6 @@
 package org.perun.registrarprototype.services;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.regex.Pattern;
 import java.util.regex.PatternSyntaxException;
@@ -66,6 +67,45 @@ public class FormService {
       }
     }
 
+    return modules;
+  }
+
+  /**
+   * Sets modules for the form. Checks whether the module actually exists and whether all the required options are set.
+   *
+   * @param formId id of the form to assign modules to
+   * @param modulesToAssign modules with module name and options set (the rest is ignored)
+   * @return
+   */
+  public List<AssignedFormModule> setModules(int formId, List<AssignedFormModule> modulesToAssign) {
+    Form form = formRepository.findById(formId).orElseThrow(() -> new IllegalArgumentException("Form with ID " + formId + " not found"));
+
+    List<AssignedFormModule> modules = new ArrayList<>();
+
+    for (AssignedFormModule module : modulesToAssign) {
+      try {
+        if (module.getFormId() != form.getId()) {
+          throw new IllegalArgumentException("Cannot assign module to different form.");
+        }
+        AssignedFormModule moduleWithComponent = this.setModule(module);
+        if (!moduleWithComponent.getFormModule().getRequiredOptions().isEmpty()) {
+          if (moduleWithComponent.getOptions() == null || moduleWithComponent.getOptions().isEmpty()) {
+            throw new IllegalArgumentException("Module " + module.getModuleName() + " requires options.");
+          }
+          for (String requiredOption : moduleWithComponent.getFormModule().getRequiredOptions()) {
+            if (!moduleWithComponent.getOptions().containsKey(requiredOption)) {
+              throw new IllegalArgumentException("Module " + module.getModuleName() + " requires option " + requiredOption);
+            }
+          }
+        }
+        moduleWithComponent.setFormId(form.getId());
+        modules.add(moduleWithComponent);
+      } catch (FormModuleNotExistsException e) {
+        throw new IllegalArgumentException("Module " + module.getModuleName() + " not found");
+      }
+    }
+
+    formModuleRepository.saveAll(modules);
     return modules;
   }
 

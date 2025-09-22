@@ -8,10 +8,15 @@ import org.perun.registrarprototype.services.modules.FormModule;
  *
  */
 public class AssignedFormModule {
-  private final int formId;
   private final String moduleName; // save this to retrieve the module component
+  private int formId;
   private FormModule formModule;
   private Map<String, String> options;
+
+  public AssignedFormModule(String moduleName, Map<String, String> options) {
+    this.moduleName = moduleName;
+    this.options = options;
+  }
 
   public AssignedFormModule(int formId, String moduleName, FormModule formModule, Map<String, String> options) {
     this.formId = formId;
@@ -34,6 +39,10 @@ public class AssignedFormModule {
 
   public Map<String, String> getOptions() {
     return options;
+  }
+
+  public void setFormId(int formId) {
+    this.formId = formId;
   }
 
   public void setFormModule(FormModule formModule) {

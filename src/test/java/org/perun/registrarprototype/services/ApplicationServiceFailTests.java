@@ -10,7 +10,7 @@ import org.perun.registrarprototype.models.FormItemData;
 import org.springframework.boot.test.context.SpringBootTest;
 
 @SpringBootTest
-public class ApplicationServiceFailServiceTests extends GenericRegistrarServiceTests {
+public class ApplicationServiceFailTests extends GenericRegistrarServiceTests {
 
 
   @Test
