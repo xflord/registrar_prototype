@@ -8,7 +8,7 @@ import org.springframework.http.client.ClientHttpResponse;
 import org.springframework.http.HttpHeaders;
 import java.io.IOException;
 
-@Profile( "oauth")
+@Profile( "oauth" )
 public class BearerTokenInterceptor implements ClientHttpRequestInterceptor {
 
     private final ClientAccessTokenService tokenService;

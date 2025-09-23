@@ -77,16 +77,19 @@ public class FormService {
    * @param modulesToAssign modules with module name and options set (the rest is ignored)
    * @return
    */
-  public List<AssignedFormModule> setModules(int formId, List<AssignedFormModule> modulesToAssign) {
+  public List<AssignedFormModule> setModules(CurrentUser sess, int formId, List<AssignedFormModule> modulesToAssign)
+      throws InsufficientRightsException {
     Form form = formRepository.findById(formId).orElseThrow(() -> new IllegalArgumentException("Form with ID " + formId + " not found"));
+
+    if (!authorizationService.isAuthorized(sess, form.getGroupId())) {
+      // 403
+      throw new InsufficientRightsException("You are not authorized to create a form for this group");
+    }
 
     List<AssignedFormModule> modules = new ArrayList<>();
 
     for (AssignedFormModule module : modulesToAssign) {
       try {
-        if (module.getFormId() != form.getId()) {
-          throw new IllegalArgumentException("Cannot assign module to different form.");
-        }
         AssignedFormModule moduleWithComponent = this.setModule(module);
         if (!moduleWithComponent.getFormModule().getRequiredOptions().isEmpty()) {
           if (moduleWithComponent.getOptions() == null || moduleWithComponent.getOptions().isEmpty()) {

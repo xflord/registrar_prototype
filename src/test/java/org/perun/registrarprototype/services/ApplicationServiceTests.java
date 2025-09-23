@@ -1,13 +1,15 @@
 package org.perun.registrarprototype.services;
 
+import java.util.HashMap;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.perun.registrarprototype.models.Application;
 import org.perun.registrarprototype.models.ApplicationState;
+import org.perun.registrarprototype.models.AssignedFormModule;
 import org.perun.registrarprototype.models.Form;
 import org.perun.registrarprototype.models.FormItem;
 import org.perun.registrarprototype.models.FormItemData;
-
+import org.perun.registrarprototype.security.CurrentUser;
 import org.springframework.boot.test.context.SpringBootTest;
 
 @SpringBootTest
@@ -73,6 +75,42 @@ class ApplicationServiceTests extends GenericRegistrarServiceTests {
     createdApp = applicationRepository.findById(app.getId()).orElse(null);
     assert createdApp != null;
     assert createdApp.getState().equals(ApplicationState.APPROVED);
+  }
+
+  @Test
+  void loadForm() throws Exception {
+    FormItem item1 = new FormItem(1, "email", "email", false, "^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$");
+    int groupId = 1;
+    perunIntegrationService.createGroup(groupId);
+
+    Form form = formService.createForm(null, groupId, List.of(item1));
+
+    Application app = applicationService.loadForm(new CurrentUser(-1, null), form.getId(), "www.google.com");
+
+    assert app != null;
+    assert app.getFormId() == form.getId();
+    assert app.getRedirectUrl().equals("www.google.com");
+  }
+
+  @Test
+  void loadFormCallsBeforeSubmissionHook() throws Exception {
+    FormItem item1 = new FormItem(1, "test");
+
+    int groupId = 1;
+    perunIntegrationService.createGroup(groupId);
+
+    Form form = formService.createForm(null, groupId, List.of(item1));
+
+    AssignedFormModule module = new AssignedFormModule("testModuleBeforeSubmission", new HashMap<>());
+
+    formService.setModules(null, form.getId(), List.of(module));
+
+    Application app = applicationService.loadForm(new CurrentUser(-1, null), form.getId(), "");
+
+    assert app != null;
+    assert app.getFormId() == form.getId();
+    assert app.getExternalAttributes().containsKey("test-module-before-submission");
+    assert app.getExternalAttributes().get("test-module-before-submission").equals("test");
   }
 
 }

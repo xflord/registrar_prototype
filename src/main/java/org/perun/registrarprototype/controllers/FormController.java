@@ -2,8 +2,10 @@ package org.perun.registrarprototype.controllers;
 
 import jakarta.servlet.http.HttpServletRequest;
 import java.util.List;
+import java.util.Map;
 import org.perun.registrarprototype.exceptions.FormItemRegexNotValid;
 import org.perun.registrarprototype.exceptions.InsufficientRightsException;
+import org.perun.registrarprototype.models.AssignedFormModule;
 import org.perun.registrarprototype.models.Form;
 import org.perun.registrarprototype.models.FormItem;
 import org.perun.registrarprototype.security.CurrentUser;
@@ -39,9 +41,23 @@ public class FormController {
       } catch (FormItemRegexNotValid e) {
         throw new RuntimeException(e);
       } catch (InsufficientRightsException e) {
-        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
       }
       return ResponseEntity.ok().build();
+  }
+
+  // TODO probably do not mix request params and body
+  @PostMapping("/setModule")
+  public ResponseEntity<List<AssignedFormModule>> setModules(@RequestParam int formId, @RequestBody List<AssignedFormModule> modules, HttpServletRequest request) {
+    String authHeader = request.getHeader(HttpHeaders.AUTHORIZATION);
+    CurrentUser user = currentUserProvider.getCurrentUser(authHeader);
+    List<AssignedFormModule> setModules;
+    try {
+      setModules = formService.setModules(user, formId, modules);
+    } catch (InsufficientRightsException e) {
+      return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+    }
+    return ResponseEntity.ok(setModules);
   }
 
 }

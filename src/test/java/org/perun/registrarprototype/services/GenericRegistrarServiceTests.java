@@ -2,8 +2,10 @@ package org.perun.registrarprototype.services;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.perun.registrarprototype.repositories.ApplicationRepository;
+import org.perun.registrarprototype.repositories.FormModuleRepository;
 import org.perun.registrarprototype.repositories.tempImpl.ApplicationRepositoryDummy;
 import org.perun.registrarprototype.repositories.FormRepository;
+import org.perun.registrarprototype.repositories.tempImpl.FormModuleRepositoryDummy;
 import org.perun.registrarprototype.repositories.tempImpl.FormRepositoryDummy;
 import org.perun.registrarprototype.services.tempImpl.PerunIntegrationDummy;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -25,6 +27,7 @@ public class GenericRegistrarServiceTests {
    protected FormService formService;
    protected ApplicationRepository applicationRepository;
    protected FormRepository formRepository;
+   protected FormModuleRepository formModuleRepository;
 
    @BeforeEach
     void setUp() {
@@ -35,5 +38,8 @@ public class GenericRegistrarServiceTests {
         FormRepositoryDummy formRep = new FormRepositoryDummy();
         formRep.reset();
         formRepository = formRep;
+        FormModuleRepositoryDummy formModuleRep = new FormModuleRepositoryDummy();
+        formModuleRep.reset();
+        formModuleRepository = formModuleRep;
     }
 }

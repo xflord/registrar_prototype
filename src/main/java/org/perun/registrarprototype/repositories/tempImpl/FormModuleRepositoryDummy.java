@@ -19,4 +19,9 @@ public class FormModuleRepositoryDummy implements FormModuleRepository {
   public void saveAll(List<AssignedFormModule> modulesToSave) {
     modules.addAll(modulesToSave);
   }
+
+
+  public void reset() {
+    modules.clear();
+  }
 }

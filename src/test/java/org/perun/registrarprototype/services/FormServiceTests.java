@@ -7,16 +7,10 @@ import org.junit.jupiter.api.Test;
 import org.perun.registrarprototype.models.AssignedFormModule;
 import org.perun.registrarprototype.models.Form;
 import org.perun.registrarprototype.models.FormItem;
-import org.perun.registrarprototype.repositories.FormModuleRepository;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 
 @SpringBootTest
 public class FormServiceTests extends GenericRegistrarServiceTests {
-
-
-  @Autowired
-  private FormModuleRepository formModuleRepository;
 
   @Test
   void createFormWithoutConstraints() throws Exception {
@@ -62,7 +56,7 @@ public class FormServiceTests extends GenericRegistrarServiceTests {
 
     AssignedFormModule module = new AssignedFormModule("testModule", new HashMap<>());
 
-    formService.setModules(form.getId(), List.of(module));
+    formService.setModules(null, form.getId(), List.of(module));
 
     List<AssignedFormModule> modules = formModuleRepository.findAllByFormId(form.getId());
 
@@ -86,7 +80,7 @@ public class FormServiceTests extends GenericRegistrarServiceTests {
 
     AssignedFormModule module = new AssignedFormModule("testModuleWithOptions", Map.of("option1", "value1", "option2", "value2"));
 
-    formService.setModules(form.getId(), List.of(module));
+    formService.setModules(null, form.getId(), List.of(module));
 
     List<AssignedFormModule> modules = formModuleRepository.findAllByFormId(form.getId());
 

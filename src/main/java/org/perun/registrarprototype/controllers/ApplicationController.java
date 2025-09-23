@@ -53,7 +53,7 @@ public class ApplicationController {
     try {
       applicationService.approveApplication(sess, applicationId);
     } catch (InsufficientRightsException e) {
-      return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+      return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
     }
     return ResponseEntity.ok().build();
   }
@@ -66,7 +66,7 @@ public class ApplicationController {
     try {
       applicationService.rejectApplication(sess, applicationId);
     } catch (InsufficientRightsException e) {
-      return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+      return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
     }
     return ResponseEntity.ok().build();
   }
