@@ -5,11 +5,19 @@ import java.util.List;
 
 public class Form {
   private final int id;
+  private int voId;
   private final int groupId;
   private final List<FormItem> items;
 
   public Form(int id, int groupId, List<FormItem> items) {
     this.id = id;
+    this.groupId = groupId;
+    this.items = items;
+  }
+
+  public Form(int id, int voId, int groupId, List<FormItem> items) {
+    this.id = id;
+    this.voId = voId;
     this.groupId = groupId;
     this.items = items;
   }
@@ -29,6 +37,10 @@ public class Form {
 
   public int getId() {
     return id;
+  }
+
+  public int getVoId() {
+    return voId;
   }
 
   public int getGroupId() {

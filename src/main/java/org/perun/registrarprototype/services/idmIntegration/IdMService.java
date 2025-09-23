@@ -27,7 +27,7 @@ public interface IdMService {
    * @param identifier oauth identifier (e.g. sub in oidc)
    * @return either Perun User or custom User object
    */
-  User getUserByIdentifier(String identifier) throws Exception;
+  User getUserByIdentifier(String identifier);
 
   List<Integer> getGroupIdsWhereUserIsMember(String identifier);
 
@@ -40,9 +40,13 @@ public interface IdMService {
   Map<String, List<Integer>> getAuthorizedObjects(String identifier) throws Exception;
 
   // TODO add custom exception for IdM errors? an ErrorHandler would be nice to have
-  String getUserAttribute(String identifier, String attributeName) throws Exception;
+  String getUserAttribute(String identifier, String attributeName);
 
   String getMemberAttribute(String identifier, String attributeName, int groupId);
+
+  String getVoAttribute(String attributeName, int voId);
+
+  String getGroupAttribute(String attributeName, int groupId);
 
   /**
    * Retrieves User objects that match the attributes of the oauth principal (e.g. sub in oidc, email. etc.).

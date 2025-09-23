@@ -3,6 +3,7 @@ package org.perun.registrarprototype.services.modules;
 import java.util.List;
 import java.util.Map;
 import org.perun.registrarprototype.models.Application;
+import org.perun.registrarprototype.security.CurrentUser;
 import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
 
@@ -10,7 +11,12 @@ import org.springframework.stereotype.Component;
 @Profile("test")
 public class TestModuleWithOptions implements FormModule {
   @Override
-  public void beforeSubmission(Application application, Map<String, String> options) {
+  public void canBeSubmitted(CurrentUser sess, Map<String, String> options) {
+
+  }
+
+  @Override
+  public void afterFormItemsPrefilled(Application application) {
 
   }
 

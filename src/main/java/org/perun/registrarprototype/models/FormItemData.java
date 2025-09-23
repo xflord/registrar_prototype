@@ -4,36 +4,37 @@ import java.util.regex.Pattern;
 
 public class FormItemData {
   private final int itemId;
-  private String data;
+  private String value;
+  private String prefilledValue; // probably set this in GUI and later check that this value matches current IdM/Identity values
 
-  public FormItemData(int itemId, String data) {
+  public FormItemData(int itemId, String value) {
     this.itemId = itemId;
-    this.data = data;
+    this.value = value;
   }
 
   public int getItemId() {
     return itemId;
   }
 
-  public String getData() {
-    return data;
+  public String getValue() {
+    return value;
   }
 
-  public void setData(String data) {
-    this.data = data;
+  public void setValue(String value) {
+    this.value = value;
   }
 
   public boolean isEmpty() {
-    return data == null || data.isBlank();
+    return value == null || value.isBlank();
   }
 
   public boolean matches(String regex) {
     Pattern pattern = Pattern.compile(regex);
-    return data != null && pattern.matcher(data).matches();
+    return value != null && pattern.matcher(value).matches();
   }
 
   @Override
   public String toString() {
-    return "FormItemData [itemId=" + itemId + ", data=" + data + "]";
+    return "FormItemData [itemId=" + itemId + ", data=" + value + "]";
   }
 }

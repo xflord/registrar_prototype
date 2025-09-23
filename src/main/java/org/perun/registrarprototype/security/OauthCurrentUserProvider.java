@@ -23,7 +23,7 @@ public class OauthCurrentUserProvider implements CurrentUserProvider {
     }
 
     if (userId != -1) {
-      return new CurrentUser(userId, managedGroups);
+      return new CurrentUser(userId, managedGroups, principal);
     }
 
     return null;

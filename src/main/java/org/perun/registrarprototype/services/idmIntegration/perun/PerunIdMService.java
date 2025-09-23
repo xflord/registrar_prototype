@@ -31,12 +31,14 @@ public class PerunIdMService implements IdMService {
   }
 
   @Override
-  public User getUserByIdentifier(String identifier) throws Exception {
+  public User getUserByIdentifier(String identifier) {
     User user;
     try {
       user = rpc.getUsersManager().getUserByExtSourceNameAndExtLogin(identifier, idmExtSourceName);
     } catch (HttpClientErrorException ex) {
-      throw PerunException.to(ex);
+      // another way of handling this - logging and returning null?
+      System.out.println(PerunException.to(ex).getMessage());
+      return null;
     } catch (RestClientException ex) {
       throw new RuntimeException(ex);
     }
@@ -52,7 +54,7 @@ public class PerunIdMService implements IdMService {
 
   @Override
   public Map<String, List<Integer>> getAuthorizedObjects(String identifier) throws Exception {
-    User user = initTokenAndGetUser(identifier);
+    User user = getUser(identifier);
 
     if (user == null) {
       return new HashMap<>();
@@ -87,8 +89,8 @@ public class PerunIdMService implements IdMService {
   }
 
   @Override
-  public String getUserAttribute(String identifier, String attributeName) throws Exception {
-    User user = initTokenAndGetUser(identifier);
+  public String getUserAttribute(String identifier, String attributeName) {
+    User user = getUser(identifier);
 
     if (user == null) {
       return null;
@@ -98,7 +100,9 @@ public class PerunIdMService implements IdMService {
       Attribute attr = rpc.getAttributesManager().getUserAttributeByName(user.getId(), attributeName);
       return attr.getValue() == null ? null : attr.getValue().toString();
     } catch (HttpClientErrorException ex) {
-      throw PerunException.to(ex);
+      // another way of handling this - logging and returning null?
+      System.out.println(PerunException.to(ex).getMessage());
+      return null;
     } catch (RestClientException ex) {
       throw new RuntimeException(ex);
     }
@@ -106,7 +110,7 @@ public class PerunIdMService implements IdMService {
 
   @Override
   public String getMemberAttribute(String identifier, String attributeName, int groupId) {
-    User user = initTokenAndGetUser(identifier);
+    User user = getUser(identifier);
 
     if (user == null) {
       return null;
@@ -145,21 +149,41 @@ public class PerunIdMService implements IdMService {
   }
 
   @Override
+  public String getVoAttribute(String attributeName, int voId) {
+    try {
+      Attribute attr = rpc.getAttributesManager().getVoAttributeByName(voId, attributeName);
+      return attr.getValue() == null ? null : attr.getValue().toString();
+    } catch (HttpClientErrorException ex) {
+      System.out.println(PerunException.to(ex).getMessage());
+      return null;
+    } catch (RestClientException ex) {
+      throw new RuntimeException(ex);
+    }
+  }
+
+  @Override
+  public String getGroupAttribute(String attributeName, int groupId) {
+    try {
+      Attribute attr = rpc.getAttributesManager().getGroupAttributeByName(groupId, attributeName);
+      return attr.getValue() == null ? null : attr.getValue().toString();
+    } catch (HttpClientErrorException ex) {
+      System.out.println(PerunException.to(ex).getMessage());
+      return null;
+    } catch (RestClientException ex) {
+      throw new RuntimeException(ex);
+    }
+  }
+
+  @Override
   public List<Identity> getSimilarUsers(Map<String, Object> attributes) {
     return List.of();
   }
 
-  private User initTokenAndGetUser(String identifier) {
-    User user = null;
-    try {
-      user = this.getUserByIdentifier(identifier);
-    } catch (Exception ex) {
-      // log error or rethrow?
-    }
+  private User getUser(String identifier) {
+    User user;
 
-    if (user == null) {
-      return null;
-    }
+    user = this.getUserByIdentifier(identifier);
+
     return user;
   }
 }

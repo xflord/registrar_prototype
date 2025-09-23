@@ -37,7 +37,7 @@ public class ApplicationController {
     CurrentUser user = currentUserProvider.getCurrentUser(authHeader);
     Application app;
     try {
-      app = applicationService.applyForMembership(user.id(), groupId, itemData);
+      app = applicationService.applyForMembership(Integer.parseInt(user.id()), groupId, itemData);
     } catch (InvalidApplicationDataException e) {
       // probably modify to return ValidationErrors/Result
       throw new RuntimeException(e);

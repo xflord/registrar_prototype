@@ -93,7 +93,7 @@ class ApplicationServiceTests extends GenericRegistrarServiceTests {
   }
 
   @Test
-  void loadFormCallsBeforeSubmissionHook() throws Exception {
+  void loadFormCallsAfterFormItemsPrefilledHook() throws Exception {
     FormItem item1 = new FormItem(1, "test");
 
     int groupId = 1;

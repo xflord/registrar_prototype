@@ -3,6 +3,7 @@ package org.perun.registrarprototype.services.modules;
 import java.util.List;
 import java.util.Map;
 import org.perun.registrarprototype.models.Application;
+import org.perun.registrarprototype.security.CurrentUser;
 
 /**
  * Interface for form modules, following the lifecycle of an application.
@@ -12,10 +13,12 @@ public interface FormModule {
   /**
    * Called before an application is submitted, already containing prefilled data.
    * Use to check whether the application can be submitted or whether prefilled data is valid.
-   * @param application
+   * @param sess
    * @param options sample options map, not sure whether this will end up being used
    */
-  void beforeSubmission(Application application, Map<String, String> options);
+  void canBeSubmitted(CurrentUser sess, Map<String, String> options);
+
+  void afterFormItemsPrefilled(Application application);
 
   /**
    * Called before an application is approved.

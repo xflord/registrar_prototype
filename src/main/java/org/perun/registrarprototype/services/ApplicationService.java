@@ -16,6 +16,7 @@ import org.perun.registrarprototype.models.FormItemData;
 import org.perun.registrarprototype.repositories.ApplicationRepository;
 import org.perun.registrarprototype.repositories.FormRepository;
 import org.perun.registrarprototype.security.CurrentUser;
+import org.perun.registrarprototype.services.idmIntegration.IdMService;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -26,14 +27,19 @@ public class ApplicationService {
   private final PerunIntegrationService perunIntegrationService;
   private final AuthorizationService authorizationService;
   private final FormService formService;
+  private final IdMService idmService;
 
-  public ApplicationService(ApplicationRepository applicationRepository, FormRepository formRepository, EventService eventService, PerunIntegrationService perunIntegrationService, AuthorizationService authorizationService, FormService formService) {
+  public ApplicationService(ApplicationRepository applicationRepository, FormRepository formRepository,
+                            EventService eventService, PerunIntegrationService perunIntegrationService,
+                            AuthorizationService authorizationService, FormService formService,
+                            IdMService idmService) {
     this.applicationRepository = applicationRepository;
     this.formRepository = formRepository;
     this.eventService = eventService;
     this.perunIntegrationService = perunIntegrationService;
     this.authorizationService = authorizationService;
     this.formService = formService;
+    this.idmService = idmService;
   }
 
   public Application registerUserToGroup(int userId, int groupId, List<FormItemData> itemData)
@@ -63,7 +69,6 @@ public class ApplicationService {
 
     Application app = new Application(applicationRepository.getNextId(), userId, form.getId(), itemData);
     try {
-      // TODO how to implement `canBeSubmitted` module hook currently sync in Perun? Same with `canBeApproved`, `beforeApprove`, etc.
       app.submit(form);
     } catch (InvalidApplicationDataException e) {
       // handle logs, feedback to GUI
@@ -124,13 +129,14 @@ public class ApplicationService {
   public Application loadForm(CurrentUser sess, int formId, String redirectUrl) {
     Form form = formRepository.findById(formId).orElseThrow(() -> new IllegalArgumentException("Form with ID " + formId + " not found"));
 
+    // TODO do we check if user is not already a member in the group/VO? If so, check as well when submitting
     checkOpenApplications(sess, form);
 
-    // load modules before prefilling to avoid potential pointless computation
     List<AssignedFormModule> modules = formService.getAssignedFormModules(form);
+    modules.forEach(module -> module.getFormModule().canBeSubmitted(sess, module.getOptions()));
 
     List<FormItemData> prefilledFormItemData = form.getItems().stream()
-        .map(this::prefillFormItemValue)
+        .map((item) -> this.prefillFormItemValue(sess, item))
         .toList();
 
     // Create application object to hold the prefilled data, id and user id is not needed for now
@@ -140,18 +146,49 @@ public class ApplicationService {
     // TODO this will likely need a more complex solution to handle chaining/combined forms
     app.setRedirectUrl(redirectUrl);
 
-    modules.forEach(module -> module.getFormModule().beforeSubmission(app, module.getOptions()));
+    modules.forEach(module -> module.getFormModule().afterFormItemsPrefilled(app));
 
     return app;
   }
 
   /**
-   * Prefill form item value based on principal data.
+   * Prefill form item value based on principal data (to be returned to GUI).
    * @param item
    * @return
    */
-  private FormItemData prefillFormItemValue(FormItem item) { // again decide whether to pass principal as argument or retrieve it from the current session
-    return null;
+  private FormItemData prefillFormItemValue(CurrentUser sess, FormItem item) { // again decide whether to pass principal as argument or retrieve it from the current session
+    String identityValue = getIdentityAttributeValue(sess, item);
+    if (item.isPreferIdentityAttribute() && identityValue != null) {
+      return new FormItemData(item.getId(), identityValue);
+    }
+    String idmValue = getIdmAttributeValue(sess, item);
+    // TODO consider the option to set default/static prefilled value for item (set if both are null)
+    return new FormItemData(item.getId(), idmValue);
+  }
+
+  private String getIdentityAttributeValue(CurrentUser sess, FormItem item) {
+    String sourceAttr = item.getSourceIdentityAttribute();
+    return sourceAttr == null ? null : sess.attribute(sourceAttr);
+  }
+
+  private String getIdmAttributeValue(CurrentUser sess, FormItem item) {
+    Form form = formRepository.findById(item.getFormId()).orElseThrow(() -> new DataInconsistencyException("Form with ID " + item.getFormId() + " not found for form item " + item.getId()));
+
+    String sourceAttr = item.getSourceIdmAttribute();
+    if (sourceAttr == null) {
+      return null;
+    }
+    if (sourceAttr.startsWith("urn:perun:user")) {
+      return idmService.getUserAttribute(String.valueOf(sess.id()), sourceAttr);
+    } else if (sourceAttr.startsWith("urn:perun:vo")) {
+      return idmService.getVoAttribute(sourceAttr, form.getVoId());
+    } else if (sourceAttr.startsWith("urn:perun:member") && form.getGroupId() > 0) { // TODO better check if group is present
+      return idmService.getMemberAttribute(String.valueOf(sess.id()), sourceAttr, form.getGroupId());
+    } else if (sourceAttr.startsWith("urn:perun:group") && form.getGroupId() > 0) {
+      return idmService.getGroupAttribute(sourceAttr, form.getGroupId());
+    } else {
+      throw new IllegalArgumentException("Unsupported attribute source: " + sourceAttr);
+    }
   }
 
 
@@ -162,10 +199,10 @@ public class ApplicationService {
    */
   private void checkOpenApplications(CurrentUser sess, Form form) {
     // TODO check for open applications if user already exists - define how to check whether user does exist in th system
-    if (sess.id() > 0) {
+    if (Integer.parseInt(sess.id()) > 0) {
       boolean hasOpenApps = applicationRepository.findByFormId(form.getId()).stream()
           .filter(app -> app.getState().isOpenState())
-          .anyMatch(app -> app.getUserId() == sess.id()); // TODO utilize similarUsers as well?
+          .anyMatch(app -> app.getUserId() == Integer.parseInt(sess.id())); // TODO utilize similarUsers as well?
       if (hasOpenApps) {
         throw new IllegalArgumentException("User already has open application for form " + form.getId());
       }

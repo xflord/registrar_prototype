@@ -8,10 +8,15 @@ import java.util.Map;
 
 public class FormItem {
   private final int id;
+  private int formId;
   private String type; // replace with enum/inheritance
   private Map<Locale, ItemTexts> texts = new HashMap<>();
   private boolean required;
   private String constraint; // regex or similar
+  private String sourceIdentityAttribute;
+  private String sourceIdmAttribute;
+  private String destinationIdmAttribute;
+  private boolean preferIdentityAttribute; // use IdM value if false, oauth claim value if true (and available)
 
   public FormItem(int id, String type) {
     this.id = id;
@@ -32,6 +37,21 @@ public class FormItem {
     this.texts.put(Locale.ENGLISH, new ItemTexts(label, null, null));
     this.required = required;
     this.constraint = constraint;
+  }
+
+  public FormItem(int id, int formId, String type, Map<Locale, ItemTexts> texts, boolean required, String constraint,
+                  String sourceIdentityAttribute, String sourceIdmAttribute, String destinationIdmAttribute,
+                  boolean preferIdentityAttribute) {
+    this.id = id;
+    this.formId = formId;
+    this.type = type;
+    this.texts = texts;
+    this.required = required;
+    this.constraint = constraint;
+    this.sourceIdentityAttribute = sourceIdentityAttribute;
+    this.sourceIdmAttribute = sourceIdmAttribute;
+    this.destinationIdmAttribute = destinationIdmAttribute;
+    this.preferIdentityAttribute = preferIdentityAttribute;
   }
 
   public int getId() {
@@ -71,5 +91,41 @@ public class FormItem {
 
   public String getLabel() {
     return texts.get(Locale.ENGLISH).getLabel();
+  }
+
+  public boolean isPreferIdentityAttribute() {
+    return preferIdentityAttribute;
+  }
+
+  public void setPreferIdentityAttribute(boolean preferIdentityAttribute) {
+    this.preferIdentityAttribute = preferIdentityAttribute;
+  }
+
+  public String getDestinationIdmAttribute() {
+    return destinationIdmAttribute;
+  }
+
+  public void setDestinationIdmAttribute(String destinationIdmAttribute) {
+    this.destinationIdmAttribute = destinationIdmAttribute;
+  }
+
+  public String getSourceIdmAttribute() {
+    return sourceIdmAttribute;
+  }
+
+  public void setSourceIdmAttribute(String sourceIdmAttribute) {
+    this.sourceIdmAttribute = sourceIdmAttribute;
+  }
+
+  public String getSourceIdentityAttribute() {
+    return sourceIdentityAttribute;
+  }
+
+  public void setSourceIdentityAttribute(String sourceIdentityAttribute) {
+    this.sourceIdentityAttribute = sourceIdentityAttribute;
+  }
+
+  public int getFormId() {
+    return formId;
   }
 }
