@@ -159,11 +159,16 @@ public class ApplicationService {
   private FormItemData prefillFormItemValue(CurrentUser sess, FormItem item) { // again decide whether to pass principal as argument or retrieve it from the current session
     String identityValue = getIdentityAttributeValue(sess, item);
     if (item.isPreferIdentityAttribute() && identityValue != null) {
-      return new FormItemData(item.getId(), identityValue);
+      return new FormItemData(item.getId(), null, identityValue);
     }
     String idmValue = getIdmAttributeValue(sess, item);
+    if (idmValue != null) {
+      return new FormItemData(item.getId(), null, idmValue);
+    } else if (identityValue != null) {
+      return new FormItemData(item.getId(), null, identityValue);
+    }
     // TODO consider the option to set default/static prefilled value for item (set if both are null)
-    return new FormItemData(item.getId(), idmValue);
+    return new FormItemData(item.getId(), null, null);
   }
 
   private String getIdentityAttributeValue(CurrentUser sess, FormItem item) {

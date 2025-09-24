@@ -113,4 +113,21 @@ class ApplicationServiceTests extends GenericRegistrarServiceTests {
     assert app.getExternalAttributes().get("test-module-before-submission").equals("test");
   }
 
+  @Test
+  void loadFormPrefillsValues() throws Exception {
+    FormItem item1 = new FormItem(1, "test");
+    item1.setSourceIdentityAttribute("testAttribute");
+
+    int groupId = 1;
+    perunIntegrationService.createGroup(groupId);
+
+    Form form = formService.createForm(null, groupId, List.of(item1));
+
+    Application app = applicationService.loadForm(currentUserProvider.getCurrentUser(""), form.getId(), "");
+
+    assert app != null;
+    assert app.getFormId() == form.getId();
+    assert app.getFormItemData().getFirst().getPrefilledValue().equals("testValue");
+  }
+
 }

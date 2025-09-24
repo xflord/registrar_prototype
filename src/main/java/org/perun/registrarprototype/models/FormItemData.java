@@ -12,6 +12,12 @@ public class FormItemData {
     this.value = value;
   }
 
+  public FormItemData(int itemId, String value, String prefilledValue) {
+    this.itemId = itemId;
+    this.value = value;
+    this.prefilledValue = prefilledValue;
+  }
+
   public int getItemId() {
     return itemId;
   }
@@ -22,6 +28,14 @@ public class FormItemData {
 
   public void setValue(String value) {
     this.value = value;
+  }
+
+  public String getPrefilledValue() {
+    return prefilledValue;
+  }
+
+  public void setPrefilledValue(String prefilledValue) {
+    this.prefilledValue = prefilledValue;
   }
 
   public boolean isEmpty() {
@@ -35,6 +49,6 @@ public class FormItemData {
 
   @Override
   public String toString() {
-    return "FormItemData [itemId=" + itemId + ", data=" + value + "]";
+    return "FormItemData [itemId=" + itemId + ", data=" + value + ", prefilledValue= " + prefilledValue +"]";
   }
 }

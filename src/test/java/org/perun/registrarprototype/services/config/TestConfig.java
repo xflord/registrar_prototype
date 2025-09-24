@@ -1,5 +1,7 @@
-package org.perun.registrarprototype.services;
+package org.perun.registrarprototype.services.config;
 
+import org.perun.registrarprototype.security.CurrentUserProvider;
+import org.perun.registrarprototype.services.AuthorizationService;
 import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.context.annotation.Bean;
 
@@ -11,5 +13,10 @@ public class TestConfig {
   @Bean
   public AuthorizationService authorizationService() {
     return new AuthorizationServiceDummy();
+  }
+
+  @Bean
+  public CurrentUserProvider currentUserProvider() {
+    return new CurrentUserProviderDummy();
   }
 }
