@@ -3,24 +3,22 @@ package org.perun.registrarprototype.models;
 import java.util.regex.Pattern;
 
 public class FormItemData {
-  private final int itemId;
+  private FormItem formItem;
   private String value;
   private String prefilledValue; // probably set this in GUI and later check that this value matches current IdM/Identity values
+  private boolean valueAssured;
 
-  public FormItemData(int itemId, String value) {
-    this.itemId = itemId;
+  public FormItemData(FormItem formItem, String value) {
+    this.formItem = formItem;
     this.value = value;
   }
 
-  public FormItemData(int itemId, String value, String prefilledValue) {
-    this.itemId = itemId;
+  public FormItemData(FormItem formItem, String value, String prefilledValue) {
+    this.formItem = formItem;
     this.value = value;
     this.prefilledValue = prefilledValue;
   }
 
-  public int getItemId() {
-    return itemId;
-  }
 
   public String getValue() {
     return value;
@@ -38,6 +36,22 @@ public class FormItemData {
     this.prefilledValue = prefilledValue;
   }
 
+  public FormItem getFormItem() {
+    return formItem;
+  }
+
+  public void setFormItem(FormItem formItem) {
+    this.formItem = formItem;
+  }
+
+  public boolean isValueAssured() {
+    return valueAssured;
+  }
+
+  public void setValueAssured(boolean valueAssured) {
+    this.valueAssured = valueAssured;
+  }
+
   public boolean isEmpty() {
     return value == null || value.isBlank();
   }
@@ -49,6 +63,6 @@ public class FormItemData {
 
   @Override
   public String toString() {
-    return "FormItemData [itemId=" + itemId + ", data=" + value + ", prefilledValue= " + prefilledValue +"]";
+    return "FormItemData [itemId=" + formItem.getFormId() + ", data=" + value + ", prefilledValue= " + prefilledValue +"]";
   }
 }

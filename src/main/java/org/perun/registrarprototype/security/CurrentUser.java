@@ -28,4 +28,5 @@ public class CurrentUser {
   }
   public Set<Integer> managedGroups() { return managedGroups; }
   public String attribute(String name) { return principal.getClaimAsString(name); }
+  public boolean isAuthenticated() { return principal != null; }
 }

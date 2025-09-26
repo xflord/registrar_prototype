@@ -26,7 +26,7 @@ public class Form {
     List<ValidationError> errors = new ArrayList<>();
     for (FormItem item : items) {
       FormItemData response = itemData.stream()
-          .filter(r -> r.getItemId() == item.getId())
+          .filter(r -> r.getFormItem().getId() == item.getId())
           .findFirst()
           .orElse(null);
 
@@ -49,5 +49,12 @@ public class Form {
 
   public List<FormItem> getItems() {
     return items;
+  }
+
+  public enum FormType {
+    INITIAL,
+    EXTENSION,
+    CANCELLATION, // cancel membership
+    UPDATE; // update attribute value
   }
 }

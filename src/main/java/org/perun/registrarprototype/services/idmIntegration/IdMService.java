@@ -44,6 +44,10 @@ public interface IdMService {
 
   String getMemberAttribute(String identifier, String attributeName, int groupId);
 
+  String getMemberGroupAttribute(String identifier, String attributeName, int groupId);
+
+  boolean canExtendMembership(String identifier, int groupId);
+
   String getVoAttribute(String attributeName, int voId);
 
   String getGroupAttribute(String attributeName, int groupId);

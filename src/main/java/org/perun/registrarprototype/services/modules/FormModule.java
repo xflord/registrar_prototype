@@ -3,6 +3,8 @@ package org.perun.registrarprototype.services.modules;
 import java.util.List;
 import java.util.Map;
 import org.perun.registrarprototype.models.Application;
+import org.perun.registrarprototype.models.Form;
+import org.perun.registrarprototype.models.FormItemData;
 import org.perun.registrarprototype.security.CurrentUser;
 
 /**
@@ -16,9 +18,17 @@ public interface FormModule {
    * @param sess
    * @param options sample options map, not sure whether this will end up being used
    */
-  void canBeSubmitted(CurrentUser sess, Map<String, String> options);
+  void canBeSubmitted(CurrentUser sess, Form.FormType type, Map<String, String> options);
 
-  void afterFormItemsPrefilled(Application application);
+  void afterFormItemsPrefilled(CurrentUser sess, Form.FormType type, List<FormItemData> prefilledFormItems);
+
+  /**
+   * Called after an application is submitted.
+   * Use to add custom logic to run after submission - like sending an email, formatting email/phone numbers, etc.
+   * TODO consider this not being a module but hardcoded business logic.
+   * @param application
+   */
+  void afterApplicationSubmitted(Application application);
 
   /**
    * Called before an application is approved.

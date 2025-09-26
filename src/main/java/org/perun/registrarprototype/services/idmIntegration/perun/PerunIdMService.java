@@ -129,7 +129,7 @@ public class PerunIdMService implements IdMService {
 
     Member member;
     try {
-      member = rpc.getMembersManager().getMemberByUser(group.getId(), user.getId());
+      member = rpc.getMembersManager().getMemberByUser(group.getVoId(), user.getId());
     } catch (HttpClientErrorException ex) {
       System.out.println(PerunException.to(ex).getMessage());
       return null;
@@ -143,6 +143,85 @@ public class PerunIdMService implements IdMService {
     } catch (HttpClientErrorException ex) {
       System.out.println(PerunException.to(ex).getMessage());
       return null;
+    } catch (RestClientException ex) {
+      throw new RuntimeException(ex);
+    }
+  }
+
+  @Override
+  public String getMemberGroupAttribute(String identifier, String attributeName, int groupId) {
+    User user = getUser(identifier);
+
+    if (user == null) {
+      return null;
+    }
+
+    Group group;
+    try {
+      group = rpc.getGroupsManager().getGroupById(groupId);
+    } catch (HttpClientErrorException ex) {
+      // another way of handling this - logging and returning null?
+      System.out.println(PerunException.to(ex).getMessage());
+      return null;
+    } catch (RestClientException ex) {
+      throw new RuntimeException(ex);
+    }
+
+    Member member;
+    try {
+      member = rpc.getMembersManager().getMemberByUser(group.getVoId(), user.getId());
+    } catch (HttpClientErrorException ex) {
+      System.out.println(PerunException.to(ex).getMessage());
+      return null;
+    } catch (RestClientException ex) {
+      throw new RuntimeException(ex);
+    }
+
+    try {
+      Attribute attr = rpc.getAttributesManager().getMemberGroupAttributeByName(member.getId(), groupId, attributeName);
+      return attr.getValue() == null ? null : attr.getValue().toString();
+    } catch (HttpClientErrorException ex) {
+      System.out.println(PerunException.to(ex).getMessage());
+      return null;
+    } catch (RestClientException ex) {
+      throw new RuntimeException(ex);
+    }
+  }
+
+  @Override
+  public boolean canExtendMembership(String identifier, int groupId) {
+    User user = getUser(identifier);
+
+    if (user == null) {
+      return false;
+    }
+
+    Group group;
+    try {
+      group = rpc.getGroupsManager().getGroupById(groupId);
+    } catch (HttpClientErrorException ex) {
+      // another way of handling this - logging and returning null?
+      System.out.println(PerunException.to(ex).getMessage());
+      return false;
+    } catch (RestClientException ex) {
+      throw new RuntimeException(ex);
+    }
+
+    Member member;
+    try {
+      member = rpc.getMembersManager().getMemberByUser(group.getVoId(), user.getId());
+    } catch (HttpClientErrorException ex) {
+      System.out.println(PerunException.to(ex).getMessage());
+      return false;
+    } catch (RestClientException ex) {
+      throw new RuntimeException(ex);
+    }
+
+    try {
+      return rpc.getGroupsManager().canExtendMembershipInGroup(member.getId(), group.getId());
+    } catch (HttpClientErrorException ex) {
+      System.out.println(PerunException.to(ex).getMessage());
+      return false;
     } catch (RestClientException ex) {
       throw new RuntimeException(ex);
     }

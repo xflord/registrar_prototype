@@ -15,12 +15,15 @@ public class Application {
   private String rejectionReason;
   private Map<String, String> externalAttributes = new HashMap<>();
   private String redirectUrl;
+  private Form.FormType type;
 
-  public Application(int id, int userId, int formId, List<FormItemData> formItemData) {
+  public Application(int id, int userId, int formId, List<FormItemData> formItemData, String redirectUrl, Form.FormType type) {
     this.id = id;
     this.userId = userId;
     this.formId = formId;
     this.formItemData = formItemData;
+    this.redirectUrl = redirectUrl;
+    this.type = type;
   }
 
   public int getId() {

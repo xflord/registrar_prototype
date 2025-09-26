@@ -25,10 +25,10 @@ class ApplicationServiceTests extends GenericRegistrarServiceTests {
     perunIntegrationService.createGroup(groupId);
     Form form = new Form(formRepository.getNextId(), groupId, List.of(item1, item2));
     formRepository.save(form);
-    FormItemData formItemData1 = new FormItemData(item1.getId(), "test1");
-    FormItemData formItemData2 = new FormItemData(item2.getId(), "test2");
+    FormItemData formItemData1 = new FormItemData(item1, "test1");
+    FormItemData formItemData2 = new FormItemData(item2, "test2");
 
-    Application application = applicationService.registerUserToGroup(userId, groupId,
+    Application application = applicationService.registerUserToGroup(new CurrentUser(userId, null), groupId,
         List.of(formItemData1, formItemData2));
 
     assert application.getState() == ApplicationState.APPROVED;
@@ -43,9 +43,9 @@ class ApplicationServiceTests extends GenericRegistrarServiceTests {
 
     formService.createForm(null, groupId, List.of(item1));
 
-    FormItemData formItemData1 = new FormItemData(item1.getId(), "test@gmail.com");
+    FormItemData formItemData1 = new FormItemData(item1, "test@gmail.com");
 
-    Application app = applicationService.applyForMembership(-1, groupId, List.of(formItemData1));
+    Application app = applicationService.applyForMembership(new CurrentUser(-1, null), groupId, Form.FormType.INITIAL, List.of(formItemData1));
 
     Application createdApp = applicationRepository.findById(app.getId()).orElse(null);
 
@@ -61,9 +61,9 @@ class ApplicationServiceTests extends GenericRegistrarServiceTests {
 
     formService.createForm(null, groupId, List.of(item1));
 
-    FormItemData formItemData1 = new FormItemData(item1.getId(), "test@gmail.com");
+    FormItemData formItemData1 = new FormItemData(item1, "test@gmail.com");
 
-    Application app = applicationService.applyForMembership(-1, groupId, List.of(formItemData1));
+    Application app = applicationService.applyForMembership(new CurrentUser(-1, null), groupId, Form.FormType.INITIAL, List.of(formItemData1));
 
     Application createdApp = applicationRepository.findById(app.getId()).orElse(null);
 
@@ -85,11 +85,11 @@ class ApplicationServiceTests extends GenericRegistrarServiceTests {
 
     Form form = formService.createForm(null, groupId, List.of(item1));
 
-    Application app = applicationService.loadForm(new CurrentUser(-1, null), form.getId(), "www.google.com");
+    List<FormItemData> data = applicationService.loadForm(new CurrentUser(-1, null), form, Form.FormType.INITIAL, List.of(item1));
 
-    assert app != null;
-    assert app.getFormId() == form.getId();
-    assert app.getRedirectUrl().equals("www.google.com");
+    assert data != null;
+    assert data.size() == 1;
+    assert data.getFirst().getFormItem().getId() == item1.getId();
   }
 
   @Test
@@ -105,12 +105,12 @@ class ApplicationServiceTests extends GenericRegistrarServiceTests {
 
     formService.setModules(null, form.getId(), List.of(module));
 
-    Application app = applicationService.loadForm(new CurrentUser(-1, null), form.getId(), "");
+    List<FormItemData> data = applicationService.loadForm(new CurrentUser(-1, null), form, Form.FormType.INITIAL, List.of(item1));
 
-    assert app != null;
-    assert app.getFormId() == form.getId();
-    assert app.getExternalAttributes().containsKey("test-module-before-submission");
-    assert app.getExternalAttributes().get("test-module-before-submission").equals("test");
+    assert data != null;
+    assert data.size() == 1;
+    assert data.getFirst().getFormItem().getId() == item1.getId();
+    assert data.getFirst().getPrefilledValue().equals("testModuleValue");
   }
 
   @Test
@@ -123,11 +123,12 @@ class ApplicationServiceTests extends GenericRegistrarServiceTests {
 
     Form form = formService.createForm(null, groupId, List.of(item1));
 
-    Application app = applicationService.loadForm(currentUserProvider.getCurrentUser(""), form.getId(), "");
+    List<FormItemData> data = applicationService.loadForm(currentUserProvider.getCurrentUser(""), form, Form.FormType.INITIAL, List.of(item1));
 
-    assert app != null;
-    assert app.getFormId() == form.getId();
-    assert app.getFormItemData().getFirst().getPrefilledValue().equals("testValue");
+    assert data != null;
+    assert data.size() == 1;
+    assert data.getFirst().getFormItem().getId() == item1.getId();
+    assert data.getFirst().getPrefilledValue().equals("testValue");
   }
 
 }

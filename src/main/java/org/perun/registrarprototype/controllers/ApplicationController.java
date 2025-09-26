@@ -4,6 +4,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import org.perun.registrarprototype.exceptions.InsufficientRightsException;
 import org.perun.registrarprototype.exceptions.InvalidApplicationDataException;
 import org.perun.registrarprototype.models.Application;
+import org.perun.registrarprototype.models.Form;
 import org.perun.registrarprototype.security.CurrentUser;
 import org.perun.registrarprototype.models.FormItemData;
 import org.perun.registrarprototype.security.CurrentUserProvider;
@@ -37,7 +38,7 @@ public class ApplicationController {
     CurrentUser user = currentUserProvider.getCurrentUser(authHeader);
     Application app;
     try {
-      app = applicationService.applyForMembership(Integer.parseInt(user.id()), groupId, itemData);
+      app = applicationService.applyForMembership(user, groupId, Form.FormType.INITIAL, itemData);
     } catch (InvalidApplicationDataException e) {
       // probably modify to return ValidationErrors/Result
       throw new RuntimeException(e);
@@ -80,7 +81,7 @@ public class ApplicationController {
   ) {
     Application app;
     try {
-      app = applicationService.registerUserToGroup(userId, groupId, itemData);
+      app = applicationService.registerUserToGroup(new CurrentUser(userId, null), groupId, itemData);
     } catch (InvalidApplicationDataException e) {
       // probably modify to return ValidationErrors/Result
       throw new RuntimeException(e);
@@ -100,7 +101,8 @@ public class ApplicationController {
     String authHeader = request.getHeader(HttpHeaders.AUTHORIZATION);
     CurrentUser user = currentUserProvider.getCurrentUser(authHeader);
 
-    Application app = applicationService.loadForm(user, formId, redirectUrl);
-    return ResponseEntity.ok(app);
+//    Application app = applicationService.loadForm(user, formId, redirectUrl);
+//    return ResponseEntity.ok(app);
+    return ResponseEntity.ok().build();
   }
 }

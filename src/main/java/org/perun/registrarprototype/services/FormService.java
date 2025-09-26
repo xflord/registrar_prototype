@@ -11,6 +11,7 @@ import org.perun.registrarprototype.exceptions.InsufficientRightsException;
 import org.perun.registrarprototype.models.AssignedFormModule;
 import org.perun.registrarprototype.models.Form;
 import org.perun.registrarprototype.models.FormItem;
+import org.perun.registrarprototype.repositories.FormItemRepository;
 import org.perun.registrarprototype.repositories.FormModuleRepository;
 import org.perun.registrarprototype.repositories.FormRepository;
 import org.perun.registrarprototype.security.CurrentUser;
@@ -24,13 +25,17 @@ public class FormService {
   private final FormRepository formRepository;
   private final AuthorizationService authorizationService;
   private final FormModuleRepository formModuleRepository;
+  private final FormItemRepository formItemRepository;
   private final ApplicationContext context;
 
-  public FormService(FormRepository formRepository, AuthorizationService authorizationService, FormModuleRepository formModuleRepository, ApplicationContext context) {
+  public FormService(FormRepository formRepository, AuthorizationService authorizationService,
+                     FormModuleRepository formModuleRepository, ApplicationContext context,
+                     FormItemRepository formItemRepository) {
     this.formRepository = formRepository;
     this.authorizationService = authorizationService;
     this.formModuleRepository = formModuleRepository;
     this.context = context;
+    this.formItemRepository = formItemRepository;
   }
 
   public Form createForm(CurrentUser sess, int groupId, List<FormItem> items)
@@ -110,6 +115,19 @@ public class FormService {
 
     formModuleRepository.saveAll(modules);
     return modules;
+  }
+
+  /**
+   * Retrieves all forms that are required to be filled before applying for membership via the supplied form.
+   * TODO what about PRE forms that also have prerequisites? Recursively check all prerequisites or do not allow?
+   * @return
+   */
+  public List<Form> getPrerequisiteForms(Form form) {
+    return new ArrayList<>();
+  }
+
+  public List<FormItem> getFormItems(CurrentUser sess, Form form, Form.FormType type) {
+    return formItemRepository.getFormItemsByFormId(form.getId()).stream().filter(formItem -> formItem.getFormTypes().contains(type)).toList();
   }
 
   /**

@@ -17,6 +17,8 @@ public class FormItem {
   private String sourceIdmAttribute;
   private String destinationIdmAttribute;
   private boolean preferIdentityAttribute; // use IdM value if false, oauth claim value if true (and available)
+  private String defaultValue;
+  private List<Form.FormType> formTypes;
 
   public FormItem(int id, String type) {
     this.id = id;
@@ -41,7 +43,7 @@ public class FormItem {
 
   public FormItem(int id, int formId, String type, Map<Locale, ItemTexts> texts, boolean required, String constraint,
                   String sourceIdentityAttribute, String sourceIdmAttribute, String destinationIdmAttribute,
-                  boolean preferIdentityAttribute) {
+                  boolean preferIdentityAttribute, List<Form.FormType> formTypes, String defaultValue) {
     this.id = id;
     this.formId = formId;
     this.type = type;
@@ -52,6 +54,8 @@ public class FormItem {
     this.sourceIdmAttribute = sourceIdmAttribute;
     this.destinationIdmAttribute = destinationIdmAttribute;
     this.preferIdentityAttribute = preferIdentityAttribute;
+    this.formTypes = formTypes;
+    this.defaultValue = defaultValue;
   }
 
   public int getId() {
@@ -127,5 +131,13 @@ public class FormItem {
 
   public int getFormId() {
     return formId;
+  }
+
+  public List<Form.FormType> getFormTypes() {
+    return formTypes;
+  }
+
+  public String getDefaultValue() {
+    return defaultValue;
   }
 }
