@@ -14,9 +14,11 @@ public class ApplicationRepositoryDummy implements ApplicationRepository {
   private static int currId = 0;
 
   @Override
-  public void save(Application application) {
+  public Application save(Application application) {
+    application.setId(currId++);
     applications.add(application);
     System.out.println("Created application " + application);
+    return application;
   }
 
   @Override

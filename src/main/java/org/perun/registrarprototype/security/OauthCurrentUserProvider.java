@@ -19,6 +19,7 @@ public class OauthCurrentUserProvider implements CurrentUserProvider {
     for (String group : groupsClaim.split(",")) {
       // example entitlement: urn:perun:group:einfra:managers
       // TODO find out how to get the group id from the urn
+      //   also either make sure this is refreshed upon making decision on application or use direct IdM call to get roles
       managedGroups.add(Integer.parseInt(group));
     }
 

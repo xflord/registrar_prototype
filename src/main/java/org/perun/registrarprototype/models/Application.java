@@ -1,21 +1,19 @@
 package org.perun.registrarprototype.models;
 
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import org.perun.registrarprototype.exceptions.InvalidApplicationDataException;
 import org.perun.registrarprototype.exceptions.InvalidApplicationStateTransitionException;
 
 public class Application {
-  private final int id;
+  private int id;
   private final int userId;
   private final int formId;
   private final List<FormItemData> formItemData;
   private ApplicationState state = ApplicationState.PENDING;
   private String rejectionReason;
-  private Map<String, String> externalAttributes = new HashMap<>();
   private String redirectUrl;
   private Form.FormType type;
+  private Submission submission;
 
   public Application(int id, int userId, int formId, List<FormItemData> formItemData, String redirectUrl, Form.FormType type) {
     this.id = id;
@@ -28,6 +26,9 @@ public class Application {
 
   public int getId() {
     return id;
+  }
+  public void setId(int id) {
+    this.id = id;
   }
 
   public int getUserId() {
@@ -50,32 +51,32 @@ public class Application {
     return rejectionReason;
   }
 
-  public Map<String, String> getExternalAttributes() {
-    return externalAttributes;
-  }
-
   public String getRedirectUrl() {
     return redirectUrl;
   }
 
-  public void submit(Form form) throws InvalidApplicationDataException {
+  public void submit(Form form) throws InvalidApplicationDataException, InvalidApplicationStateTransitionException {
+    if (state != ApplicationState.PENDING) {
+      throw new InvalidApplicationStateTransitionException("Only new applications can be submitted", this);
+    }
+    // TODO this is probably unnecessary, consider removing `submit` `approve` and `reject` methods
     ValidationResult result = form.validateItemData(formItemData);
     if (!result.isValid()) {
         throw new InvalidApplicationDataException("Some of the form items were incorrectly filled in",
             result.errors(), this);
     }
-    this.state = ApplicationState.PENDING;
+    this.state = ApplicationState.SUBMITTED;
   }
 
   public void approve() throws InvalidApplicationStateTransitionException {
-    if (state != ApplicationState.PENDING) {
+    if (!this.state.isOpenState()) {
       throw new InvalidApplicationStateTransitionException("Application has already been approved or rejected", this);
     }
     this.state = ApplicationState.APPROVED;
   }
 
   public void reject(String reason) throws InvalidApplicationStateTransitionException {
-    if (state != ApplicationState.PENDING) {
+    if (!this.state.isOpenState()) {
       throw new InvalidApplicationStateTransitionException("Application has already been approved or rejected", this);
     }
     if (reason == null || reason.isBlank()) {
@@ -85,8 +86,11 @@ public class Application {
     this.rejectionReason = reason;
   }
 
-  public void setExternalAttributes(Map<String, String> externalAttributes) {
-    this.externalAttributes = externalAttributes;
+  public void requestChanges() throws InvalidApplicationStateTransitionException {
+    if (!this.state.isOpenState()) {
+      throw new InvalidApplicationStateTransitionException("Application has already been approved or rejected", this);
+    }
+    this.state = ApplicationState.CHANGES_REQUESTED;
   }
 
   public void setRedirectUrl(String redirectUrl) {

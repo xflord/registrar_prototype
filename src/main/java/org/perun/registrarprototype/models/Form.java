@@ -30,7 +30,10 @@ public class Form {
           .findFirst()
           .orElse(null);
 
-      errors.addAll(item.validate(response));
+      ValidationError validationResult = item.validate(response);
+      if (validationResult != null) {
+        errors.add(validationResult);
+      }
     }
     return new ValidationResult(errors);
   }

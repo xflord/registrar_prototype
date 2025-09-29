@@ -7,7 +7,7 @@ import java.util.Locale;
 import java.util.Map;
 
 public class FormItem {
-  private final int id;
+  private int id;
   private int formId;
   private String type; // replace with enum/inheritance
   private Map<Locale, ItemTexts> texts = new HashMap<>();
@@ -62,6 +62,10 @@ public class FormItem {
     return id;
   }
 
+  public void setId(int id) {
+    this.id = id;
+  }
+
   public String getType() {
     return type;
   }
@@ -70,19 +74,19 @@ public class FormItem {
     this.type = type;
   }
 
-  public List<ValidationError> validate(FormItemData response) {
+  public ValidationError validate(FormItemData response) {
     // TODO ideally replace hardcoded strings with enums/inheritance and let GUI translate them
-    List<ValidationError> errors = new ArrayList<>();
+
     if (required && (response == null || response.isEmpty())) {
-        errors.add(new ValidationError(id, "Field " + getLabel() + " is required"));
+        return new ValidationError(id, "Field " + getLabel() + " is required");
     }
     if (response != null && constraint != null) {
         if (!response.matches(constraint)) {
-            errors.add(new ValidationError(id, "Item " + getLabel() + " must match constraint " + constraint));
+            return new ValidationError(id, "Item " + getLabel() + " must match constraint " + constraint);
         }
     }
 
-    return errors;
+    return null;
   }
 
   public boolean isRequired() {

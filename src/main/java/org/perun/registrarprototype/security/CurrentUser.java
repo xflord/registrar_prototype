@@ -1,5 +1,6 @@
 package org.perun.registrarprototype.security;
 
+import java.util.Map;
 import java.util.Set;
 
 /**
@@ -29,4 +30,5 @@ public class CurrentUser {
   public Set<Integer> managedGroups() { return managedGroups; }
   public String attribute(String name) { return principal.getClaimAsString(name); }
   public boolean isAuthenticated() { return principal != null; }
+  public Map<String, Object> getAttributes() { return principal.getAttributes(); }
 }

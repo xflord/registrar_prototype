@@ -5,7 +5,9 @@ import java.util.regex.Pattern;
 public class FormItemData {
   private FormItem formItem;
   private String value;
-  private String prefilledValue; // probably set this in GUI and later check that this value matches current IdM/Identity values
+  private String prefilledValue; // preferred prefilled value passed to GUI
+  private String identityAttributeValue;
+  private String idmAttributeValue;
   private boolean valueAssured;
 
   public FormItemData(FormItem formItem, String value) {
@@ -50,6 +52,22 @@ public class FormItemData {
 
   public void setValueAssured(boolean valueAssured) {
     this.valueAssured = valueAssured;
+  }
+
+  public String getIdentityAttributeValue() {
+    return identityAttributeValue;
+  }
+
+  public void setIdentityAttributeValue(String identityAttributeValue) {
+    this.identityAttributeValue = identityAttributeValue;
+  }
+
+  public String getIdmAttributeValue() {
+    return idmAttributeValue;
+  }
+
+  public void setIdmAttributeValue(String idmAttributeValue) {
+    this.idmAttributeValue = idmAttributeValue;
   }
 
   public boolean isEmpty() {

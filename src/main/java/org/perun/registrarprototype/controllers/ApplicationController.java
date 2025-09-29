@@ -28,23 +28,23 @@ public class ApplicationController {
       this.currentUserProvider = currentUserProvider;
   }
 
-  // --- User applies for membership ---
-  @PostMapping("/apply")
-  public ResponseEntity<Application> applyForMembership(
-          @RequestParam int groupId,
-          @RequestBody List<FormItemData> itemData, HttpServletRequest request
-  ) {
-    String authHeader = request.getHeader(HttpHeaders.AUTHORIZATION); // replace with spring security/filter after done with testing
-    CurrentUser user = currentUserProvider.getCurrentUser(authHeader);
-    Application app;
-    try {
-      app = applicationService.applyForMembership(user, groupId, Form.FormType.INITIAL, itemData);
-    } catch (InvalidApplicationDataException e) {
-      // probably modify to return ValidationErrors/Result
-      throw new RuntimeException(e);
-    }
-    return ResponseEntity.ok(app);
-  }
+//  // --- User applies for membership ---
+//  @PostMapping("/apply")
+//  public ResponseEntity<Application> applyForMembership(
+//          @RequestParam int groupId,
+//          @RequestBody List<FormItemData> itemData, HttpServletRequest request
+//  ) {
+//    String authHeader = request.getHeader(HttpHeaders.AUTHORIZATION); // replace with spring security/filter after done with testing
+//    CurrentUser user = currentUserProvider.getCurrentUser(authHeader);
+//    Application app;
+//    try {
+//      app = applicationService.applyForMembership(user, groupId, Form.FormType.INITIAL, itemData);
+//    } catch (InvalidApplicationDataException e) {
+//      // probably modify to return ValidationErrors/Result
+//      throw new RuntimeException(e);
+//    }
+//    return ResponseEntity.ok(app);
+//  }
 
   // --- Manager approves an application ---
   @PostMapping("/{applicationId}/approve")

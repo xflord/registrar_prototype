@@ -9,6 +9,7 @@ import org.perun.registrarprototype.models.AssignedFormModule;
 import org.perun.registrarprototype.models.Form;
 import org.perun.registrarprototype.models.FormItem;
 import org.perun.registrarprototype.models.FormItemData;
+import org.perun.registrarprototype.models.PrefilledFormData;
 import org.perun.registrarprototype.security.CurrentUser;
 import org.springframework.boot.test.context.SpringBootTest;
 
@@ -41,16 +42,16 @@ class ApplicationServiceTests extends GenericRegistrarServiceTests {
     int groupId = 1;
     perunIntegrationService.createGroup(groupId);
 
-    formService.createForm(null, groupId, List.of(item1));
+    Form form = formService.createForm(null, groupId, List.of(item1));
 
     FormItemData formItemData1 = new FormItemData(item1, "test@gmail.com");
 
-    Application app = applicationService.applyForMembership(new CurrentUser(-1, null), groupId, Form.FormType.INITIAL, List.of(formItemData1));
+    Application app = applicationService.applyForMembership(new CurrentUser(-1, null), new PrefilledFormData(form, groupId, List.of(formItemData1), Form.FormType.INITIAL));
 
     Application createdApp = applicationRepository.findById(app.getId()).orElse(null);
 
     assert createdApp == app;
-    assert createdApp.getState() == ApplicationState.PENDING;
+    assert createdApp.getState() == ApplicationState.SUBMITTED;
   }
 
   @Test
@@ -59,16 +60,16 @@ class ApplicationServiceTests extends GenericRegistrarServiceTests {
     int groupId = 1;
     perunIntegrationService.createGroup(groupId);
 
-    formService.createForm(null, groupId, List.of(item1));
+    Form form = formService.createForm(null, groupId, List.of(item1));
 
     FormItemData formItemData1 = new FormItemData(item1, "test@gmail.com");
 
-    Application app = applicationService.applyForMembership(new CurrentUser(-1, null), groupId, Form.FormType.INITIAL, List.of(formItemData1));
+    Application app = applicationService.applyForMembership(new CurrentUser(-1, null), new PrefilledFormData(form, groupId, List.of(formItemData1), Form.FormType.INITIAL));
 
     Application createdApp = applicationRepository.findById(app.getId()).orElse(null);
 
     assert createdApp == app;
-    assert createdApp.getState() == ApplicationState.PENDING;
+    assert createdApp.getState() == ApplicationState.SUBMITTED;
 
     applicationService.approveApplication(null, createdApp.getId());
 

@@ -2,6 +2,7 @@ package org.perun.registrarprototype.services;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.regex.Pattern;
 import java.util.regex.PatternSyntaxException;
 import org.perun.registrarprototype.exceptions.DataInconsistencyException;
@@ -117,6 +118,10 @@ public class FormService {
     return modules;
   }
 
+  public Form getFormById(CurrentUser sess, int formId) {
+    return formRepository.findById(formId).orElseThrow(() -> new DataInconsistencyException("Form with ID " + formId + " not found. "));
+  }
+
   /**
    * Retrieves all forms that are required to be filled before applying for membership via the supplied form.
    * TODO what about PRE forms that also have prerequisites? Recursively check all prerequisites or do not allow?
@@ -126,8 +131,36 @@ public class FormService {
     return new ArrayList<>();
   }
 
+  /**
+   * Retrieves all forms that are automatically submitted after the supplied form is submitted.
+   * TODO again what to do with autosubmit forms with autosubmit forms?
+   * @param form
+   * @return
+   */
+  public List<Form> getAutosubmitForms(Form form) {
+    return new ArrayList<>();
+  }
+
+  /**
+   * Retrieves all forms that user is redirected to after submitting the supplied form.
+   * TODO do we allow multiple forms? Probably yes, build composite form with them in GUI
+   * @param form
+   * @return
+   */
+  public List<Form> getRedirectForms(Form form) {
+    return new ArrayList<>();
+  }
+
   public List<FormItem> getFormItems(CurrentUser sess, Form form, Form.FormType type) {
     return formItemRepository.getFormItemsByFormId(form.getId()).stream().filter(formItem -> formItem.getFormTypes().contains(type)).toList();
+  }
+
+  public FormItem getFormItemById(CurrentUser sess, int formItemId) {
+    return formItemRepository.getFormItemById(formItemId).orElseThrow(() -> new DataInconsistencyException("Form item with ID " + formItemId + " not found"));
+  }
+
+  public FormItem createFormItem(FormItem item) {
+    return formItemRepository.save(item);
   }
 
   /**
