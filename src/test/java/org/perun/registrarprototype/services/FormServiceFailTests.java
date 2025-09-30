@@ -15,21 +15,27 @@ public class FormServiceFailTests extends GenericRegistrarServiceTests {
 
   @Test
   void createFormIncorrectConstraints() throws Exception {
-    FormItem item1 = new FormItem(1, "email", "email", false, "^[a-zA-Z0-9._%+-+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$");
-    int groupId = 1;
+    int groupId = getGroupId();
     perunIntegrationService.createGroup(groupId);
 
-    assertThrows(FormItemRegexNotValid.class, () -> formService.createForm(null, groupId, List.of(item1)));
+    Form form = formService.createForm(null, groupId);
+
+
+    FormItem item1 = formService.createFormItem(new FormItem(1, FormItem.Type.EMAIL, "email", false, "^[a-zA-Z0-9._%+-+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$"));
+
+
+    assertThrows(FormItemRegexNotValid.class, () -> formService.setFormItem(form.getId(), item1));
   }
 
   @Test
   void setModuleMissingRequiredOptions() throws Exception {
-    FormItem item1 = new FormItem(1, "test");
-
-    int groupId = 1;
+    int groupId = getGroupId();
     perunIntegrationService.createGroup(groupId);
 
-    Form form = formService.createForm(null, groupId, List.of(item1));
+    Form form = formService.createForm(null, groupId);
+
+    FormItem item1 = new FormItem(1, FormItem.Type.TEXTFIELD);
+    item1 = formService.setFormItem(form.getId(), item1);
 
     AssignedFormModule
         module = new AssignedFormModule("testModuleWithOptions", new HashMap<>());
@@ -39,12 +45,14 @@ public class FormServiceFailTests extends GenericRegistrarServiceTests {
 
   @Test
   void setModuleWrongRequiredOptions() throws Exception {
-    FormItem item1 = new FormItem(1, "test");
-
-    int groupId = 1;
+    int groupId = getGroupId();
     perunIntegrationService.createGroup(groupId);
 
-    Form form = formService.createForm(null, groupId, List.of(item1));
+    Form form = formService.createForm(null, groupId);
+
+
+    FormItem item1 = new FormItem(1, FormItem.Type.TEXTFIELD);
+    item1 = formService.setFormItem(form.getId(), item1);
 
     AssignedFormModule
         module = new AssignedFormModule("testModuleWithOptions", Map.of("wrongOption", "value1"));

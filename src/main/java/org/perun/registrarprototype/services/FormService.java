@@ -39,12 +39,49 @@ public class FormService {
     this.formItemRepository = formItemRepository;
   }
 
-  public Form createForm(CurrentUser sess, int groupId, List<FormItem> items)
+  public Form createForm(CurrentUser sess, int groupId)
       throws FormItemRegexNotValid, InsufficientRightsException {
     if (!authorizationService.isAuthorized(sess, groupId)) {
       // 403
       throw new InsufficientRightsException("You are not authorized to create a form for this group");
     }
+
+    return formRepository.save(new Form(-1, groupId, new ArrayList<>()));
+  }
+
+  public Form createForm(CurrentUser sess, int groupId, List<FormItem> items)
+      throws FormItemRegexNotValid, InsufficientRightsException {
+    Form form = createForm(sess, groupId);
+
+    setFormItems(sess, form.getId(), items);
+
+    return form;
+  }
+
+  public FormItem setFormItem(int formId, FormItem formItem) throws FormItemRegexNotValid {
+    Form form = formRepository.findById(formId).orElseThrow(() -> new IllegalArgumentException("Form with ID " + formId + " not found"));
+
+    if (formItem.getConstraint() != null && !formItem.getConstraint().isEmpty()) {
+        try {
+          Pattern.compile(formItem.getConstraint());
+        } catch (PatternSyntaxException e) {
+          throw new FormItemRegexNotValid("Cannot compile regex: " + formItem.getConstraint(), formItem);
+        }
+      }
+
+    formItem.setFormId(formId);
+    formItemRepository.save(formItem);
+
+    List<FormItem> items = form.getItems();
+    items.add(formItem);
+    form.setItems(items);
+
+    formRepository.update(form);
+    return formItem;
+  }
+
+  public void setFormItems(CurrentUser sess, int formId, List<FormItem> items) throws FormItemRegexNotValid {
+    Form form = formRepository.findById(formId).orElseThrow(() -> new IllegalArgumentException("Form with ID " + formId + " not found"));
 
     for (FormItem item : items) {
       if (item.getConstraint() != null && !item.getConstraint().isEmpty()) {
@@ -56,9 +93,15 @@ public class FormService {
       }
     }
 
-    Form form = new Form(formRepository.getNextId(), groupId, items);
-    formRepository.save(form);
-    return form;
+    items.forEach(item -> {
+                      item.setFormId(form.getId());
+                      formItemRepository.update(item);
+        }
+    );
+
+    form.setItems(items);
+    formRepository.update(form);
+
   }
 
   public List<AssignedFormModule> getAssignedFormModules(Form form) {
@@ -132,7 +175,7 @@ public class FormService {
   }
 
   /**
-   * Retrieves all forms that are automatically submitted after the supplied form is submitted.
+   * Retrieves all forms that are automatically submitted after the supplied form is submitted (AKA embedded).
    * TODO again what to do with autosubmit forms with autosubmit forms?
    * @param form
    * @return

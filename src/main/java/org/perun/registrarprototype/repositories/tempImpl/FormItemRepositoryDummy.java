@@ -28,4 +28,14 @@ public class FormItemRepositoryDummy implements FormItemRepository {
     formItems.add(formItem);
     return formItem;
   }
+
+  @Override
+  public FormItem update(FormItem formItem) {
+    FormItem item = formItems.stream().filter(dbItem -> dbItem.getId() == formItem.getId()).findFirst().orElse(null);
+    if (item == null) {
+      return formItem;
+    }
+    item.setFormId(formItem.getFormId());
+    return item;
+  }
 }

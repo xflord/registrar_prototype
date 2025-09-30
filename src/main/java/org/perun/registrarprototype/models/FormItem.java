@@ -1,6 +1,5 @@
 package org.perun.registrarprototype.models;
 
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
@@ -9,7 +8,7 @@ import java.util.Map;
 public class FormItem {
   private int id;
   private int formId;
-  private String type; // replace with enum/inheritance
+  private Type type; // replace with enum/inheritance
   private Map<Locale, ItemTexts> texts = new HashMap<>();
   private boolean required;
   private String constraint; // regex or similar
@@ -18,14 +17,14 @@ public class FormItem {
   private String destinationIdmAttribute;
   private boolean preferIdentityAttribute; // use IdM value if false, oauth claim value if true (and available)
   private String defaultValue;
-  private List<Form.FormType> formTypes;
+  private List<Form.FormType> formTypes = List.of(Form.FormType.INITIAL, Form.FormType.EXTENSION);
 
-  public FormItem(int id, String type) {
+  public FormItem(int id, Type type) {
     this.id = id;
     this.type = type;
   }
 
-  public FormItem(int id, String type, Map<Locale, ItemTexts> texts, boolean required, String constraint) {
+  public FormItem(int id, Type type, Map<Locale, ItemTexts> texts, boolean required, String constraint) {
     this.id = id;
     this.type = type;
     this.texts = texts;
@@ -33,7 +32,7 @@ public class FormItem {
     this.constraint = constraint;
   }
 
-  public FormItem(int id, String type, String label, boolean required, String constraint) {
+  public FormItem(int id, Type type, String label, boolean required, String constraint) {
     this.id = id;
     this.type = type;
     this.texts.put(Locale.ENGLISH, new ItemTexts(label, null, null));
@@ -41,7 +40,7 @@ public class FormItem {
     this.constraint = constraint;
   }
 
-  public FormItem(int id, int formId, String type, Map<Locale, ItemTexts> texts, boolean required, String constraint,
+  public FormItem(int id, int formId, Type type, Map<Locale, ItemTexts> texts, boolean required, String constraint,
                   String sourceIdentityAttribute, String sourceIdmAttribute, String destinationIdmAttribute,
                   boolean preferIdentityAttribute, List<Form.FormType> formTypes, String defaultValue) {
     this.id = id;
@@ -66,11 +65,11 @@ public class FormItem {
     this.id = id;
   }
 
-  public String getType() {
+  public Type getType() {
     return type;
   }
 
-  public void setType(String type) {
+  public void setType(Type type) {
     this.type = type;
   }
 
@@ -137,11 +136,21 @@ public class FormItem {
     return formId;
   }
 
+  public void setFormId(int formId) {
+    this.formId = formId;
+  }
+
   public List<Form.FormType> getFormTypes() {
     return formTypes;
   }
 
   public String getDefaultValue() {
     return defaultValue;
+  }
+
+  public enum Type {
+    LOGIN,
+    EMAIL,
+    TEXTFIELD
   }
 }

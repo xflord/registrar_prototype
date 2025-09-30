@@ -10,5 +10,7 @@ public interface FormRepository {
   Optional<Form> findByGroupId(int groupId);
 
   int getNextId();
-  void save(Form form);
+  Form save(Form form);
+
+  Form update(Form form);
 }

@@ -4,10 +4,10 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class Form {
-  private final int id;
+  private int id;
   private int voId;
   private final int groupId;
-  private final List<FormItem> items;
+  private List<FormItem> items;
 
   public Form(int id, int groupId, List<FormItem> items) {
     this.id = id;
@@ -41,6 +41,9 @@ public class Form {
   public int getId() {
     return id;
   }
+  public void setId(int id) {
+    this.id = id;
+  }
 
   public int getVoId() {
     return voId;
@@ -52,6 +55,10 @@ public class Form {
 
   public List<FormItem> getItems() {
     return items;
+  }
+
+  public void setItems(List<FormItem> items) {
+    this.items = items;
   }
 
   public enum FormType {

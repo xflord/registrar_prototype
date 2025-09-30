@@ -30,8 +30,20 @@ public class FormRepositoryDummy implements FormRepository {
   }
 
   @Override
-  public void save(Form form) {
+  public Form save(Form form) {
+    form.setId(currId++);
     forms.add(form);
+    return form;
+  }
+
+  @Override
+  public Form update(Form form) {
+    Form existingForm = forms.stream().filter(dbForm -> dbForm.getId() == form.getId()).findFirst().orElse(null);
+    if (existingForm == null) {
+      return form;
+    }
+    existingForm.setItems(form.getItems());
+    return existingForm;
   }
 
   // for testing purposes

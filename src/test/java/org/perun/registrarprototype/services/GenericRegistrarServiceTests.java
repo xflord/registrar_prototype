@@ -29,21 +29,23 @@ public class GenericRegistrarServiceTests {
    protected FormService formService;
    @Autowired
    protected CurrentUserProvider currentUserProvider;
+   @Autowired
    protected ApplicationRepository applicationRepository;
+   @Autowired
    protected FormRepository formRepository;
    protected FormModuleRepository formModuleRepository;
+
+   private static int groupId = 0;
 
    @BeforeEach
     void setUp() {
         perunIntegrationService = new PerunIntegrationDummy();
-        ApplicationRepositoryDummy appRep = new ApplicationRepositoryDummy();
-        appRep.reset();
-        applicationRepository = appRep;
-        FormRepositoryDummy formRep = new FormRepositoryDummy();
-        formRep.reset();
-        formRepository = formRep;
         FormModuleRepositoryDummy formModuleRep = new FormModuleRepositoryDummy();
         formModuleRep.reset();
         formModuleRepository = formModuleRep;
+    }
+
+    protected int getGroupId() {
+     return groupId++;
     }
 }

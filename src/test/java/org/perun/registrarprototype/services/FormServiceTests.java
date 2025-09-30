@@ -14,13 +14,15 @@ public class FormServiceTests extends GenericRegistrarServiceTests {
 
   @Test
   void createFormWithoutConstraints() throws Exception {
-    FormItem item1 = new FormItem(1, "test");
-    FormItem item2 = new FormItem(2, "test");
-
-    int groupId = 1;
+    int groupId = getGroupId();
     perunIntegrationService.createGroup(groupId);
 
-    Form form = formService.createForm(null, groupId, List.of(item1, item2));
+    Form form = formService.createForm(null, groupId);
+
+    FormItem item1 = new FormItem(1, FormItem.Type.TEXTFIELD);
+    item1 = formService.setFormItem(form.getId(), item1);
+    FormItem item2 = new FormItem(2, FormItem.Type.TEXTFIELD);
+    item2 = formService.setFormItem(form.getId(), item2);
 
     Form createdForm = formRepository.findById(form.getId()).orElse(null);
     assert createdForm == form;
@@ -32,11 +34,13 @@ public class FormServiceTests extends GenericRegistrarServiceTests {
 
   @Test
   void createFormCorrectConstraints() throws Exception {
-    FormItem item1 = new FormItem(1, "email", "email", false, "^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$");
-    int groupId = 1;
+    int groupId = getGroupId();
     perunIntegrationService.createGroup(groupId);
 
-    Form form = formService.createForm(null, groupId, List.of(item1));
+    Form form = formService.createForm(null, groupId);
+
+    FormItem item1 = new FormItem(1, FormItem.Type.EMAIL, "email", false, "^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$");
+    item1 = formService.setFormItem(form.getId(), item1);
 
     Form createdForm = formRepository.findById(form.getId()).orElse(null);
     assert createdForm == form;
@@ -47,12 +51,13 @@ public class FormServiceTests extends GenericRegistrarServiceTests {
 
   @Test
   void setModulesWithoutOptions() throws Exception {
-    FormItem item1 = new FormItem(1, "test");
-
-    int groupId = 1;
+    int groupId = getGroupId();
     perunIntegrationService.createGroup(groupId);
 
-    Form form = formService.createForm(null, groupId, List.of(item1));
+    Form form = formService.createForm(null, groupId);
+
+    FormItem item1 = new FormItem(1, FormItem.Type.TEXTFIELD);
+    item1 = formService.setFormItem(form.getId(), item1);
 
     AssignedFormModule module = new AssignedFormModule("testModule", new HashMap<>());
 
@@ -71,12 +76,14 @@ public class FormServiceTests extends GenericRegistrarServiceTests {
 
   @Test
   void setModulesWithOptions() throws Exception {
-    FormItem item1 = new FormItem(1, "test");
-
-    int groupId = 1;
+    int groupId = getGroupId();
     perunIntegrationService.createGroup(groupId);
 
-    Form form = formService.createForm(null, groupId, List.of(item1));
+    Form form = formService.createForm(null, groupId);
+
+    FormItem item1 = new FormItem(1, FormItem.Type.TEXTFIELD);
+    item1 = formService.setFormItem(form.getId(), item1);
+
 
     AssignedFormModule module = new AssignedFormModule("testModuleWithOptions", Map.of("option1", "value1", "option2", "value2"));
 

@@ -91,15 +91,20 @@ public class ApplicationService {
       throw new InsufficientRightsException("You are not authorized to approve this application");
     }
     try {
+      // TODO this probably isn't enough -> create Approval object that holds the approver info as well (and metadata)
       app.approve();
     } catch (InvalidApplicationStateTransitionException e) {
       throw new RuntimeException(e);
     }
 
+    // TODO unreserve logins
+
 
     app = applicationRepository.save(app);
 
     for (AssignedFormModule module : modules) {
+      // TODO if this was the first approved initial app (e.g., user ID from IdM was not available before but is now)
+      //  update all other submissions matching this user with IdM ID (and possibly other attributes)
       module.getFormModule().onApproval(app);
     }
     // TODO directly call IdM (this could be done via module) / call adapter (again this could be done via modules) / or possibly emit event with whole app object + submission data
@@ -122,6 +127,9 @@ public class ApplicationService {
     } catch (InvalidApplicationStateTransitionException e) {
       throw new RuntimeException(e);
     }
+
+    // TODO unreserve logins
+    // TODO how do we handle auto-submitted applications related to this one?
 
     List<AssignedFormModule> modules = formService.getAssignedFormModules(form);
     for (AssignedFormModule module : modules) {
@@ -225,6 +233,7 @@ public class ApplicationService {
       throw new IllegalArgumentException("User already has an open application in group: " + prefilledFormData.getGroupId());
     }
 
+    areAllRequiredItemsFilled(sess, prefilledFormData);
     prefilledFormData.getPrefilledItems().forEach(item -> {
       validateFilledFormItemData(sess, form, item);
       checkPrefilledValueConsistency(sess, item);
@@ -234,16 +243,31 @@ public class ApplicationService {
         prefilledFormData.getPrefilledItems(), null, prefilledFormData.getType());
     try {
       app.submit(form);
-    } catch (InvalidApplicationDataException | InvalidApplicationStateTransitionException e) {
+    } catch (InvalidApplicationStateTransitionException e) {
       // should not happen, we checked the items beforehand
       throw new DataInconsistencyException(e.getMessage());
     }
 
-    // TODO if we emit events asynchronously this might be problematic (not sure rollback would work here)
     app = applicationRepository.save(app);
+
+    // TODO reserve login
+
+    // TODO if we emit events asynchronously this might be problematic (not sure rollback would work here)
     eventService.emitEvent(new ApplicationSubmittedEvent(app.getId(), Integer.parseInt(sess.id()), prefilledFormData.getGroupId()));
 
     return app;
+  }
+
+  private void areAllRequiredItemsFilled(CurrentUser sess, PrefilledFormData data) {
+    List<FormItem> items = formService.getFormItems(sess, data.getForm(), data.getType());
+    List<ValidationError> result = items.stream().map(item -> item.validate(data.getPrefilledItems().stream()
+                                            .filter(itemData -> itemData.getFormItem().getId() == item.getId())
+                                            .findFirst().orElse(null))).filter(Objects::nonNull).toList();
+    if (!result.isEmpty()) {
+      System.out.println(result.toString());
+      throw new InvalidApplicationDataException("Some of the form items were incorrectly filled in",
+            result, null);
+    }
   }
 
   /**
@@ -263,7 +287,8 @@ public class ApplicationService {
     ValidationError validation = item.validate(itemData);
 
     if (validation != null) {
-      throw new IllegalArgumentException("Form item " + item.getId() + " validation failed with error: " + validation.message());
+      throw new InvalidApplicationDataException("Some of the form items were incorrectly filled in",
+                  List.of(validation), null);
     }
 
     itemData.setFormItem(item);
@@ -272,6 +297,7 @@ public class ApplicationService {
   /**
    * Checks that form data is validated against form item constraints, checks that prefilled data is still valid, if so
    * set a flag to indicate that the form item data has been prefilled and validated (LOA or just a flag).
+   * TODO do we want the option to require item value to be validated? This can optionally be done using `beforeApproval` module hook
    * @param sess
    * @param itemData
    */

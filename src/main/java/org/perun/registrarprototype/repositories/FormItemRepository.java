@@ -10,4 +10,6 @@ public interface FormItemRepository {
   Optional<FormItem> getFormItemById(int formItemId);
 
   FormItem save(FormItem formItem);
+
+  FormItem update(FormItem formItem);
 }

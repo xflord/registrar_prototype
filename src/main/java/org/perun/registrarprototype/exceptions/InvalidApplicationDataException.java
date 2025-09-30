@@ -4,7 +4,7 @@ import java.util.List;
 import org.perun.registrarprototype.models.Application;
 import org.perun.registrarprototype.models.ValidationError;
 
-public class InvalidApplicationDataException extends Exception {
+public class InvalidApplicationDataException extends RuntimeException {
   private final Application application;
   private final List<ValidationError> errors;
 
