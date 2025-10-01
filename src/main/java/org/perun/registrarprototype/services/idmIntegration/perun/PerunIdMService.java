@@ -2,6 +2,7 @@ package org.perun.registrarprototype.services.idmIntegration.perun;
 
 import cz.metacentrum.perun.openapi.PerunRPC;
 import cz.metacentrum.perun.openapi.model.Attribute;
+import cz.metacentrum.perun.openapi.model.AttributeDefinition;
 import cz.metacentrum.perun.openapi.model.Group;
 import cz.metacentrum.perun.openapi.model.Identity;
 import cz.metacentrum.perun.openapi.model.Member;
@@ -251,6 +252,35 @@ public class PerunIdMService implements IdMService {
     } catch (RestClientException ex) {
       throw new RuntimeException(ex);
     }
+  }
+
+  @Override
+  public AttributeDefinition getAttributeDefinition(String attributeName) {
+    try {
+      return rpc.getAttributesManager().getAttributeDefinitionByName(attributeName);
+    } catch (HttpClientErrorException ex) {
+      System.out.println(PerunException.to(ex).getMessage());
+      return null;
+    } catch (RestClientException ex) {
+      throw new RuntimeException(ex);
+    }
+  }
+
+  @Override
+  public boolean isLoginAvailable(String namespace, String login) {
+    try {
+      return rpc.getUsersManager().isLoginAvailable(namespace, login) == 1;
+    } catch (HttpClientErrorException ex) {
+      System.out.println(PerunException.to(ex).getMessage());
+      return false;
+    } catch (RestClientException ex) {
+      throw new RuntimeException(ex);
+    }
+  }
+
+  @Override
+  public void reserveLogin(String namespace, String login) {
+    // not implemented
   }
 
   @Override

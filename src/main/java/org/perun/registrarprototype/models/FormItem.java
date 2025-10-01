@@ -18,6 +18,10 @@ public class FormItem {
   private boolean preferIdentityAttribute; // use IdM value if false, oauth claim value if true (and available)
   private String defaultValue;
   private List<Form.FormType> formTypes = List.of(Form.FormType.INITIAL, Form.FormType.EXTENSION);
+  private Condition hidden;
+  private Condition disabled;
+  private Integer hiddenDependencyItemId;
+  private Integer disabledDependencyItemId;
 
   public FormItem(int id, Type type) {
     this.id = id;
@@ -42,7 +46,8 @@ public class FormItem {
 
   public FormItem(int id, int formId, Type type, Map<Locale, ItemTexts> texts, boolean required, String constraint,
                   String sourceIdentityAttribute, String sourceIdmAttribute, String destinationIdmAttribute,
-                  boolean preferIdentityAttribute, List<Form.FormType> formTypes, String defaultValue) {
+                  boolean preferIdentityAttribute, List<Form.FormType> formTypes, String defaultValue,
+                  Condition hidden, Condition disabled) {
     this.id = id;
     this.formId = formId;
     this.type = type;
@@ -55,6 +60,8 @@ public class FormItem {
     this.preferIdentityAttribute = preferIdentityAttribute;
     this.formTypes = formTypes;
     this.defaultValue = defaultValue;
+    this.hidden = hidden;
+    this.disabled = disabled;
   }
 
   public int getId() {
@@ -148,9 +155,38 @@ public class FormItem {
     return defaultValue;
   }
 
+  public Condition getDisabled() {
+    return disabled;
+  }
+
+  public void setDisabled(Condition disabled) {
+    this.disabled = disabled;
+  }
+
+  public Condition getHidden() {
+    return hidden;
+  }
+
+  public void setHidden(Condition hidden) {
+    this.hidden = hidden;
+  }
+
+  public Integer getDisabledDependencyItemId() {
+    return disabledDependencyItemId;
+  }
+
+  public Integer getHiddenDependencyItemId() {
+    return hiddenDependencyItemId;
+  }
+
   public enum Type {
     LOGIN,
     EMAIL,
     TEXTFIELD
   }
+
+  public enum Condition {
+    NEVER, ALWAYS, IF_PREFILLED, IF_EMPTY
+  }
+
 }

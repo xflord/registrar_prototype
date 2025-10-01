@@ -1,5 +1,6 @@
 package org.perun.registrarprototype.services.idmIntegration;
 
+import cz.metacentrum.perun.openapi.model.AttributeDefinition;
 import cz.metacentrum.perun.openapi.model.Identity;
 import cz.metacentrum.perun.openapi.model.User;
 import java.util.List;
@@ -51,6 +52,12 @@ public interface IdMService {
   String getVoAttribute(String attributeName, int voId);
 
   String getGroupAttribute(String attributeName, int groupId);
+
+  AttributeDefinition getAttributeDefinition(String attributeName);
+
+  boolean isLoginAvailable(String namespace, String login);
+
+  void reserveLogin(String namespace, String login);
 
   /**
    * Retrieves User objects that match the attributes of the oauth principal (e.g. sub in oidc, email. etc.).

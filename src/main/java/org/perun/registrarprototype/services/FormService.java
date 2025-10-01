@@ -12,9 +12,11 @@ import org.perun.registrarprototype.exceptions.InsufficientRightsException;
 import org.perun.registrarprototype.models.AssignedFormModule;
 import org.perun.registrarprototype.models.Form;
 import org.perun.registrarprototype.models.FormItem;
+import org.perun.registrarprototype.models.FormTransition;
 import org.perun.registrarprototype.repositories.FormItemRepository;
 import org.perun.registrarprototype.repositories.FormModuleRepository;
 import org.perun.registrarprototype.repositories.FormRepository;
+import org.perun.registrarprototype.repositories.FormTransitionRepository;
 import org.perun.registrarprototype.security.CurrentUser;
 import org.perun.registrarprototype.services.modules.FormModule;
 import org.springframework.beans.BeansException;
@@ -27,16 +29,18 @@ public class FormService {
   private final AuthorizationService authorizationService;
   private final FormModuleRepository formModuleRepository;
   private final FormItemRepository formItemRepository;
+  private final FormTransitionRepository formTransitionRepository;
   private final ApplicationContext context;
 
   public FormService(FormRepository formRepository, AuthorizationService authorizationService,
                      FormModuleRepository formModuleRepository, ApplicationContext context,
-                     FormItemRepository formItemRepository) {
+                     FormItemRepository formItemRepository, FormTransitionRepository formTransitionRepository) {
     this.formRepository = formRepository;
     this.authorizationService = authorizationService;
     this.formModuleRepository = formModuleRepository;
     this.context = context;
     this.formItemRepository = formItemRepository;
+    this.formTransitionRepository = formTransitionRepository;
   }
 
   public Form createForm(CurrentUser sess, int groupId)
@@ -170,8 +174,12 @@ public class FormService {
    * TODO what about PRE forms that also have prerequisites? Recursively check all prerequisites or do not allow?
    * @return
    */
-  public List<Form> getPrerequisiteForms(Form form) {
-    return new ArrayList<>();
+  public List<FormTransition> getPrerequisiteForms(Form form, Form.FormType type) {
+    List<FormTransition> transitions = formTransitionRepository.getAllBySourceFormAndType(form, FormTransition.TransitionType.PREREQUISITE);
+    // TODO add some logic to determine the order of PRE forms? More so if we want recursive prerequisites.
+    return transitions.stream()
+               .filter((transition) -> transition.getSourceFormTypes().contains(type))
+               .toList();
   }
 
   /**

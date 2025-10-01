@@ -48,11 +48,12 @@ public class ApplicationController {
 
   // --- Manager approves an application ---
   @PostMapping("/{applicationId}/approve")
-  public ResponseEntity<Void> approveApplication(@PathVariable int applicationId, HttpServletRequest request) {
+  public ResponseEntity<Void> approveApplication(@PathVariable int applicationId, @RequestBody String message,
+                                                 HttpServletRequest request) {
     String authHeader = request.getHeader(HttpHeaders.AUTHORIZATION); // replace with spring security/filter after done with testing
     CurrentUser sess = currentUserProvider.getCurrentUser(authHeader);
     try {
-      applicationService.approveApplication(sess, applicationId);
+      applicationService.approveApplication(sess, applicationId, message);
     } catch (InsufficientRightsException e) {
       return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
     }
@@ -61,11 +62,12 @@ public class ApplicationController {
 
   // --- Manager rejects an application ---
   @PostMapping("/{applicationId}/reject")
-  public ResponseEntity<Void> rejectApplication(@PathVariable int applicationId, HttpServletRequest request) {
+  public ResponseEntity<Void> rejectApplication(@PathVariable int applicationId, @RequestBody String message,
+                                                HttpServletRequest request) {
     String authHeader = request.getHeader(HttpHeaders.AUTHORIZATION); // replace with spring security/filter after done with testing
     CurrentUser sess = currentUserProvider.getCurrentUser(authHeader);
     try {
-      applicationService.rejectApplication(sess, applicationId);
+      applicationService.rejectApplication(sess, applicationId, message);
     } catch (InsufficientRightsException e) {
       return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
     }

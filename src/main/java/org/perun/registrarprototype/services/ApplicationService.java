@@ -1,12 +1,15 @@
 package org.perun.registrarprototype.services;
 
+import cz.metacentrum.perun.openapi.model.AttributeDefinition;
 import io.micrometer.common.util.StringUtils;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.Set;
 import java.util.stream.Collectors;
 import org.perun.registrarprototype.events.ApplicationApprovedEvent;
 import org.perun.registrarprototype.events.ApplicationRejectedEvent;
@@ -18,15 +21,18 @@ import org.perun.registrarprototype.exceptions.InvalidApplicationDataException;
 import org.perun.registrarprototype.exceptions.InvalidApplicationStateTransitionException;
 import org.perun.registrarprototype.models.Application;
 import org.perun.registrarprototype.models.AssignedFormModule;
+import org.perun.registrarprototype.models.Decision;
 import org.perun.registrarprototype.models.Form;
 import org.perun.registrarprototype.models.FormItem;
 import org.perun.registrarprototype.models.FormItemData;
+import org.perun.registrarprototype.models.FormTransition;
 import org.perun.registrarprototype.models.PrefilledFormData;
 import org.perun.registrarprototype.models.PrefilledSubmissionData;
 import org.perun.registrarprototype.models.Submission;
 import org.perun.registrarprototype.models.SubmissionResult;
 import org.perun.registrarprototype.models.ValidationError;
 import org.perun.registrarprototype.repositories.ApplicationRepository;
+import org.perun.registrarprototype.repositories.DecisionRepository;
 import org.perun.registrarprototype.repositories.FormRepository;
 import org.perun.registrarprototype.repositories.SubmissionRepository;
 import org.perun.registrarprototype.security.CurrentUser;
@@ -38,6 +44,7 @@ public class ApplicationService {
   private final ApplicationRepository applicationRepository;
   private final FormRepository formRepository;
   private final SubmissionRepository submissionRepository;
+  private final DecisionRepository decisionRepository;
   private final EventService eventService;
   private final PerunIntegrationService perunIntegrationService;
   private final AuthorizationService authorizationService;
@@ -45,13 +52,14 @@ public class ApplicationService {
   private final IdMService idmService;
 
   public ApplicationService(ApplicationRepository applicationRepository, FormRepository formRepository,
-                            SubmissionRepository submissionRepository,
+                            SubmissionRepository submissionRepository, DecisionRepository decisionRepository,
                             EventService eventService, PerunIntegrationService perunIntegrationService,
                             AuthorizationService authorizationService, FormService formService,
                             IdMService idmService) {
     this.applicationRepository = applicationRepository;
     this.formRepository = formRepository;
     this.submissionRepository = submissionRepository;
+    this.decisionRepository = decisionRepository;
     this.eventService = eventService;
     this.perunIntegrationService = perunIntegrationService;
     this.authorizationService = authorizationService;
@@ -59,6 +67,7 @@ public class ApplicationService {
     this.idmService = idmService;
   }
 
+  // TODO modify this to call all the new methods to test the flow
   public Application registerUserToGroup(CurrentUser sess, int groupId, List<FormItemData> itemData)
       throws InvalidApplicationDataException {
     Form form = formRepository.findByGroupId(groupId).orElseThrow(() -> new IllegalArgumentException("Form not found"));
@@ -77,7 +86,7 @@ public class ApplicationService {
     return app;
   }
 
-  public Application approveApplication(CurrentUser sess, int applicationId) throws InsufficientRightsException {
+  public Application approveApplication(CurrentUser sess, int applicationId, String message) throws InsufficientRightsException {
     Application app = applicationRepository.findById(applicationId).orElseThrow(() -> new IllegalArgumentException("Application not found"));
     Form form = formService.getFormById(sess, app.getFormId());
 
@@ -90,15 +99,16 @@ public class ApplicationService {
       // return 403
       throw new InsufficientRightsException("You are not authorized to approve this application");
     }
+
+    makeDecision(sess, app, message, Decision.DecisionType.APPROVED);
+
     try {
-      // TODO this probably isn't enough -> create Approval object that holds the approver info as well (and metadata)
       app.approve();
     } catch (InvalidApplicationStateTransitionException e) {
       throw new RuntimeException(e);
     }
 
     // TODO unreserve logins
-
 
     app = applicationRepository.save(app);
 
@@ -114,7 +124,7 @@ public class ApplicationService {
     return app;
   }
 
-  public Application rejectApplication(CurrentUser sess, int applicationId) throws InsufficientRightsException {
+  public Application rejectApplication(CurrentUser sess, int applicationId, String message) throws InsufficientRightsException {
     Application app = applicationRepository.findById(applicationId).orElseThrow(() -> new IllegalArgumentException("Application not found"));
     Form form = formService.getFormById(sess, app.getFormId());
 
@@ -122,13 +132,17 @@ public class ApplicationService {
       // return 403
       throw new InsufficientRightsException("You are not authorized to reject this application");
     }
+
+    makeDecision(sess, app, message, Decision.DecisionType.REJECTED);
+
     try {
       app.reject("Manually rejected by manager");
     } catch (InvalidApplicationStateTransitionException e) {
       throw new RuntimeException(e);
     }
 
-    // TODO unreserve logins
+    // TODO unreserve logins -> this probably also needs to be done in IdM/adapter (shortly before setting the attributes)
+
     // TODO how do we handle auto-submitted applications related to this one?
 
     List<AssignedFormModule> modules = formService.getAssignedFormModules(form);
@@ -142,14 +156,20 @@ public class ApplicationService {
     return app;
   }
 
-  public Application requestChanges(CurrentUser sess, int applicationId) throws InsufficientRightsException {
+  public Application requestChanges(CurrentUser sess, int applicationId, String message) throws InsufficientRightsException {
     Application app = applicationRepository.findById(applicationId).orElseThrow(() -> new IllegalArgumentException("Application not found"));
     Form form = formService.getFormById(sess, app.getFormId());
+
+    if (StringUtils.isEmpty(message)) {
+      throw new IllegalArgumentException("Cannot request changes without a message");
+    }
 
     if (!authorizationService.isAuthorized(sess, form.getGroupId())) {
       // return 403
       throw new InsufficientRightsException("You are not authorized to request changes to this application");
     }
+
+    makeDecision(sess, app, message, Decision.DecisionType.CHANGES_REQUESTED);
 
     try {
       app.requestChanges();
@@ -163,6 +183,32 @@ public class ApplicationService {
     return app;
   }
 
+  /**
+   * Creates the decision object filled with metadata
+   * @param sess
+   * @param app
+   * @param message
+   * @param decisionType
+   * @return
+   */
+  private Decision makeDecision(CurrentUser sess, Application app, String message, Decision.DecisionType decisionType) {
+    Decision decision = new Decision();
+    decision.setApplication(app);
+    decision.setApproverId(sess.id());
+    decision.setApproverName(sess.attribute("name"));
+    decision.setDecisionType(decisionType);
+    decision.setMessage(message);
+    return decisionRepository.save(decision);
+  }
+
+  /**
+   * Submits an application to each of the supplied forms, aggregates them under one submission object along with
+   * information about the submitter, automatically submits applications (to forms that are marked as such), retrieves
+   * forms to which to redirect, and displays result messages.
+   * @param sess
+   * @param submissionData
+   * @return
+   */
   public SubmissionResult applyForMemberships(CurrentUser sess, PrefilledSubmissionData submissionData) {
     List<Application> applications = submissionData.getPrefilledData().stream()
                                          .map((data) -> applyForMembership(sess, data))
@@ -190,6 +236,8 @@ public class ApplicationService {
                                     .toList();
     result.setRedirectUrl(submissionData.getRedirectUrl());
     setRedirectForms(sess, redirectForms, result);
+
+    result.addMessage("Successfully submitted applications"); // TODO add custom form messages
 
     return result;
   }
@@ -221,6 +269,12 @@ public class ApplicationService {
 
   }
 
+  /**
+   * Validates the input data for the form, marks assured prefilled items and submits an application.
+   * @param sess
+   * @param prefilledFormData
+   * @return
+   */
   public Application applyForMembership(CurrentUser sess, PrefilledFormData prefilledFormData) {
     Form form = formRepository.findByGroupId(prefilledFormData.getGroupId()).orElseThrow(() -> new IllegalArgumentException("Form not found"));
 
@@ -233,11 +287,10 @@ public class ApplicationService {
       throw new IllegalArgumentException("User already has an open application in group: " + prefilledFormData.getGroupId());
     }
 
-    areAllRequiredItemsFilled(sess, prefilledFormData);
-    prefilledFormData.getPrefilledItems().forEach(item -> {
-      validateFilledFormItemData(sess, form, item);
-      checkPrefilledValueConsistency(sess, item);
-    });
+    Map<String, String> reservedPrincipalLogins = getReservedLoginsForPrincipal(sess); // call here to avoid unnecessary idm calls
+
+    validateFilledFormData(sess, prefilledFormData);
+    prefilledFormData.getPrefilledItems().forEach(item -> checkPrefilledValueConsistency(sess, item, reservedPrincipalLogins));
 
     Application app = new Application(0, Integer.parseInt(sess.id()), form.getId(),
         prefilledFormData.getPrefilledItems(), null, prefilledFormData.getType());
@@ -250,7 +303,7 @@ public class ApplicationService {
 
     app = applicationRepository.save(app);
 
-    // TODO reserve login
+    reserveLogins(sess, prefilledFormData.getPrefilledItems());
 
     // TODO if we emit events asynchronously this might be problematic (not sure rollback would work here)
     eventService.emitEvent(new ApplicationSubmittedEvent(app.getId(), Integer.parseInt(sess.id()), prefilledFormData.getGroupId()));
@@ -258,53 +311,57 @@ public class ApplicationService {
     return app;
   }
 
-  private void areAllRequiredItemsFilled(CurrentUser sess, PrefilledFormData data) {
+  /**
+   * Validates that the submitted form data is correctly filled in (e.g. required items not empty, values match
+   * constraints, etc.)
+   * @param sess
+   * @param data
+   */
+  private void validateFilledFormData(CurrentUser sess, PrefilledFormData data) {
     List<FormItem> items = formService.getFormItems(sess, data.getForm(), data.getType());
-    List<ValidationError> result = items.stream().map(item -> item.validate(data.getPrefilledItems().stream()
-                                            .filter(itemData -> itemData.getFormItem().getId() == item.getId())
-                                            .findFirst().orElse(null))).filter(Objects::nonNull).toList();
+
+    Set<Integer> itemIds = items.stream().map(FormItem::getId).collect(Collectors.toSet());
+    List<FormItemData> foreignItems = data.getPrefilledItems().stream()
+                                          .filter((itemData) -> itemIds.contains(itemData.getFormItem().getId()))
+                                          .toList();
+    if (!foreignItems.isEmpty()) {
+      throw new DataInconsistencyException("Submitted form: " + data.getForm().getId() + " contains data for items" +
+                                               " not currently in that form: " + foreignItems);
+    }
+
+    List<ValidationError> result = items.stream()
+                                       .map(item -> item.validate(
+        data.getPrefilledItems().stream()
+            .filter(itemData -> itemData.getFormItem().getId() == item.getId())
+            .findFirst().orElse(null))
+        )
+                                       .filter(Objects::nonNull).toList();
     if (!result.isEmpty()) {
-      System.out.println(result.toString());
       throw new InvalidApplicationDataException("Some of the form items were incorrectly filled in",
             result, null);
     }
   }
 
   /**
-   * Validate that the given form item data is valid (e.g. not empty, valid value, etc.)
-   * @param sess
-   * @param form
-   * @param itemData
-   */
-  private void validateFilledFormItemData(CurrentUser sess, Form form, FormItemData itemData) {
-    // retrieve form item again to check whether it hasn't changed since submission
-    FormItem item = formService.getFormItemById(sess, itemData.getFormItem().getId());
-
-    if (item.getFormId() != form.getId()) {
-      throw new IllegalArgumentException("Form item " + item.getId() + " does not belong to form " + form.getId());
-    }
-
-    ValidationError validation = item.validate(itemData);
-
-    if (validation != null) {
-      throw new InvalidApplicationDataException("Some of the form items were incorrectly filled in",
-                  List.of(validation), null);
-    }
-
-    itemData.setFormItem(item);
-  }
-
-  /**
-   * Checks that form data is validated against form item constraints, checks that prefilled data is still valid, if so
-   * set a flag to indicate that the form item data has been prefilled and validated (LOA or just a flag).
+   * Checks that form data is validated against form item constraints, checks that prefilled data is still valid (e.g.
+   * the submitted value matches prefilled value from source attributes), if so set a flag to indicate that the form item
+   * data has been validated (LOA or just a flag).
    * TODO do we want the option to require item value to be validated? This can optionally be done using `beforeApproval` module hook
    * @param sess
    * @param itemData
    */
-  private void checkPrefilledValueConsistency(CurrentUser sess, FormItemData itemData) {
+  private void checkPrefilledValueConsistency(CurrentUser sess, FormItemData itemData, Map<String, String> reservedLogins) {
     itemData.setValueAssured(false);
     if (StringUtils.isEmpty(itemData.getValue())) {
       return;
+    }
+
+    if (itemData.getFormItem().getType().equals(FormItem.Type.LOGIN)) {
+      String loginValue = tryToFillLoginItem(sess, itemData.getFormItem(), reservedLogins);
+      if (!StringUtils.isEmpty(loginValue) && loginValue.equals(itemData.getValue())) {
+        itemData.setValueAssured(true);
+        return;
+      }
     }
 
     String identityValue = getIdentityAttributeValue(sess, itemData.getFormItem());
@@ -385,14 +442,42 @@ public class ApplicationService {
     return assemblePrefilledForms(sess, requiredForms, redirectUrl);
   }
 
+  /**
+   * Determines the application types for each form, retrieves and prefills items for that form type and returns this
+   * aggregated data.
+   * @param sess
+   * @param requiredForms
+   * @param redirectUrl
+   * @return
+   */
   private PrefilledSubmissionData assemblePrefilledForms(CurrentUser sess, List<Form> requiredForms, String redirectUrl) {
     List<PrefilledFormData> prefilledFormData = new ArrayList<>();
     for (Form form : requiredForms) {
+      if (checkOpenApplications(sess, form) != null) {
+        continue;
+      }
+
       Form.FormType type = selectFormType(sess, form);
+      if (type == null) {
+        continue;
+      }
 
-      List<FormItem> formItems = formService.getFormItems(sess, form, type);
+      // now that we have form type, retrieve prerequisite forms
+      formService.getPrerequisiteForms(form, type).forEach(transition -> {
+        if (checkOpenApplications(sess, form) == null) {
+          Form.FormType targetFormType = selectFormType(sess, transition.getTargetForm());
+          if (transition.getTargetFormTypes().contains(targetFormType) && targetFormType != null) {
+            Form prerequisiteForm =  transition.getTargetForm();
+            prerequisiteForm.setItems(formService.getFormItems(sess, form, targetFormType));
+            prefilledFormData.add(new PrefilledFormData(prerequisiteForm, prerequisiteForm.getGroupId(),
+                loadForm(sess, prerequisiteForm, targetFormType), targetFormType));
+          }
+        }
+      });
 
-      List<FormItemData> prefilledFormItemData = loadForm(sess, form, type, formItems);
+      form.setItems(formService.getFormItems(sess, form, type));
+
+      List<FormItemData> prefilledFormItemData = loadForm(sess, form, type);
 
       prefilledFormData.add(new PrefilledFormData(form, form.getGroupId(), prefilledFormItemData,
           type));
@@ -409,35 +494,146 @@ public class ApplicationService {
    */
   private Form.FormType selectFormType(CurrentUser sess, Form form) {
 
-    Application existingApplication = checkOpenApplications(sess, form);
-    if (existingApplication != null) {
-      // TODO This is probably a bit problematic -> we probably want to know we're updating an INITIAL X EXTENSION app,
-      //  also, do we prefill the prefilled data again if updating? Probably call a different method for updating
-      return Form.FormType.UPDATE;
+    if (checkUserMembership(sess, form.getGroupId())) {
+      if (canExtendMembership(sess, form.getGroupId())) {
+        return Form.FormType.EXTENSION;
+      }
+      return null;
     }
-
-    if (canExtendMembership(sess, form.getGroupId())) {
-      return Form.FormType.EXTENSION;
-    }
-
 
     return Form.FormType.INITIAL;
   }
 
-  public List<FormItemData> loadForm(CurrentUser sess, Form form, Form.FormType type, List<FormItem> formItems) {
+  /**
+   * Generates prefilled form item data for the form and its type, calls module hooks and ensures the validity of form
+   * item visibility.
+   * @param sess
+   * @param form
+   * @param type
+   * @return
+   */
+  public List<FormItemData> loadForm(CurrentUser sess, Form form, Form.FormType type) {
+    if (type.equals(Form.FormType.UPDATE)) {
+      // TODO prefill form with data from already submitted app if loading modifying/update form type
+    }
 
     List<AssignedFormModule> modules = formService.getAssignedFormModules(form);
     modules.forEach(module -> module.getFormModule().canBeSubmitted(sess, type, module.getOptions()));
 
-    List<FormItemData> prefilledFormItemData = formItems.stream()
-        .map((item) -> this.prefillFormItemValue(sess, item))
-        .toList();
-
-    // TODO prefill form with data from already submitted app if loading modifying/update form type (e.g pass form type as arg)
+    List<FormItemData> prefilledFormItemData = prefillForm(sess, form);
 
     modules.forEach(module -> module.getFormModule().afterFormItemsPrefilled(sess, type, prefilledFormItemData));
 
+    checkMissingPrefilledItems(sess, prefilledFormItemData);
+
     return prefilledFormItemData;
+  }
+
+  /**
+   * Returns prefilled form item data for supplied form's items.
+   * @param sess
+   * @param form Form object with set form items array
+   * @return
+   */
+  private List<FormItemData> prefillForm(CurrentUser sess, Form form) {
+    Map<String, String> reservedPrincipalLogins = getReservedLoginsForPrincipal(sess); // call here to avoid unnecessary idm calls
+
+    return form.getItems().stream()
+        .map((item) -> new FormItemData(item, null,
+            calculatePrefilledValue(sess, item, reservedPrincipalLogins)))
+        .toList();
+    // TODO consider prefilling from submitted prerequisite forms (from submitted matching destination attribute to source/destination?)
+  }
+
+  /**
+   * Ensures that all items that are required and do not allow user input are prefilled.
+   * @param sess
+   * @param prefilledItems
+   */
+  private void checkMissingPrefilledItems(CurrentUser sess, List<FormItemData> prefilledItems) {
+    List<FormItemData> unmodifiableRequiredButEmpty = new ArrayList<>();
+    List<FormItemData> itemsWithMissingData = new ArrayList<>();
+    prefilledItems.stream()
+        .filter(item -> hasItemIncorrectVisibility(item, prefilledItems)).forEach(item -> {
+          if (StringUtils.isEmpty(item.getFormItem().getSourceIdentityAttribute()) &&
+              StringUtils.isEmpty(item.getFormItem().getSourceIdmAttribute())) {
+            unmodifiableRequiredButEmpty.add(item);
+          } else {
+            itemsWithMissingData.add(item);
+          }
+        });
+    if (!unmodifiableRequiredButEmpty.isEmpty()) {
+      System.out.println("ERROR: The following items were set as hidden or disabled but do not have source attributes" +
+                             " to prefill from: " + unmodifiableRequiredButEmpty);
+      throw new RuntimeException("Items that are hidden/disabled but do not have a source attribute should not exist:" +
+                                     unmodifiableRequiredButEmpty);
+    }
+    if (!itemsWithMissingData.isEmpty()) {
+      System.out.println("ERROR: Could not prefill the following disabled/hidden attributes: " + itemsWithMissingData);
+      if (sess.isAuthenticated()) {
+        // user is authenticated, hence source attribute values should exist?
+        throw new RuntimeException("Could not prefill the following disabled/hidden attributes: " + itemsWithMissingData);
+      }
+    }
+  }
+
+  /**
+   * Checks whether there is an issue with the item's visibility/editable settings.
+   * @param item
+   * @param prefilledFormItemData
+   * @return
+   */
+  private boolean hasItemIncorrectVisibility(FormItemData item, List<FormItemData> prefilledFormItemData) {
+    return item.getFormItem().isRequired() && StringUtils.isEmpty(item.getPrefilledValue()) &&
+            (isItemHidden(item, prefilledFormItemData) || isItemDisabled(item, prefilledFormItemData));
+  }
+
+  /**
+   * Checks whether the item will be hidden in the form
+   * @param item
+   * @param prefilledFormItemData
+   * @return
+   */
+  private boolean isItemHidden(FormItemData item, List<FormItemData> prefilledFormItemData) {
+    return isItemConditionApplied(item.getPrefilledValue(), prefilledFormItemData, item.getFormItem().getHidden(),
+        item.getFormItem().getHiddenDependencyItemId());
+  }
+
+  /**
+   * Checks whether the item will be disabled in the form
+   * @param item
+   * @param prefilledFormItemData
+   * @return
+   */
+  private boolean isItemDisabled(FormItemData item, List<FormItemData> prefilledFormItemData) {
+    return isItemConditionApplied(item.getPrefilledValue(), prefilledFormItemData, item.getFormItem().getDisabled(),
+        item.getFormItem().getDisabledDependencyItemId());
+  }
+
+  /**
+   * Checks whether the supplied condition will be applied for the item
+   * @param valueToCheck
+   * @param prefilledFormItemData
+   * @param condition
+   * @param dependencyItemId
+   * @return
+   */
+  private boolean isItemConditionApplied(String valueToCheck, List<FormItemData> prefilledFormItemData,
+                                         FormItem.Condition condition, Integer dependencyItemId) {
+    if (dependencyItemId != null) {
+      FormItemData dependentItem = prefilledFormItemData.stream().
+                                       filter(otherItem -> otherItem.getFormItem().getId() == dependencyItemId)
+                                       .findFirst()
+                                       .orElseThrow(() -> new RuntimeException("Dependent item " + dependencyItemId + " not found"));
+      valueToCheck = dependentItem.getPrefilledValue();
+    }
+
+    return switch (condition) {
+      case ALWAYS -> true;
+      case NEVER -> false;
+      case IF_PREFILLED -> StringUtils.isNotBlank(valueToCheck);
+      case IF_EMPTY -> StringUtils.isBlank(valueToCheck);
+    };
   }
 
   /**
@@ -445,25 +641,42 @@ public class ApplicationService {
    * @param item
    * @return
    */
-  private FormItemData prefillFormItemValue(CurrentUser sess, FormItem item) { // again decide whether to pass principal as argument or retrieve it from the current session
+  private String calculatePrefilledValue(CurrentUser sess, FormItem item, Map<String, String> reservedLogins) { // again decide whether to pass principal as argument or retrieve it from the current session
+   if (item.getType().equals(FormItem.Type.LOGIN)) {
+     return tryToFillLoginItem(sess, item, reservedLogins);
+      // TODO we only want to prefill login from reserved logins, right? If not the whole logic regarding logins has to be tweaked
+   }
+
     String identityValue = getIdentityAttributeValue(sess, item);
     if (item.isPreferIdentityAttribute() && identityValue != null) {
-      return new FormItemData(item, null, identityValue);
+      return identityValue;
     }
     String idmValue = getIdmAttributeValue(sess, item);
     if (idmValue != null) {
-      return new FormItemData(item, null, idmValue);
+      return idmValue;
     } else if (identityValue != null) {
-      return new FormItemData(item, null, identityValue);
+      return identityValue;
     }
-    return new FormItemData(item, null, item.getDefaultValue());
+    return item.getDefaultValue();
   }
 
+  /**
+   * Retrieves value of item's source identity attribute
+   * @param sess
+   * @param item
+   * @return
+   */
   private String getIdentityAttributeValue(CurrentUser sess, FormItem item) {
     String sourceAttr = item.getSourceIdentityAttribute();
     return sourceAttr == null ? null : sess.attribute(sourceAttr);
   }
 
+  /**
+   * Retrieves value of item's source IdM attribute.
+   * @param sess
+   * @param item
+   * @return
+   */
   private String getIdmAttributeValue(CurrentUser sess, FormItem item) {
     Form form = formRepository.findById(item.getFormId()).orElseThrow(() -> new DataInconsistencyException("Form with ID " + item.getFormId() + " not found for form item " + item.getId()));
 
@@ -482,6 +695,62 @@ public class ApplicationService {
     } else {
       throw new IllegalArgumentException("Unsupported attribute source: " + sourceAttr);
     }
+  }
+
+  /**
+   * Tries to fill items with the destination attribute matching the LOGIN urn
+   * @param sess
+   * @param item
+   * @param reservedLogins
+   * @return
+   */
+  private String tryToFillLoginItem(CurrentUser sess, FormItem item, Map<String, String> reservedLogins) {
+    for (String namespace : reservedLogins.keySet()) {
+      String loginAttributeDefinition = "urn:perun:user:attribute-def:def:login-namespace:" + namespace;  // TODO add config property or constant
+      if (item.getDestinationIdmAttribute().equals(loginAttributeDefinition)) {
+        return reservedLogins.get(namespace);
+      }
+    }
+    return null;
+  }
+
+  /**
+   * Reserves the login in the set namespace
+   * TODO this has to be implemented using IdM calls -> how do we ensure that IdM does not create a user with the reserved
+   *  login (e.g. using service accounts).
+   * @param itemData
+   */
+  private void reserveLogins(CurrentUser sess, List<FormItemData> itemData) {
+
+    for (FormItemData formItemData : itemData) {
+      if (formItemData.getFormItem().getType().equals(FormItem.Type.LOGIN)) {
+        if (StringUtils.isEmpty(formItemData.getValue()) ||
+                formItemData.isValueAssured()) { // login with prefilled value => value alr reserved
+          continue;
+        }
+        // could be a lot of calls
+        AttributeDefinition attrDef = idmService.getAttributeDefinition(formItemData.getFormItem().getDestinationIdmAttribute());
+        if (attrDef == null) {
+          // TODO probably throw an error here
+          continue;
+        }
+        String namespace =  attrDef.getNamespace();
+        if (idmService.isLoginAvailable(namespace, formItemData.getValue())) {
+          idmService.reserveLogin(namespace, formItemData.getValue());
+        } else {
+          throw new RuntimeException("Login " + formItemData.getValue() + " is blocked");
+        }
+      }
+    }
+  }
+
+  /**
+   * Returns all logins reserved by the authenticated principal
+   * @param sess
+   * @return a map of reserved logins, the keys being namespaces of the logins
+   */
+  private Map<String, String> getReservedLoginsForPrincipal(CurrentUser sess) {
+    return new HashMap<>();
   }
 
 
@@ -542,12 +811,10 @@ public class ApplicationService {
     List<Form> requiredForms = new ArrayList<>();
     for (Integer groupId : groupIds) {
       Form form = formRepository.findByGroupId(groupId).orElseThrow(() -> new IllegalArgumentException("Form for group " + groupId + " not found"));
+      // TODO do we always display EXTENSION forms if user is already member of some groups?
 
-      requiredForms.addAll(formService.getPrerequisiteForms(form));
       requiredForms.add(form);
     }
     return requiredForms;
   }
-
-
 }
