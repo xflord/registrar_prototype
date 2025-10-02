@@ -2,7 +2,6 @@ package org.perun.registrarprototype.services;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Optional;
 import java.util.regex.Pattern;
 import java.util.regex.PatternSyntaxException;
 import org.perun.registrarprototype.exceptions.DataInconsistencyException;
@@ -174,11 +173,12 @@ public class FormService {
    * TODO what about PRE forms that also have prerequisites? Recursively check all prerequisites or do not allow?
    * @return
    */
-  public List<FormTransition> getPrerequisiteForms(Form form, Form.FormType type) {
+  public List<FormTransition> getPrerequisiteTransitions(Form form, Form.FormType type) {
     List<FormTransition> transitions = formTransitionRepository.getAllBySourceFormAndType(form, FormTransition.TransitionType.PREREQUISITE);
     // TODO add some logic to determine the order of PRE forms? More so if we want recursive prerequisites.
+    //  for now recursive form retrieval not necessary
     return transitions.stream()
-               .filter((transition) -> transition.getSourceFormTypes().contains(type))
+               .filter(transition -> transition.getSourceFormTypes().contains(type))
                .toList();
   }
 
@@ -188,8 +188,12 @@ public class FormService {
    * @param form
    * @return
    */
-  public List<Form> getAutosubmitForms(Form form) {
-    return new ArrayList<>();
+  public List<Form> getAutosubmitForms(Form form, Form.FormType type) {
+    List<FormTransition> transitions = formTransitionRepository.getAllBySourceFormAndType(form, FormTransition.TransitionType.AUTO_SUBMIT);
+    return transitions.stream()
+               .filter(transition -> transition.getSourceFormTypes().contains(type))
+               .map(FormTransition::getTargetForm)
+               .toList();
   }
 
   /**
@@ -198,8 +202,12 @@ public class FormService {
    * @param form
    * @return
    */
-  public List<Form> getRedirectForms(Form form) {
-    return new ArrayList<>();
+  public List<Form> getRedirectForms(Form form, Form.FormType type) {
+    List<FormTransition> transitions = formTransitionRepository.getAllBySourceFormAndType(form, FormTransition.TransitionType.REDIRECT);
+    return transitions.stream()
+               .filter(transition -> transition.getSourceFormTypes().contains(type))
+               .map(FormTransition::getTargetForm)
+               .toList();
   }
 
   public List<FormItem> getFormItems(CurrentUser sess, Form form, Form.FormType type) {

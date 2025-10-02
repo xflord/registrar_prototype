@@ -25,7 +25,6 @@ import org.perun.registrarprototype.models.Decision;
 import org.perun.registrarprototype.models.Form;
 import org.perun.registrarprototype.models.FormItem;
 import org.perun.registrarprototype.models.FormItemData;
-import org.perun.registrarprototype.models.FormTransition;
 import org.perun.registrarprototype.models.PrefilledFormData;
 import org.perun.registrarprototype.models.PrefilledSubmissionData;
 import org.perun.registrarprototype.models.Submission;
@@ -223,21 +222,22 @@ public class ApplicationService {
 
     SubmissionResult result = new SubmissionResult();
     result.setSubmission(submission);
-    List<Form> autoSubmitForms = submissionData.getPrefilledData().stream()
-                                    .flatMap(formData -> formService.getAutosubmitForms(formData.getForm()).stream())
-                                     .toList();
-    autoSubmitForms.forEach(form -> {
-      autoSubmitForm(sess, form, submissionData);
-      result.addMessage("Form into group " + form.getGroupId() + " was submitted automatically.");
-    });
 
-    List<Form> redirectForms = submissionData.getPrefilledData().stream()
-                                   .flatMap(formData -> formService.getRedirectForms(formData.getForm()).stream())
-                                    .toList();
-    result.setRedirectUrl(submissionData.getRedirectUrl());
-    setRedirectForms(sess, redirectForms, result);
+//    List<Form> autoSubmitForms = submissionData.getPrefilledData().stream()
+//                                    .flatMap(formData -> formService.getAutosubmitForms(formData.getForm(), formData.getType()).stream())
+//                                     .toList();
+//    autoSubmitForms.forEach(form -> {
+//      autoSubmitForm(sess, form, submissionData);
+//      result.addMessage("Form into group " + form.getGroupId() + " was submitted automatically.");
+//    });
+//
+//    List<Form> redirectForms = submissionData.getPrefilledData().stream()
+//                                   .flatMap(formData -> formService.getRedirectForms(formData.getForm(), formData.getType()).stream())
+//                                    .toList();
+//    result.setRedirectUrl(submissionData.getRedirectUrl());
+//    setRedirectForms(sess, redirectForms, result);
 
-    result.addMessage("Successfully submitted applications"); // TODO add custom form messages
+    result.addMessage("Successfully submitted applications"); // TODO add custom form messages / is this really part of the domain => depends on if we consider the result page as part of the flow YES
 
     return result;
   }
@@ -364,6 +364,8 @@ public class ApplicationService {
       }
     }
 
+    // TODO this is where we in the future want to handle attribute freshness/provenance logic
+
     String identityValue = getIdentityAttributeValue(sess, itemData.getFormItem());
     itemData.setIdentityAttributeValue(identityValue);
     String idmValue = getIdmAttributeValue(sess, itemData.getFormItem());
@@ -421,6 +423,7 @@ public class ApplicationService {
       List<Integer> groupIds = redirectForms.stream().map(Form::getGroupId).distinct().toList();
       try {
         submissionResult.setRedirectForms(loadForms(sess, groupIds, submissionResult.getRedirectUrl()));
+        // theoretically just the set of ids (or whatever the API will take as the entrypoint of registration flow) is enough and just redirect user to that endpoint
       } catch (Exception e) {
         System.out.println("Error assembling redirect forms: " + e.getMessage()); // TODO log properly
         // probably best to use some constant here so that it can be localized
@@ -435,7 +438,7 @@ public class ApplicationService {
    *
    * @param sess
    * @param groupIds set of groups the user wants to apply for membership in
-   * @return map, keys being groupIds, the value a list of prefilled FormItems TODO should be enough to build the whole form page? or do we need more info?
+   * @return prefilled submission object, with the redirect URL and individual prefilled form data (prefilled items, form type) TODO should be enough to build the whole form page? or do we need more info?
    */
   public PrefilledSubmissionData loadForms(CurrentUser sess, List<Integer> groupIds, String redirectUrl) {
     List<Form> requiredForms = determineGroupSet(sess, groupIds);
@@ -454,6 +457,7 @@ public class ApplicationService {
     List<PrefilledFormData> prefilledFormData = new ArrayList<>();
     for (Form form : requiredForms) {
       if (checkOpenApplications(sess, form) != null) {
+        // TODO open existing
         continue;
       }
 
@@ -462,18 +466,18 @@ public class ApplicationService {
         continue;
       }
 
-      // now that we have form type, retrieve prerequisite forms
-      formService.getPrerequisiteForms(form, type).forEach(transition -> {
-        if (checkOpenApplications(sess, form) == null) {
-          Form.FormType targetFormType = selectFormType(sess, transition.getTargetForm());
-          if (transition.getTargetFormTypes().contains(targetFormType) && targetFormType != null) {
-            Form prerequisiteForm =  transition.getTargetForm();
-            prerequisiteForm.setItems(formService.getFormItems(sess, form, targetFormType));
-            prefilledFormData.add(new PrefilledFormData(prerequisiteForm, prerequisiteForm.getGroupId(),
-                loadForm(sess, prerequisiteForm, targetFormType), targetFormType));
-          }
-        }
-      });
+//      // now that we have form type, retrieve prerequisite forms
+//      formService.getPrerequisiteTransitions(form, type).forEach(transition -> {
+//        if (checkOpenApplications(sess, form) == null) {
+//          Form.FormType targetFormType = selectFormType(sess, transition.getTargetForm());
+//          if (transition.getTargetFormTypes().contains(targetFormType) && targetFormType != null) {
+//            Form prerequisiteForm =  transition.getTargetForm();
+//            prerequisiteForm.setItems(formService.getFormItems(sess, form, targetFormType));
+//            prefilledFormData.add(new PrefilledFormData(prerequisiteForm, prerequisiteForm.getGroupId(),
+//                loadForm(sess, prerequisiteForm, targetFormType), targetFormType));
+//          }
+//        }
+//      });
 
       form.setItems(formService.getFormItems(sess, form, type));
 
@@ -483,6 +487,8 @@ public class ApplicationService {
           type));
     }
 
+    // TODO probably some logic to order the individual forms? (e.g. prerequisites before their source form - or do we want
+    //  to display prerequisites independently and have them redirect to the original forms?
     return new PrefilledSubmissionData(redirectUrl, prefilledFormData);
   }
 
@@ -498,6 +504,7 @@ public class ApplicationService {
       if (canExtendMembership(sess, form.getGroupId())) {
         return Form.FormType.EXTENSION;
       }
+      // todo display error message if no forms returned?
       return null;
     }
 
@@ -513,9 +520,9 @@ public class ApplicationService {
    * @return
    */
   public List<FormItemData> loadForm(CurrentUser sess, Form form, Form.FormType type) {
-    if (type.equals(Form.FormType.UPDATE)) {
-      // TODO prefill form with data from already submitted app if loading modifying/update form type
-    }
+//    if (type.equals(Form.FormType.UPDATE)) {
+//      // TODO prefill form with data from already submitted app if loading modifying/update form type
+//    }
 
     List<AssignedFormModule> modules = formService.getAssignedFormModules(form);
     modules.forEach(module -> module.getFormModule().canBeSubmitted(sess, type, module.getOptions()));
@@ -531,6 +538,8 @@ public class ApplicationService {
 
   /**
    * Returns prefilled form item data for supplied form's items.
+   * Allow admin to define where to fill item from (e.g. federation, IdM, more complex solutions/external sources -> from submitted prerequisites)]
+   * TODO we can also hide prerequisite submitted apps behind external sources (same with redirect forms)
    * @param sess
    * @param form Form object with set form items array
    * @return
@@ -543,10 +552,12 @@ public class ApplicationService {
             calculatePrefilledValue(sess, item, reservedPrincipalLogins)))
         .toList();
     // TODO consider prefilling from submitted prerequisite forms (from submitted matching destination attribute to source/destination?)
+    //  => only if explicitly defined as source + that's where a key of source item is defied
   }
 
   /**
    * Ensures that all items that are required and do not allow user input are prefilled.
+   * TODO move this logic to setting up form => ensure that admin cannot create a form that would result in a situation like this
    * @param sess
    * @param prefilledItems
    */
@@ -643,8 +654,10 @@ public class ApplicationService {
    */
   private String calculatePrefilledValue(CurrentUser sess, FormItem item, Map<String, String> reservedLogins) { // again decide whether to pass principal as argument or retrieve it from the current session
    if (item.getType().equals(FormItem.Type.LOGIN)) {
-     return tryToFillLoginItem(sess, item, reservedLogins);
-      // TODO we only want to prefill login from reserved logins, right? If not the whole logic regarding logins has to be tweaked
+     String login = tryToFillLoginItem(sess, item, reservedLogins);
+     if (!StringUtils.isEmpty(login)) {
+       return login;
+     }
    }
 
     String identityValue = getIdentityAttributeValue(sess, item);
@@ -736,6 +749,7 @@ public class ApplicationService {
         }
         String namespace =  attrDef.getNamespace();
         if (idmService.isLoginAvailable(namespace, formItemData.getValue())) {
+          // these two calls can probably be joined
           idmService.reserveLogin(namespace, formItemData.getValue());
         } else {
           throw new RuntimeException("Login " + formItemData.getValue() + " is blocked");

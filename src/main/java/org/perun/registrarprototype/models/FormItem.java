@@ -60,6 +60,7 @@ public class FormItem {
     this.preferIdentityAttribute = preferIdentityAttribute;
     this.formTypes = formTypes;
     this.defaultValue = defaultValue;
+    // TODO use positive naming for these two fields (and related methods)
     this.hidden = hidden;
     this.disabled = disabled;
   }
