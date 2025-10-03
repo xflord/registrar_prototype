@@ -1,1 +1,5 @@
-rootProject.name = 'RegistrarPrototype'
+rootProject.name = "RegistrarPrototype"
+
+include("extension-api")
+include("core")
+include 'extension-api'

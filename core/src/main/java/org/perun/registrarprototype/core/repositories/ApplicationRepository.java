@@ -1,0 +1,15 @@
+package org.perun.registrarprototype.core.repositories;
+
+import java.util.List;
+import java.util.Optional;
+import org.perun.registrarprototype.core.models.Application;
+
+public interface ApplicationRepository {
+  Application save(Application application);
+
+  Optional<Application> findById(int id);
+
+  List<Application> findByFormId(int formId);
+
+  int getNextId();
+}

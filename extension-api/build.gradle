@@ -1,0 +1,27 @@
+plugins {
+    id "java"
+}
+
+group = "org.perun.registrarprototype"
+version = "1.0.0"
+
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(17)
+    }
+}
+
+dependencies {
+    // Only PF4J is needed so you can mark extension points
+    implementation "org.pf4j:pf4j:3.13.0"
+
+    // If your DTOs use annotations like @NotNull (Jakarta validation)
+    compileOnly "jakarta.validation:jakarta.validation-api:3.0.2"
+    compileOnly 'cz.metacentrum.perun:perun-openapi:0.0.0-development'
+
+    testImplementation "org.junit.jupiter:junit-jupiter:5.10.0"
+}
+
+tasks.withType(Test) {
+    useJUnitPlatform()
+}
