@@ -6,14 +6,14 @@ import java.util.List;
 public class SubmissionResult {
   private List<String> customMessages = new ArrayList<>(); // messages defined by admins to be shown after successful submission
   private String redirectUrl;
-  private PrefilledSubmissionData redirectForms; // this might not be necessary as long as we pass the data via redirectUrl, though this would save some api calls
+  private SubmissionContext redirectForms; // this might not be necessary as long as we pass the data via redirectUrl, though this would save some api calls
   private Submission submission;
 
   public SubmissionResult() {
   }
 
   public SubmissionResult(List<String> customMessages, String redirectUrl,
-                          PrefilledSubmissionData redirectForms, Submission submission) {
+                          SubmissionContext redirectForms, Submission submission) {
     this.customMessages = customMessages;
     this.redirectUrl = redirectUrl;
     this.redirectForms = redirectForms;
@@ -40,11 +40,11 @@ public class SubmissionResult {
     this.redirectUrl = redirectUrl;
   }
 
-  public PrefilledSubmissionData getRedirectForms() {
+  public SubmissionContext getRedirectForms() {
     return redirectForms;
   }
 
-  public void setRedirectForms(PrefilledSubmissionData redirectForms) {
+  public void setRedirectForms(SubmissionContext redirectForms) {
     this.redirectForms = redirectForms;
   }
 

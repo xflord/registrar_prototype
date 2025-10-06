@@ -9,7 +9,7 @@ import org.perun.registrarprototype.models.AssignedFormModule;
 import org.perun.registrarprototype.models.Form;
 import org.perun.registrarprototype.models.FormItem;
 import org.perun.registrarprototype.models.FormItemData;
-import org.perun.registrarprototype.models.PrefilledFormData;
+import org.perun.registrarprototype.models.ApplicationContext;
 import org.perun.registrarprototype.security.CurrentUser;
 import org.springframework.boot.test.context.SpringBootTest;
 
@@ -50,7 +50,7 @@ class ApplicationServiceTests extends GenericRegistrarServiceTests {
 
     FormItemData formItemData1 = new FormItemData(item1, "test@gmail.com");
 
-    Application app = applicationService.applyForMembership(new CurrentUser(-1, null), new PrefilledFormData(form, groupId, List.of(formItemData1), Form.FormType.INITIAL));
+    Application app = applicationService.applyForMembership(new CurrentUser(-1, null), new ApplicationContext(form, groupId, List.of(formItemData1), Form.FormType.INITIAL));
 
     Application createdApp = applicationRepository.findById(app.getId()).orElse(null);
 
@@ -70,7 +70,7 @@ class ApplicationServiceTests extends GenericRegistrarServiceTests {
 
     FormItemData formItemData1 = new FormItemData(item1, "test@gmail.com");
 
-    Application app = applicationService.applyForMembership(new CurrentUser(-1, null), new PrefilledFormData(form, groupId, List.of(formItemData1), Form.FormType.INITIAL));
+    Application app = applicationService.applyForMembership(new CurrentUser(-1, null), new ApplicationContext(form, groupId, List.of(formItemData1), Form.FormType.INITIAL));
 
     Application createdApp = applicationRepository.findById(app.getId()).orElse(null);
 
