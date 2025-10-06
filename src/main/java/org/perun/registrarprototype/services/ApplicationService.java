@@ -25,8 +25,8 @@ import org.perun.registrarprototype.models.Decision;
 import org.perun.registrarprototype.models.Form;
 import org.perun.registrarprototype.models.FormItem;
 import org.perun.registrarprototype.models.FormItemData;
-import org.perun.registrarprototype.models.PrefilledFormData;
-import org.perun.registrarprototype.models.PrefilledSubmissionData;
+import org.perun.registrarprototype.models.ApplicationContext;
+import org.perun.registrarprototype.models.SubmissionContext;
 import org.perun.registrarprototype.models.Submission;
 import org.perun.registrarprototype.models.SubmissionResult;
 import org.perun.registrarprototype.models.ValidationError;
@@ -70,7 +70,7 @@ public class ApplicationService {
   public Application registerUserToGroup(CurrentUser sess, int groupId, List<FormItemData> itemData)
       throws InvalidApplicationDataException {
     Form form = formRepository.findByGroupId(groupId).orElseThrow(() -> new IllegalArgumentException("Form not found"));
-    Application app = this.applyForMembership(sess, new PrefilledFormData(form, groupId, itemData, Form.FormType.INITIAL));
+    Application app = this.applyForMembership(sess, new ApplicationContext(form, groupId, itemData, Form.FormType.INITIAL));
 
     try {
       app.approve();
@@ -208,7 +208,7 @@ public class ApplicationService {
    * @param submissionData
    * @return
    */
-  public SubmissionResult applyForMemberships(CurrentUser sess, PrefilledSubmissionData submissionData) {
+  public SubmissionResult applyForMemberships(CurrentUser sess, SubmissionContext submissionData) {
     List<Application> applications = submissionData.getPrefilledData().stream()
                                          .map((data) -> applyForMembership(sess, data))
                                          .peek((app) -> app.setRedirectUrl(submissionData.getRedirectUrl()))
@@ -270,30 +270,30 @@ public class ApplicationService {
   }
 
   /**
-   * Validates the input data for the form, marks assured prefilled items and submits an application.
+   * Validates the input data for the form, marks assured prefilled items, and submits an application.
    * @param sess
-   * @param prefilledFormData
+   * @param applicationContext
    * @return
    */
-  public Application applyForMembership(CurrentUser sess, PrefilledFormData prefilledFormData) {
-    Form form = formRepository.findByGroupId(prefilledFormData.getGroupId()).orElseThrow(() -> new IllegalArgumentException("Form not found"));
+  public Application applyForMembership(CurrentUser sess, ApplicationContext applicationContext) {
+    Form form = formRepository.findById(applicationContext.getForm().getId()).orElseThrow(() -> new IllegalArgumentException("Form not found"));
 
-    if (prefilledFormData.getType() == Form.FormType.EXTENSION && !canExtendMembership(sess, prefilledFormData.getGroupId())) {
-      throw new IllegalArgumentException("User cannot extend membership in group: " + prefilledFormData.getGroupId());
+    if (applicationContext.getType() == Form.FormType.EXTENSION && !canExtendMembership(sess, applicationContext.getGroupId())) {
+      throw new IllegalArgumentException("User cannot extend membership in group: " + applicationContext.getGroupId());
     }
 
-    if (checkOpenApplications(sess, form) != null && prefilledFormData.getType() != Form.FormType.UPDATE) {
+    if (checkOpenApplications(sess, form) != null && applicationContext.getType() != Form.FormType.UPDATE) {
       // user has applied for membership since loading the form
-      throw new IllegalArgumentException("User already has an open application in group: " + prefilledFormData.getGroupId());
+      throw new IllegalArgumentException("User already has an open application in group: " + applicationContext.getGroupId());
     }
 
     Map<String, String> reservedPrincipalLogins = getReservedLoginsForPrincipal(sess); // call here to avoid unnecessary idm calls
 
-    validateFilledFormData(sess, prefilledFormData);
-    prefilledFormData.getPrefilledItems().forEach(item -> checkPrefilledValueConsistency(sess, item, reservedPrincipalLogins));
+    validateFilledFormData(sess, applicationContext);
+    applicationContext.getPrefilledItems().forEach(item -> checkPrefilledValueConsistency(sess, item, reservedPrincipalLogins));
 
     Application app = new Application(0, Integer.parseInt(sess.id()), form.getId(),
-        prefilledFormData.getPrefilledItems(), null, prefilledFormData.getType());
+        applicationContext.getPrefilledItems(), null, applicationContext.getType());
     try {
       app.submit(form);
     } catch (InvalidApplicationStateTransitionException e) {
@@ -303,10 +303,10 @@ public class ApplicationService {
 
     app = applicationRepository.save(app);
 
-    reserveLogins(sess, prefilledFormData.getPrefilledItems());
+    reserveLogins(sess, applicationContext.getPrefilledItems());
 
     // TODO if we emit events asynchronously this might be problematic (not sure rollback would work here)
-    eventService.emitEvent(new ApplicationSubmittedEvent(app.getId(), Integer.parseInt(sess.id()), prefilledFormData.getGroupId()));
+    eventService.emitEvent(new ApplicationSubmittedEvent(app.getId(), Integer.parseInt(sess.id()), applicationContext.getGroupId()));
 
     return app;
   }
@@ -317,7 +317,7 @@ public class ApplicationService {
    * @param sess
    * @param data
    */
-  private void validateFilledFormData(CurrentUser sess, PrefilledFormData data) {
+  private void validateFilledFormData(CurrentUser sess, ApplicationContext data) {
     List<FormItem> items = formService.getFormItems(sess, data.getForm(), data.getType());
 
     Set<Integer> itemIds = items.stream().map(FormItem::getId).collect(Collectors.toSet());
@@ -384,8 +384,8 @@ public class ApplicationService {
    * @param form
    * @param submissionData
    */
-  public void autoSubmitForm(CurrentUser sess, Form form, PrefilledSubmissionData submissionData) {
-    PrefilledSubmissionData autoSubmitData;
+  public void autoSubmitForm(CurrentUser sess, Form form, SubmissionContext submissionData) {
+    SubmissionContext autoSubmitData;
     try {
       autoSubmitData = assemblePrefilledForms(sess, List.of(form), null);
       applyForMemberships(sess, autoSubmitData);
@@ -406,7 +406,7 @@ public class ApplicationService {
    * @param form
    * @param prefilledItems
    */
-  private PrefilledFormData prefillAutosubmitFormItems(CurrentUser sess, Form form, List<FormItemData> prefilledItems) {
+  private ApplicationContext prefillAutosubmitFormItems(CurrentUser sess, Form form, List<FormItemData> prefilledItems) {
     return null;
   }
 
@@ -434,27 +434,27 @@ public class ApplicationService {
   }
 
   /**
-   * Entry from GUI -> for a given group, determine which forms to display to the user, prefill form items and return to GUI
+   * Entry from GUI -> for a given group, determine which forms to display to the user, prefill form items, and return to GUI
    *
    * @param sess
    * @param groupIds set of groups the user wants to apply for membership in
    * @return prefilled submission object, with the redirect URL and individual prefilled form data (prefilled items, form type) TODO should be enough to build the whole form page? or do we need more info?
    */
-  public PrefilledSubmissionData loadForms(CurrentUser sess, List<Integer> groupIds, String redirectUrl) {
+  public SubmissionContext loadForms(CurrentUser sess, List<Integer> groupIds, String redirectUrl) {
     List<Form> requiredForms = determineGroupSet(sess, groupIds);
     return assemblePrefilledForms(sess, requiredForms, redirectUrl);
   }
 
   /**
-   * Determines the application types for each form, retrieves and prefills items for that form type and returns this
+   * Determines the application types for each form, retrieves and prefills items for that form type, and returns this
    * aggregated data.
    * @param sess
    * @param requiredForms
    * @param redirectUrl
    * @return
    */
-  private PrefilledSubmissionData assemblePrefilledForms(CurrentUser sess, List<Form> requiredForms, String redirectUrl) {
-    List<PrefilledFormData> prefilledFormData = new ArrayList<>();
+  private SubmissionContext assemblePrefilledForms(CurrentUser sess, List<Form> requiredForms, String redirectUrl) {
+    List<ApplicationContext> applicationFormData = new ArrayList<>();
     for (Form form : requiredForms) {
       if (checkOpenApplications(sess, form) != null) {
         // TODO open existing
@@ -483,13 +483,13 @@ public class ApplicationService {
 
       List<FormItemData> prefilledFormItemData = loadForm(sess, form, type);
 
-      prefilledFormData.add(new PrefilledFormData(form, form.getGroupId(), prefilledFormItemData,
+      applicationFormData.add(new ApplicationContext(form, form.getGroupId(), prefilledFormItemData,
           type));
     }
 
     // TODO probably some logic to order the individual forms? (e.g. prerequisites before their source form - or do we want
     //  to display prerequisites independently and have them redirect to the original forms?
-    return new PrefilledSubmissionData(redirectUrl, prefilledFormData);
+    return new SubmissionContext(redirectUrl, applicationFormData);
   }
 
   /**
@@ -512,7 +512,7 @@ public class ApplicationService {
   }
 
   /**
-   * Generates prefilled form item data for the form and its type, calls module hooks and ensures the validity of form
+   * Generates prefilled form item data for the form and its type, calls module hooks, and ensures the validity of form
    * item visibility.
    * @param sess
    * @param form

@@ -2,13 +2,13 @@ package org.perun.registrarprototype.models;
 
 import java.util.List;
 
-public class PrefilledFormData {
+public class ApplicationContext {
   private Form form;
   private int groupId;
   private List<FormItemData> prefilledItems;
   private Form.FormType type;
 
-  public PrefilledFormData(Form form, int groupId, List<FormItemData> prefilledItems, Form.FormType type) {
+  public ApplicationContext(Form form, int groupId, List<FormItemData> prefilledItems, Form.FormType type) {
     this.form = form;
     this.groupId = groupId;
     this.prefilledItems = prefilledItems;
