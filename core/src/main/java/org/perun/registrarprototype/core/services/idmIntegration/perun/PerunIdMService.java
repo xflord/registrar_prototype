@@ -280,7 +280,7 @@ public class PerunIdMService implements IdMService {
 
   @Override
   public void reserveLogin(String namespace, String login) {
-    // not implemented
+    System.out.println("Reserving login " + login + " in namespace " + namespace);
   }
 
   @Override

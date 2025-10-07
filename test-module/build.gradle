@@ -1,0 +1,43 @@
+plugins {
+    id 'java'
+    id 'io.spring.dependency-management' version '1.1.7'
+}
+
+group = 'org.perun.registrarprototype'
+version = '0.0.1-SNAPSHOT'
+
+repositories {
+    mavenCentral()
+}
+jar {
+    manifest {
+      attributes 'Plugin-Class': "${pluginClass}",
+          'Plugin-Id': "${pluginId}",
+          'Plugin-Version': "${archiveVersion}",
+          'Plugin-Provider': "${pluginProvider}",
+          'Plugin-Dependencies': "${pluginDependencies}"
+    }
+  }
+
+  task plugin(type: Jar) {
+    archiveBaseName = "plugin-${pluginId}"
+    into('classes') {
+      with jar
+    }
+    into('lib') {
+      from configurations.runtimeClasspath
+    }
+    archiveExtension ='zip'
+  }
+
+
+dependencies {
+  // compileOnly important!!! We do not want to put the api into the zip file since the main program has it already!
+    compileOnly project(':extension-api')
+    compileOnly(group: 'org.pf4j', name: 'pf4j', version: "3.13.0") {
+        exclude group: "org.slf4j"
+    }
+  annotationProcessor(group: 'org.pf4j', name: 'pf4j', version: "3.13.0")
+
+    compileOnly "org.springframework:spring-context:6.1.5"
+}

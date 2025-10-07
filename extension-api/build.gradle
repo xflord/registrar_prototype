@@ -13,7 +13,8 @@ java {
 
 dependencies {
     // Only PF4J is needed so you can mark extension points
-    implementation "org.pf4j:pf4j:3.13.0"
+    implementation group: 'org.pf4j', name: 'pf4j', version: "3.13.0"
+    annotationProcessor(group: 'org.pf4j', name: 'pf4j', version: "3.13.0")
 
     // If your DTOs use annotations like @NotNull (Jakarta validation)
     compileOnly "jakarta.validation:jakarta.validation-api:3.0.2"

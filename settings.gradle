@@ -3,3 +3,4 @@ rootProject.name = "RegistrarPrototype"
 include("extension-api")
 include("core")
 include 'extension-api'
+include 'test-module'
