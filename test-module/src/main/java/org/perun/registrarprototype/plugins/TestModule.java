@@ -61,6 +61,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 
       @Override
       public List<String> getRequiredOptions() {
+        // test that autowired component works
         this.idMService.reserveLogin("TestModule", "login");
         return List.of();
       }

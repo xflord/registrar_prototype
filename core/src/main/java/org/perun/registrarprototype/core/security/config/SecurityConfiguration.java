@@ -5,6 +5,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.oauth2.server.resource.introspection.OpaqueTokenIntrospector;
 import org.springframework.security.web.SecurityFilterChain;
 
@@ -17,7 +18,9 @@ public class SecurityConfiguration {
     // very basic security configuration, potentially expand with more filters to add unauthorized access handling
     httpSecurity.
         authorizeHttpRequests(authorize -> authorize
-                                               .anyRequest().authenticated())
+//                                               .anyRequest().authenticated())
+                                               .anyRequest().permitAll())
+        .csrf(AbstractHttpConfigurer::disable) // TODO just for testing, remove in production
         .oauth2ResourceServer(oauth2 -> oauth2
                                             .opaqueToken(opaque -> opaque.introspector(introspector())));
         return httpSecurity.build();

@@ -9,10 +9,13 @@ import org.perun.registrarprototype.core.models.Form;
 import org.perun.registrarprototype.core.models.FormItem;
 import org.perun.registrarprototype.core.security.CurrentUser;
 import org.perun.registrarprototype.core.security.CurrentUserProvider;
+import org.perun.registrarprototype.core.services.FormModuleService;
 import org.perun.registrarprototype.core.services.FormService;
+import org.perun.registrarprototype.extension.services.modules.FormModule;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -24,10 +27,12 @@ import org.springframework.web.bind.annotation.RestController;
 public class FormController {
 
   private final FormService formService;
+  private final FormModuleService formModuleService;
   private final CurrentUserProvider currentUserProvider;
 
-  public FormController(FormService formService, CurrentUserProvider currentUserProvider) {
+  public FormController(FormService formService, FormModuleService formModuleService, CurrentUserProvider currentUserProvider) {
       this.formService = formService;
+      this.formModuleService = formModuleService;
       this.currentUserProvider = currentUserProvider;
   }
 
@@ -58,5 +63,16 @@ public class FormController {
 //    }
 //    return ResponseEntity.ok(setModules);
 //  }
+
+  @GetMapping("/modules")
+  public ResponseEntity<List<String>> getModules() {
+    return ResponseEntity.ok(formModuleService.getAvailableModules());
+  }
+
+  @PostMapping("/loadModule")
+  public ResponseEntity<Void> loadModule(@RequestParam String moduleName) {
+    formModuleService.loadModule(moduleName);
+    return ResponseEntity.ok().build();
+  }
 
 }

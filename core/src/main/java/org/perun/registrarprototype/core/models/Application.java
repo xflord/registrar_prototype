@@ -92,5 +92,25 @@ public class Application {
   public void setRedirectUrl(String redirectUrl) {
     this.redirectUrl = redirectUrl;
   }
+
+  public void setState(ApplicationState state) {
+    this.state = state;
+  }
+
+  public FormType getType() {
+    return type;
+  }
+
+  public void setType(FormType type) {
+    this.type = type;
+  }
+
+  public Submission getSubmission() {
+    return submission;
+  }
+
+  public void setSubmission(Submission submission) {
+    this.submission = submission;
+  }
 }
 

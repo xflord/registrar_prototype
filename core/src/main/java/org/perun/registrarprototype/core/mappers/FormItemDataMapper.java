@@ -8,6 +8,6 @@ import org.perun.registrarprototype.extension.dto.FormItemDataDto;
 
 @Mapper(componentModel = "spring", uses = FormItemMapper.class)
 public interface FormItemDataMapper {
-  FormItemDataDto toDto(Application app);
+  FormItemDataDto toDto(FormItemData formItemData);
   void updateEntity(FormItemDataDto dto, @MappingTarget FormItemData formItemData);
 }

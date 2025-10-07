@@ -11,6 +11,7 @@ import java.util.Map;
  * data will be updated).
  */
 public class Submission {
+  private int id;
   private List<Application> applications;
   private LocalDateTime timestamp;
   private String submitterId;
@@ -26,6 +27,14 @@ public class Submission {
     this.submitterId = submitterId;
     this.submitterName = submitterName;
     this.identityAttributes = identityAttributes;
+  }
+
+  public int getId() {
+    return id;
+  }
+
+  public void setId(int id) {
+    this.id = id;
   }
 
   public List<Application> getApplications() {

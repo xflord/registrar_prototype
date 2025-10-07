@@ -10,6 +10,9 @@ public class FormItemData {
   private String idmAttributeValue;
   private boolean valueAssured;
 
+  public FormItemData() {
+  }
+
   public FormItemData(FormItem formItem, String value) {
     this.formItem = formItem;
     this.value = value;

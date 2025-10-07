@@ -93,8 +93,9 @@ public class ApplicationService {
   public Application approveApplication(CurrentUser sess, int applicationId, String message) throws InsufficientRightsException {
     Application app = applicationRepository.findById(applicationId).orElseThrow(() -> new IllegalArgumentException("Application not found"));
     Form form = formService.getFormById(sess, app.getFormId());
+    List<AssignedFormModule> modules = formModuleService.getAssignedFormModules(form);
 
-    formModuleService.beforeApproval(form, app);
+    formModuleService.beforeApproval(modules, app);
 
     if (!authorizationService.isAuthorized(sess, form.getGroupId())) {
       // return 403
@@ -115,7 +116,7 @@ public class ApplicationService {
 
     // TODO if this was the first approved initial app (e.g., user ID from IdM was not available before but is now)
     //  update all other submissions matching this user with IdM ID (and possibly other attributes)
-    formModuleService.onApproval(form, app);
+    formModuleService.onApproval(modules, app);
 
     // TODO directly call IdM (this could be done via module) / call adapter (again this could be done via modules) / or possibly emit event with whole app object + submission data
     perunIntegrationService.registerUserToGroup(app.getUserId(), form.getGroupId());
@@ -146,7 +147,7 @@ public class ApplicationService {
     // TODO how do we handle auto-submitted applications related to this one?
     app = applicationRepository.save(app);
 
-    formModuleService.onRejection(form, app);
+    formModuleService.onRejection(formModuleService.getAssignedFormModules(form), app);
     eventService.emitEvent(new ApplicationRejectedEvent(app.getId(), app.getUserId(), form.getGroupId()));
 
     return app;
@@ -520,11 +521,12 @@ public class ApplicationService {
   //    if (type.equals(Form.FormType.UPDATE)) {
   //      // TODO prefill form with data from already submitted app if loading modifying/update form type
   //    }
+    List<AssignedFormModule> modules = formModuleService.getAssignedFormModules(form);
 
-    formModuleService.canBeSubmitted(form, sess, type);
+    formModuleService.canBeSubmitted(modules, sess, type);
     List<FormItemData> prefilledFormItemData = prefillForm(sess, form);
 
-    formModuleService.afterFormItemsPrefilled(form, sess, type, prefilledFormItemData);
+    formModuleService.afterFormItemsPrefilled(modules, sess, type, prefilledFormItemData);
 
     checkMissingPrefilledItems(sess, prefilledFormItemData);
 

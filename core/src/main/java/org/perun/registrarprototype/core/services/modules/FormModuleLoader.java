@@ -42,27 +42,28 @@ public class FormModuleLoader {
       factory.autowireBean(module);
       loadedModules.put(module.getName(), module);
       System.out.println("Loaded module: " + module.getName() + " (" + module.getClass().getName() + ")");
-      module.getRequiredOptions();
     });
 
     return new ArrayList<>(loadedModules.values());
   }
 
-  public void loadModule(Path jarPath) {
-    String pluginId = pluginManager.loadPlugin(jarPath);
+  public void loadModule(String moduleName) {
+    String pluginId = pluginManager.loadPlugin(Paths.get(modulesDirectory, moduleName));
     pluginManager.startPlugin(pluginId);
 
     AutowireCapableBeanFactory factory = springContext.getAutowireCapableBeanFactory();
     // TODO make sure this only autowires the new module
     pluginManager.getExtensions(FormModule.class)
                  .forEach(module -> {
-                   factory.autowireBean(module);
-                   loadedModules.putIfAbsent(module.getName(), module);
+                   if (!loadedModules.containsKey(module.getName())) {
+                     factory.autowireBean(module);
+                     loadedModules.put(module.getName(), module);
+                     System.out.println("Loaded module: " + module.getName() + " (" + module.getClass().getName() + ")");
+                   }
                  });
   }
 
   public FormModule getModule(String name) {
-    System.out.println(loadedModules.keySet());
     return loadedModules.get(name);
   }
 

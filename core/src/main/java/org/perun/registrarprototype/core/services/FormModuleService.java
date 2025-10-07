@@ -3,7 +3,6 @@ package org.perun.registrarprototype.core.services;
 import java.util.ArrayList;
 import java.util.List;
 import org.perun.registrarprototype.core.exceptions.DataInconsistencyException;
-import org.perun.registrarprototype.core.exceptions.FormModuleNotExistsException;
 import org.perun.registrarprototype.core.exceptions.InsufficientRightsException;
 import org.perun.registrarprototype.core.mappers.ApplicationMapper;
 import org.perun.registrarprototype.core.mappers.CurrentUserMapper;
@@ -45,32 +44,37 @@ public class FormModuleService {
     this.formMapper = formMapper;
   }
 
-  public void canBeSubmitted(Form form, CurrentUser sess, FormType type) {
-    List<AssignedFormModule> assignedModules = getAssignedFormModules(form);
+  public void canBeSubmitted(List<AssignedFormModule> assignedModules, CurrentUser sess, FormType type) {
 
     assignedModules.forEach(module ->
                                 module.getFormModule().canBeSubmitted(currentUserMapper.toDto(sess),
                                     type, module.getOptions()));
   }
 
- public  void afterFormItemsPrefilled(Form form, CurrentUser sess, FormType type, List<FormItemData> prefilledData) {
+ public void afterFormItemsPrefilled(List<AssignedFormModule> assignedModules, CurrentUser sess, FormType type, List<FormItemData> prefilledData) {
+
+    assignedModules.forEach(module ->
+                               module.getFormModule().afterFormItemsPrefilled(currentUserMapper.toDto(sess),
+                                   type, prefilledData.stream()
+                                             .map(formItemDataMapper::toDto).toList()));
 
   }
 
-  public void afterApplicationSubmitted(Form form, Application application) {
+  public void afterApplicationSubmitted(List<AssignedFormModule> assignedModules, Application application) {
+    assignedModules.forEach(module -> module.getFormModule().afterApplicationSubmitted(applicationMapper.toDto(application)));
 
   }
 
-  public void beforeApproval(Form form, Application application) {
-
+  public void beforeApproval(List<AssignedFormModule> assignedModules, Application application) {
+    assignedModules.forEach(module -> module.getFormModule().beforeApproval(applicationMapper.toDto(application)));
   }
 
-  public void onApproval(Form form, Application application) {
-
+  public void onApproval(List<AssignedFormModule> assignedModules, Application application) {
+    assignedModules.forEach(module -> module.getFormModule().onApproval(applicationMapper.toDto(application)));
   }
 
-  public void onRejection(Form form, Application application) {
-
+  public void onRejection(List<AssignedFormModule> assignedModules, Application application) {
+    assignedModules.forEach(module -> module.getFormModule().onRejection(applicationMapper.toDto(application)));
   }
 
   public FormModule getModule(String moduleName) {
@@ -111,7 +115,7 @@ public class FormModuleService {
     return modules;
   }
 
-  private List<AssignedFormModule> getAssignedFormModules(Form form) {
+  public List<AssignedFormModule> getAssignedFormModules(Form form) {
     List<AssignedFormModule> modules = formModuleRepository.findAllByFormId(form.getId());
 
     for (AssignedFormModule assignedFormModule : modules) {
@@ -124,5 +128,17 @@ public class FormModuleService {
       assignedFormModule.setFormModule(module);
     }
     return modules;
+  }
+
+  public List<String> getAvailableModules() {
+    return formModuleLoader.availableModules();
+  }
+
+  public void loadModules() {
+    formModuleLoader.loadModules();
+  }
+
+  public void loadModule(String moduleName) {
+    formModuleLoader.loadModule(moduleName);
   }
 }
