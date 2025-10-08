@@ -30,24 +30,24 @@ public interface IdMService {
    */
   User getUserByIdentifier(String identifier);
 
-  List<Integer> getGroupIdsWhereUserIsMember(String identifier);
+  List<Integer> getGroupIdsWhereUserIsMember(Integer userId);
 
   /**
    *
-   * @param identifier
+   * @param userId
    * @return Map of authorized objects (e.g. Vos, Groups) and their IDs. Keys are `Group` and `VO`.
    * @throws Exception
    */
-  Map<String, List<Integer>> getAuthorizedObjects(String identifier) throws Exception;
+  Map<String, List<Integer>> getAuthorizedObjects(Integer userId) throws Exception;
 
   // TODO add custom exception for IdM errors? an ErrorHandler would be nice to have
-  String getUserAttribute(String identifier, String attributeName);
+  String getUserAttribute(Integer userId, String attributeName);
 
-  String getMemberAttribute(String identifier, String attributeName, int groupId);
+  String getMemberAttribute(Integer userId, String attributeName, int groupId);
 
-  String getMemberGroupAttribute(String identifier, String attributeName, int groupId);
+  String getMemberGroupAttribute(Integer userId, String attributeName, int groupId);
 
-  boolean canExtendMembership(String identifier, int groupId);
+  boolean canExtendMembership(Integer userId, int groupId);
 
   String getVoAttribute(String attributeName, int voId);
 

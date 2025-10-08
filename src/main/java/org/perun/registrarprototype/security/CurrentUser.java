@@ -31,8 +31,10 @@ public class CurrentUser {
   }
   public Map<String, Object> getAttributes() { return attributes; }
 
-  public String id() {
+  public int id() { return id; }
+
+  public String name() {
     Object name = this.getAttributes().get("name");
-    return name == null ? (String) this.getAttributes().get("sub"): (String) name;
+    return name == null ? (String) this.getAttributes().get("sub") : (String) name;
   }
 }

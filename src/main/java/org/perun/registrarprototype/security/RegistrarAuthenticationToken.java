@@ -32,9 +32,6 @@ public class RegistrarAuthenticationToken extends AbstractAuthenticationToken {
 
   @Override
   public String getName() {
-    // The getName() is usually the unique ID. For authenticated users,
-    // it defaults to the 'sub' claim.
-    // For unauthenticated users, it's the default ID (e.g., "0").
-    return principal.id();
+    return principal.name();
   }
 }

@@ -38,7 +38,6 @@ import org.perun.registrarprototype.security.CurrentUser;
 import org.perun.registrarprototype.security.RegistrarAuthenticationToken;
 import org.perun.registrarprototype.security.SessionProvider;
 import org.perun.registrarprototype.services.idmIntegration.IdMService;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -83,9 +82,9 @@ public class ApplicationService {
       throw new RuntimeException(e);
     }
     app = applicationRepository.save(app);
-    eventService.emitEvent(new ApplicationApprovedEvent(app.getId(), Integer.parseInt(sess.id()), groupId));
+    eventService.emitEvent(new ApplicationApprovedEvent(app.getId(), Integer.parseInt(sess.name()), groupId));
 
-    perunIntegrationService.registerUserToGroup(Integer.parseInt(sess.id()), groupId);
+    perunIntegrationService.registerUserToGroup(Integer.parseInt(sess.name()), groupId);
 
     return app;
   }
@@ -116,16 +115,25 @@ public class ApplicationService {
 
     app = applicationRepository.save(app);
 
+    consolidateSubmissions();
+
     for (AssignedFormModule module : modules) {
       // TODO if this was the first approved initial app (e.g., user ID from IdM was not available before but is now)
       //  update all other submissions matching this user with IdM ID (and possibly other attributes)
       module.getFormModule().onApproval(app);
     }
     // TODO directly call IdM (this could be done via module) / call adapter (again this could be done via modules) / or possibly emit event with whole app object + submission data
-    perunIntegrationService.registerUserToGroup(app.getUserId(), form.getGroupId());
+    perunIntegrationService.registerUserToGroup(app.getIdmUserId(), form.getGroupId());
 
-    eventService.emitEvent(new ApplicationApprovedEvent(app.getId(), app.getUserId(), form.getGroupId()));
+    eventService.emitEvent(new ApplicationApprovedEvent(app.getId(), app.getIdmUserId(), form.getGroupId()));
     return app;
+  }
+
+  /**
+   * Set newly retrieved attributes from application acceptance to existing open applications
+   */
+  private void consolidateSubmissions() {
+
   }
 
   public Application rejectApplication(RegistrarAuthenticationToken sess, int applicationId, String message) throws InsufficientRightsException {
@@ -155,7 +163,7 @@ public class ApplicationService {
     }
 
     app = applicationRepository.save(app);
-    eventService.emitEvent(new ApplicationRejectedEvent(app.getId(), app.getUserId(), form.getGroupId()));
+    eventService.emitEvent(new ApplicationRejectedEvent(app.getId(), app.getIdmUserId(), form.getGroupId()));
 
     return app;
   }
@@ -177,24 +185,24 @@ public class ApplicationService {
     }
 
     app = applicationRepository.save(app);
-    eventService.emitEvent(new ChangesRequestedToApplicationEvent(app.getId(), app.getUserId(), form.getGroupId()));
+    eventService.emitEvent(new ChangesRequestedToApplicationEvent(app.getId(), app.getIdmUserId(), form.getGroupId()));
 
     return app;
   }
 
   /**
    * Creates the decision object filled with metadata
-   * @param sess
+   * @param principal
    * @param app
    * @param message
    * @param decisionType
    * @return
    */
-  private Decision makeDecision(CurrentUser sess, Application app, String message, Decision.DecisionType decisionType) {
+  private Decision makeDecision(CurrentUser principal, Application app, String message, Decision.DecisionType decisionType) {
     Decision decision = new Decision();
     decision.setApplication(app);
-    decision.setApproverId(sess.id());
-    decision.setApproverName(sess.attribute("name"));
+    decision.setApproverId(principal.id());
+    decision.setApproverName(principal.name());
     decision.setDecisionType(decisionType);
     decision.setMessage(message);
     return decisionRepository.save(decision);
@@ -254,11 +262,10 @@ public class ApplicationService {
       return;
     }
 
-    if (idmService.getUserByIdentifier(sess.getPrincipal().id()) != null) {
-      submission.setSubmitterId(sess.getPrincipal().id());
-    }
-
-    submission.setSubmitterName(sess.getPrincipal().id());
+    submission.setSubmitterId(sess.getPrincipal().id()); // defaults to null if perun user id not present
+    submission.setIdentityIdentifier(sess.getPrincipal().attribute("sub"));
+    submission.setIdentityIssuer(sess.getPrincipal().attribute("iss"));
+    submission.setSubmitterName(sess.getPrincipal().name());
     // TODO inquire which claims/attributes to store
 
     submission.setIdentityAttributes(sess.getPrincipal().getAttributes().entrySet().stream()
@@ -290,7 +297,7 @@ public class ApplicationService {
     validateFilledFormData(applicationContext);
     applicationContext.getPrefilledItems().forEach(item -> checkPrefilledValueConsistency(sess.getPrincipal(), item, reservedPrincipalLogins));
 
-    Application app = new Application(0, Integer.parseInt(sess.getPrincipal().id()), form.getId(),
+    Application app = new Application(0, Integer.parseInt(sess.getPrincipal().name()), form.getId(),
         applicationContext.getPrefilledItems(), null, applicationContext.getType());
     try {
       app.submit(form);
@@ -304,7 +311,7 @@ public class ApplicationService {
     reserveLogins(applicationContext.getPrefilledItems());
 
     // TODO if we emit events asynchronously this might be problematic (not sure rollback would work here)
-    eventService.emitEvent(new ApplicationSubmittedEvent(app.getId(), Integer.parseInt(sess.getPrincipal().id()), applicationContext.getGroupId()));
+    eventService.emitEvent(new ApplicationSubmittedEvent(app.getId(), Integer.parseInt(sess.getPrincipal().name()), applicationContext.getGroupId()));
 
     return app;
   }
@@ -646,7 +653,7 @@ public class ApplicationService {
    * @param item
    * @return
    */
-  private String calculatePrefilledValue(CurrentUser sess, FormItem item, Map<String, String> reservedLogins) { // again decide whether to pass principal as argument or retrieve it from the current session
+  private String calculatePrefilledValue(CurrentUser principal, FormItem item, Map<String, String> reservedLogins) { // again decide whether to pass principal as argument or retrieve it from the current session
    if (item.getType().equals(FormItem.Type.LOGIN)) {
      String login = tryToFillLoginItem(item, reservedLogins);
      if (!StringUtils.isEmpty(login)) {
@@ -654,11 +661,11 @@ public class ApplicationService {
      }
    }
 
-    String identityValue = getIdentityAttributeValue(sess, item);
+    String identityValue = getIdentityAttributeValue(principal, item);
     if (item.isPreferIdentityAttribute() && identityValue != null) {
       return identityValue;
     }
-    String idmValue = getIdmAttributeValue(sess, item);
+    String idmValue = getIdmAttributeValue(principal, item);
     if (idmValue != null) {
       return idmValue;
     } else if (identityValue != null) {
@@ -669,22 +676,22 @@ public class ApplicationService {
 
   /**
    * Retrieves value of item's source identity attribute
-   * @param sess
+   * @param principal
    * @param item
    * @return
    */
-  private String getIdentityAttributeValue(CurrentUser sess, FormItem item) {
+  private String getIdentityAttributeValue(CurrentUser principal, FormItem item) {
     String sourceAttr = item.getSourceIdentityAttribute();
-    return sourceAttr == null ? null : sess.attribute(sourceAttr);
+    return sourceAttr == null ? null : principal.attribute(sourceAttr);
   }
 
   /**
    * Retrieves value of item's source IdM attribute.
-   * @param sess
+   * @param principal
    * @param item
    * @return
    */
-  private String getIdmAttributeValue(CurrentUser sess, FormItem item) {
+  private String getIdmAttributeValue(CurrentUser principal, FormItem item) {
     Form form = formRepository.findById(item.getFormId()).orElseThrow(() -> new DataInconsistencyException("Form with ID " + item.getFormId() + " not found for form item " + item.getId()));
 
     String sourceAttr = item.getSourceIdmAttribute();
@@ -692,11 +699,11 @@ public class ApplicationService {
       return null;
     }
     if (sourceAttr.startsWith("urn:perun:user")) {
-      return idmService.getUserAttribute(String.valueOf(sess.id()), sourceAttr);
+      return idmService.getUserAttribute(principal.id(), sourceAttr);
     } else if (sourceAttr.startsWith("urn:perun:vo")) {
       return idmService.getVoAttribute(sourceAttr, form.getVoId());
     } else if (sourceAttr.startsWith("urn:perun:member") && form.getGroupId() > 0) { // TODO better check if group is present
-      return idmService.getMemberAttribute(String.valueOf(sess.id()), sourceAttr, form.getGroupId());
+      return idmService.getMemberAttribute(principal.id(), sourceAttr, form.getGroupId());
     } else if (sourceAttr.startsWith("urn:perun:group") && form.getGroupId() > 0) {
       return idmService.getGroupAttribute(sourceAttr, form.getGroupId());
     } else {
@@ -753,10 +760,10 @@ public class ApplicationService {
 
   /**
    * Returns all logins reserved by the authenticated principal
-   * @param sess
+   * @param principal
    * @return a map of reserved logins, the keys being namespaces of the logins
    */
-  private Map<String, String> getReservedLoginsForPrincipal(CurrentUser sess) {
+  private Map<String, String> getReservedLoginsForPrincipal(CurrentUser principal) {
     return new HashMap<>();
   }
 
@@ -771,7 +778,10 @@ public class ApplicationService {
     if (sess.isAuthenticated()) {
       Optional<Application> foundApp = applicationRepository.findByFormId(form.getId()).stream()
           .filter(app -> app.getState().isOpenState())
-          .filter(app -> app.getUserId() == Integer.parseInt(sess.getPrincipal().id()))
+          .filter(app -> (app.getIdmUserId() != null && app.getIdmUserId() == sess.getPrincipal().id()) ||
+                             (Objects.equals(app.getSubmission().getIdentityIssuer(),
+                                 sess.getPrincipal().attribute("iss"))) &&
+                                 app.getSubmission().getIdentityIdentifier().equals(sess.getPrincipal().attribute("sub")))
                                 .findFirst(); // TODO utilize similarUsers as well?
       return foundApp.orElse(null);
     }

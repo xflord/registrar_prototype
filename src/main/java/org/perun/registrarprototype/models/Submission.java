@@ -13,14 +13,16 @@ import java.util.Map;
 public class Submission {
   private List<Application> applications;
   private LocalDateTime timestamp;
-  private String submitterId;
+  private Integer submitterId;
   private String submitterName;
+  private String identityIdentifier;
+  private String identityIssuer;
   private Map<String, String> identityAttributes; // more or less the equivalent of `fedInfo`
 
   public Submission() {
   }
 
-  public Submission(List<Application> applications, LocalDateTime timestamp, String submitterId, String submitterName, Map<String, String> identityAttributes) {
+  public Submission(List<Application> applications, LocalDateTime timestamp, Integer submitterId, String submitterName, Map<String, String> identityAttributes) {
     this.applications = applications;
     this.timestamp = timestamp;
     this.submitterId = submitterId;
@@ -44,11 +46,11 @@ public class Submission {
     this.timestamp = timestamp;
   }
 
-  public String getSubmitterId() {
+  public Integer getSubmitterId() {
     return submitterId;
   }
 
-  public void setSubmitterId(String submitterId) {
+  public void setSubmitterId(Integer submitterId) {
     this.submitterId = submitterId;
   }
 
@@ -66,5 +68,21 @@ public class Submission {
 
   public void setIdentityAttributes(Map<String, String> identityAttributes) {
     this.identityAttributes = identityAttributes;
+  }
+
+  public String getIdentityIdentifier() {
+    return identityIdentifier;
+  }
+
+  public void setIdentityIdentifier(String identityIdentifier) {
+    this.identityIdentifier = identityIdentifier;
+  }
+
+  public String getIdentityIssuer() {
+    return identityIssuer;
+  }
+
+  public void setIdentityIssuer(String identityIssuer) {
+    this.identityIssuer = identityIssuer;
   }
 }

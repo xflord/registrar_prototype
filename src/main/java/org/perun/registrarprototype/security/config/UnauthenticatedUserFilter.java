@@ -18,21 +18,13 @@ public class UnauthenticatedUserFilter extends OncePerRequestFilter {
 
         // Only run if NO Authentication object has been successfully placed by previous filters (like the JWT filter).
         if (SecurityContextHolder.getContext().getAuthentication() == null) {
-
-            // 1. Create the unauthenticated CurrentUser.
-            // Using ID 0 and empty groups for a guest user. The constructor sets 'principal = null'.
             CurrentUser unauthenticatedUser = new CurrentUser();
-
-            // 2. Create the token that holds the CurrentUser.
             RegistrarAuthenticationToken unauthenticatedToken =
                 new RegistrarAuthenticationToken(unauthenticatedUser, Collections.emptyList());
-
-            // 3. CRUCIAL: Mark the token as NOT authenticated.
-            // The CurrentUser.isAuthenticated() method will then also return false.
             unauthenticatedToken.setAuthenticated(false);
-
-            // 4. Set the token into the security context.
             SecurityContextHolder.getContext().setAuthentication(unauthenticatedToken);
+            // TODO consider identifiers for unauthenticated users to consolidate later? probably can do this only based on
+            //  filled item data
         }
 
         filterChain.doFilter(request, response);

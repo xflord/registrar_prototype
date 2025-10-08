@@ -49,16 +49,14 @@ public class PerunIdMService implements IdMService {
   }
 
   @Override
-  public List<Integer> getGroupIdsWhereUserIsMember(String identifier) {
+  public List<Integer> getGroupIdsWhereUserIsMember(Integer userId) {
 
     return List.of();
   }
 
   @Override
-  public Map<String, List<Integer>> getAuthorizedObjects(String identifier) throws Exception {
-    User user = getUser(identifier);
-
-    if (user == null) {
+  public Map<String, List<Integer>> getAuthorizedObjects(Integer userId) throws Exception {
+    if (userId == null) {
       return new HashMap<>();
     }
 
@@ -68,7 +66,7 @@ public class PerunIdMService implements IdMService {
 
     Map<String, Map<String, List<Integer>>> perunRoles;
     try {
-      perunRoles = rpc.getAuthzResolver().getUserRoles(user.getId());
+      perunRoles = rpc.getAuthzResolver().getUserRoles(userId);
     } catch (HttpClientErrorException ex) {
       throw PerunException.to(ex);
     } catch (RestClientException ex) {
@@ -91,15 +89,13 @@ public class PerunIdMService implements IdMService {
   }
 
   @Override
-  public String getUserAttribute(String identifier, String attributeName) {
-    User user = getUser(identifier);
-
-    if (user == null) {
+  public String getUserAttribute(Integer userId, String attributeName) {
+    if (userId == null) {
       return null;
     }
 
     try {
-      Attribute attr = rpc.getAttributesManager().getUserAttributeByName(user.getId(), attributeName);
+      Attribute attr = rpc.getAttributesManager().getUserAttributeByName(userId, attributeName);
       return attr.getValue() == null ? null : attr.getValue().toString();
     } catch (HttpClientErrorException ex) {
       // another way of handling this - logging and returning null?
@@ -111,10 +107,8 @@ public class PerunIdMService implements IdMService {
   }
 
   @Override
-  public String getMemberAttribute(String identifier, String attributeName, int groupId) {
-    User user = getUser(identifier);
-
-    if (user == null) {
+  public String getMemberAttribute(Integer userId, String attributeName, int groupId) {
+    if (userId == null) {
       return null;
     }
 
@@ -131,7 +125,7 @@ public class PerunIdMService implements IdMService {
 
     Member member;
     try {
-      member = rpc.getMembersManager().getMemberByUser(group.getVoId(), user.getId());
+      member = rpc.getMembersManager().getMemberByUser(group.getVoId(), userId);
     } catch (HttpClientErrorException ex) {
       System.out.println(PerunException.to(ex).getMessage());
       return null;
@@ -151,10 +145,8 @@ public class PerunIdMService implements IdMService {
   }
 
   @Override
-  public String getMemberGroupAttribute(String identifier, String attributeName, int groupId) {
-    User user = getUser(identifier);
-
-    if (user == null) {
+  public String getMemberGroupAttribute(Integer userId, String attributeName, int groupId) {
+    if (userId == null) {
       return null;
     }
 
@@ -171,7 +163,7 @@ public class PerunIdMService implements IdMService {
 
     Member member;
     try {
-      member = rpc.getMembersManager().getMemberByUser(group.getVoId(), user.getId());
+      member = rpc.getMembersManager().getMemberByUser(group.getVoId(), userId);
     } catch (HttpClientErrorException ex) {
       System.out.println(PerunException.to(ex).getMessage());
       return null;
@@ -191,10 +183,9 @@ public class PerunIdMService implements IdMService {
   }
 
   @Override
-  public boolean canExtendMembership(String identifier, int groupId) {
-    User user = getUser(identifier);
-
-    if (user == null) {
+  public boolean canExtendMembership(Integer userId, int groupId) {
+    if (userId == null) {
+      // TODO what should we return here?
       return false;
     }
 
@@ -211,7 +202,7 @@ public class PerunIdMService implements IdMService {
 
     Member member;
     try {
-      member = rpc.getMembersManager().getMemberByUser(group.getVoId(), user.getId());
+      member = rpc.getMembersManager().getMemberByUser(group.getVoId(), userId);
     } catch (HttpClientErrorException ex) {
       System.out.println(PerunException.to(ex).getMessage());
       return false;
@@ -287,13 +278,5 @@ public class PerunIdMService implements IdMService {
   @Override
   public List<Identity> getSimilarUsers(Map<String, Object> attributes) {
     return List.of();
-  }
-
-  private User getUser(String identifier) {
-    User user;
-
-    user = this.getUserByIdentifier(identifier);
-
-    return user;
   }
 }
