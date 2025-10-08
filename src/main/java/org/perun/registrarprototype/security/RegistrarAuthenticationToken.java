@@ -6,6 +6,7 @@ import org.springframework.security.core.GrantedAuthority;
 
 public class RegistrarAuthenticationToken extends AbstractAuthenticationToken {
   private final CurrentUser principal;
+  private String token;
 
   public RegistrarAuthenticationToken(CurrentUser principal, Collection<? extends GrantedAuthority> authorities) {
     super(authorities);
@@ -15,9 +16,13 @@ public class RegistrarAuthenticationToken extends AbstractAuthenticationToken {
     setAuthenticated(true);
   }
 
+  public void setCredentials(String credentials) {
+    this.token = credentials;
+  }
+
   @Override
   public Object getCredentials() {
-    return null;
+    return token;
   }
 
   @Override

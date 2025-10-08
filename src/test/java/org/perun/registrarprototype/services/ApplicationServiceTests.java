@@ -50,7 +50,7 @@ class ApplicationServiceTests extends GenericRegistrarServiceTests {
 
     FormItemData formItemData1 = new FormItemData(item1, "test@gmail.com");
 
-    Application app = applicationService.applyForMembership(new CurrentUser(-1, null), new ApplicationContext(form, groupId, List.of(formItemData1), Form.FormType.INITIAL));
+    Application app = applicationService.applyForMembership(new ApplicationContext(form, groupId, List.of(formItemData1), Form.FormType.INITIAL));
 
     Application createdApp = applicationRepository.findById(app.getId()).orElse(null);
 
@@ -70,14 +70,14 @@ class ApplicationServiceTests extends GenericRegistrarServiceTests {
 
     FormItemData formItemData1 = new FormItemData(item1, "test@gmail.com");
 
-    Application app = applicationService.applyForMembership(new CurrentUser(-1, null), new ApplicationContext(form, groupId, List.of(formItemData1), Form.FormType.INITIAL));
+    Application app = applicationService.applyForMembership(new ApplicationContext(form, groupId, List.of(formItemData1), Form.FormType.INITIAL));
 
     Application createdApp = applicationRepository.findById(app.getId()).orElse(null);
 
     assert createdApp == app;
     assert createdApp.getState() == ApplicationState.SUBMITTED;
 
-    applicationService.approveApplication(new CurrentUser(-1, null), createdApp.getId(), "");
+    applicationService.approveApplication(sessionProvider.getCurrentSession(), createdApp.getId(), "");
 
     createdApp = applicationRepository.findById(app.getId()).orElse(null);
     assert createdApp != null;
@@ -94,7 +94,7 @@ class ApplicationServiceTests extends GenericRegistrarServiceTests {
     FormItem item1 = new FormItem(1, FormItem.Type.EMAIL, "email", false, "^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$");
     item1 = formService.setFormItem(form.getId(), item1);
 
-    List<FormItemData> data = applicationService.loadForm(new CurrentUser(-1, null), form, Form.FormType.INITIAL);
+    List<FormItemData> data = applicationService.loadForm(sessionProvider.getCurrentSession(), form, Form.FormType.INITIAL);
 
     assert data != null;
     assert data.size() == 1;
@@ -115,7 +115,7 @@ class ApplicationServiceTests extends GenericRegistrarServiceTests {
 
     formService.setModules(null, form.getId(), List.of(module));
 
-    List<FormItemData> data = applicationService.loadForm(new CurrentUser(-1, null), form, Form.FormType.INITIAL);
+    List<FormItemData> data = applicationService.loadForm(sessionProvider.getCurrentSession(), form, Form.FormType.INITIAL);
 
     assert data != null;
     assert data.size() == 1;
@@ -134,7 +134,7 @@ class ApplicationServiceTests extends GenericRegistrarServiceTests {
     item1.setSourceIdentityAttribute("testAttribute");
     item1 = formService.setFormItem(form.getId(), item1);
 
-    List<FormItemData> data = applicationService.loadForm(currentUserProvider.getCurrentUser(""), form, Form.FormType.INITIAL);
+    List<FormItemData> data = applicationService.loadForm(sessionProvider.getCurrentSession(), form, Form.FormType.INITIAL);
 
     assert data != null;
     assert data.size() == 1;

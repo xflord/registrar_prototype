@@ -190,4 +190,25 @@ public class FormItem {
     NEVER, ALWAYS, IF_PREFILLED, IF_EMPTY
   }
 
+  @Override
+  public String toString() {
+    return "FormItem{" +
+               "id=" + id +
+               ", formId=" + formId +
+               ", type=" + type +
+               ", texts=" + texts +
+               ", required=" + required +
+               ", constraint='" + constraint + '\'' +
+               ", sourceIdentityAttribute='" + sourceIdentityAttribute + '\'' +
+               ", sourceIdmAttribute='" + sourceIdmAttribute + '\'' +
+               ", destinationIdmAttribute='" + destinationIdmAttribute + '\'' +
+               ", preferIdentityAttribute=" + preferIdentityAttribute +
+               ", defaultValue='" + defaultValue + '\'' +
+               ", formTypes=" + formTypes +
+               ", hidden=" + hidden +
+               ", disabled=" + disabled +
+               ", hiddenDependencyItemId=" + hiddenDependencyItemId +
+               ", disabledDependencyItemId=" + disabledDependencyItemId +
+               '}';
+  }
 }

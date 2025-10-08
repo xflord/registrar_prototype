@@ -3,11 +3,9 @@ package org.perun.registrarprototype.services;
 import org.junit.jupiter.api.BeforeEach;
 import org.perun.registrarprototype.repositories.ApplicationRepository;
 import org.perun.registrarprototype.repositories.FormModuleRepository;
-import org.perun.registrarprototype.repositories.tempImpl.ApplicationRepositoryDummy;
 import org.perun.registrarprototype.repositories.FormRepository;
 import org.perun.registrarprototype.repositories.tempImpl.FormModuleRepositoryDummy;
-import org.perun.registrarprototype.repositories.tempImpl.FormRepositoryDummy;
-import org.perun.registrarprototype.security.CurrentUserProvider;
+import org.perun.registrarprototype.security.SessionProvider;
 import org.perun.registrarprototype.services.config.TestConfig;
 import org.perun.registrarprototype.services.tempImpl.PerunIntegrationDummy;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -28,7 +26,7 @@ public class GenericRegistrarServiceTests {
    @Autowired
    protected FormService formService;
    @Autowired
-   protected CurrentUserProvider currentUserProvider;
+   protected SessionProvider sessionProvider;
    @Autowired
    protected ApplicationRepository applicationRepository;
    @Autowired

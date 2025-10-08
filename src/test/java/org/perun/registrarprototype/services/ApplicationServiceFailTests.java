@@ -31,7 +31,7 @@ public class ApplicationServiceFailTests extends GenericRegistrarServiceTests {
     FormItemData formItemData1 = new FormItemData(item2, "test2");
 
     InvalidApplicationDataException
-        ex = assertThrows(InvalidApplicationDataException.class, () -> applicationService.applyForMembership(new CurrentUser(-1, null), new ApplicationContext(form, groupId, List.of(formItemData1), Form.FormType.INITIAL)));
+        ex = assertThrows(InvalidApplicationDataException.class, () -> applicationService.applyForMembership(new ApplicationContext(form, groupId, List.of(formItemData1), Form.FormType.INITIAL)));
     assert ex.getErrors().getFirst().itemId() == item1.getId();
     assert ex.getErrors().getFirst().message().equals("Field " + item1.getLabel() + " is required");
   }
@@ -51,7 +51,7 @@ public class ApplicationServiceFailTests extends GenericRegistrarServiceTests {
 
     FormItemData formItemData = new FormItemData(item2, "incorrectTestgmail.com");
 
-    InvalidApplicationDataException ex = assertThrows(InvalidApplicationDataException.class, () -> applicationService.applyForMembership(new CurrentUser(-1, null), new ApplicationContext(form, groupId, List.of(formItemData), Form.FormType.INITIAL)));
+    InvalidApplicationDataException ex = assertThrows(InvalidApplicationDataException.class, () -> applicationService.applyForMembership(new ApplicationContext(form, groupId, List.of(formItemData), Form.FormType.INITIAL)));
     assert ex.getErrors().getFirst().itemId() == item1.getId();
     assert ex.getErrors().getFirst().message().equals("Field " + item1.getLabel() + " is required");
     assert ex.getErrors().get(1).itemId() == item2.getId();
@@ -71,7 +71,7 @@ public class ApplicationServiceFailTests extends GenericRegistrarServiceTests {
 
     FormItemData formItemData1 = new FormItemData(item1, "incorrectTestgmail.com");
 
-    InvalidApplicationDataException ex = assertThrows(InvalidApplicationDataException.class, () -> applicationService.applyForMembership(new CurrentUser(-1, null), new ApplicationContext(form, groupId, List.of(formItemData1), Form.FormType.INITIAL)));
+    InvalidApplicationDataException ex = assertThrows(InvalidApplicationDataException.class, () -> applicationService.applyForMembership(new ApplicationContext(form, groupId, List.of(formItemData1), Form.FormType.INITIAL)));
     assert ex.getErrors().getFirst().itemId() == item1.getId();
     assert ex.getErrors().getFirst().message().equals("Item " + item1.getLabel() + " must match constraint " + item1.getConstraint());
   }

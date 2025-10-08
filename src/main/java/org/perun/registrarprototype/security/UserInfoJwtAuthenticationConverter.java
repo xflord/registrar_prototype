@@ -1,10 +1,13 @@
 package org.perun.registrarprototype.security;
 
+import cz.metacentrum.perun.openapi.model.User;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 
+import org.perun.registrarprototype.services.idmIntegration.IdMService;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.convert.converter.Converter;
 import org.springframework.security.authentication.AbstractAuthenticationToken;
 import org.springframework.security.core.GrantedAuthority;
@@ -19,6 +22,8 @@ public class UserInfoJwtAuthenticationConverter implements Converter<Jwt, Abstra
   private final String userInfoEndpoint;
   private final WebClient webClient = WebClient.create();
   private final ObjectMapper objectMapper = new ObjectMapper();
+  @Autowired
+  private IdMService idmService;
 
   public UserInfoJwtAuthenticationConverter(String userInfoEndpoint) {
     this.userInfoEndpoint = userInfoEndpoint;
@@ -35,8 +40,7 @@ public class UserInfoJwtAuthenticationConverter implements Converter<Jwt, Abstra
       claims.putAll(userInfo);
     }
 
-    // Optional: call other system(s)
-    // e.g., claims.putAll(fetchAdditionalSystemData(jwt.getSubject()));
+    int perunUserId = perunUserData(jwt.getSubject());
 
     // Convert scopes to authorities
     JwtGrantedAuthoritiesConverter authoritiesConverter = new JwtGrantedAuthoritiesConverter();
@@ -48,10 +52,12 @@ public class UserInfoJwtAuthenticationConverter implements Converter<Jwt, Abstra
     //                                                       .collect(Collectors.toList()) : new ArrayList<>();
 
     // Create custom principal
-    CurrentUser principal = new CurrentUser(-1, new HashSet<>(), claims);
+    CurrentUser principal = new CurrentUser(perunUserId, new HashSet<>(), claims);
 
     // Create authentication
-    return new RegistrarAuthenticationToken(principal, authorities);
+    RegistrarAuthenticationToken token = new RegistrarAuthenticationToken(principal, authorities);
+    token.setCredentials(jwt.getTokenValue());
+    return token;
   }
 
   // ideally eliminate this by including all in jwt
@@ -68,5 +74,10 @@ public class UserInfoJwtAuthenticationConverter implements Converter<Jwt, Abstra
     } catch (Exception e) {
       return null;
     }
+  }
+
+  private int perunUserData(String subject) {
+    User perunUser = idmService.getUserByIdentifier(subject);
+    return perunUser == null ? -1 : perunUser.getId();
   }
 }

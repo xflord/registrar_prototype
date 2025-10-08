@@ -81,6 +81,6 @@ public class FormItemData {
 
   @Override
   public String toString() {
-    return "FormItemData [itemId=" + formItem.getFormId() + ", data=" + value + ", prefilledValue= " + prefilledValue +"]";
+    return "FormItemData [FormItem=" + formItem.toString() + ", data=" + value + ", prefilledValue= " + prefilledValue +"]";
   }
 }

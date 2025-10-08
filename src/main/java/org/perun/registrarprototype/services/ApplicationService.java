@@ -319,7 +319,7 @@ public class ApplicationService {
 
     Set<Integer> itemIds = items.stream().map(FormItem::getId).collect(Collectors.toSet());
     List<FormItemData> foreignItems = data.getPrefilledItems().stream()
-                                          .filter((itemData) -> itemIds.contains(itemData.getFormItem().getId()))
+                                          .filter((itemData) -> !itemIds.contains(itemData.getFormItem().getId()))
                                           .toList();
     if (!foreignItems.isEmpty()) {
       throw new DataInconsistencyException("Submitted form: " + data.getForm().getId() + " contains data for items" +

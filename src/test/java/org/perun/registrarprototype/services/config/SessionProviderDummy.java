@@ -7,16 +7,16 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import org.perun.registrarprototype.security.CurrentUser;
-import org.perun.registrarprototype.security.CurrentUserProvider;
-import org.perun.registrarprototype.security.UserInfoEnrichedPrincipal;
+import org.perun.registrarprototype.security.RegistrarAuthenticationToken;
+import org.perun.registrarprototype.security.SessionProvider;
 import org.springframework.security.core.GrantedAuthority;
 
-public class CurrentUserProviderDummy implements CurrentUserProvider {
+public class SessionProviderDummy extends SessionProvider {
   @Override
-  public CurrentUser getCurrentUser(String authHeader) {
+  public RegistrarAuthenticationToken getCurrentSession() {
     int id = -1;
 
-    Set<Integer> managedGroups = new HashSet<>();
+    Set<String> managedGroups = new HashSet<>();
 
     Map<String, Object> attributes = new HashMap<>();
     attributes.put("sub", String.valueOf(id));
@@ -24,8 +24,7 @@ public class CurrentUserProviderDummy implements CurrentUserProvider {
 
     List<GrantedAuthority> roles = new ArrayList<>();
 
-    UserInfoEnrichedPrincipal principal = new UserInfoEnrichedPrincipal(attributes, roles);
-
-    return new CurrentUser(id, managedGroups, principal);
+    CurrentUser principal = new CurrentUser(id, managedGroups, attributes);
+    return new RegistrarAuthenticationToken(principal, roles);
   }
 }

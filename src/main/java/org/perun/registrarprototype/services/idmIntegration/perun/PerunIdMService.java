@@ -22,7 +22,7 @@ import org.springframework.web.client.RestClientException;
 public class PerunIdMService implements IdMService {
   private final List<String> GROUP_MANAGER_ROLES = List.of("GROUPADMIN", "GROUPMEMBERSHIPMANAGER");
   private final List<String> VO_MANAGER_ROLES = List.of("VOADMIN", "ORGANIZATIONMEMBERSHIPMANAGER");
-  @Value( "${idm.extSourceName}")
+  @Value( "${perun.einfra.ext-source}")
   private String idmExtSourceName = "test-ext-source";
 
   private final PerunRPC rpc;
@@ -38,6 +38,7 @@ public class PerunIdMService implements IdMService {
       user = rpc.getUsersManager().getUserByExtSourceNameAndExtLogin(identifier, idmExtSourceName);
     } catch (HttpClientErrorException ex) {
       // another way of handling this - logging and returning null?
+      System.out.println(ex);
       System.out.println(PerunException.to(ex).getMessage());
       return null;
     } catch (RestClientException ex) {

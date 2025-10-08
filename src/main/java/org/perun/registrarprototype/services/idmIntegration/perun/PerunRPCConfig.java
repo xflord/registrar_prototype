@@ -91,6 +91,8 @@ public class PerunRPCConfig {
       // Same as in PerunRPC
       RestTemplate restTemplate = new RestTemplate(new HttpComponentsClientHttpRequestFactory());
       // interceptor to set access token in header for each request
+      // TODO this might not be necessary as the bearer token is set below
+      //  but I THINK this way (interceptor/token service combo) ensures refreshing
       restTemplate.setInterceptors(List.of(new BearerTokenInterceptor(tokenService)));
 
       PerunRPC oauthRpc = new PerunRPC(restTemplate);

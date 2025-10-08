@@ -26,7 +26,9 @@ public class CurrentUser {
   }
 
   public Set<String> managedGroups() { return managedGroups; }
-  public String attribute(String name) { return getAttributes().get(name).toString(); }
+  public String attribute(String name) {
+    return getAttributes().get(name) != null ? (String) getAttributes().get(name) : null;
+  }
   public Map<String, Object> getAttributes() { return attributes; }
 
   public String id() {
