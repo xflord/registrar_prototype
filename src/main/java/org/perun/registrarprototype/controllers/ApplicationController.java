@@ -4,10 +4,9 @@ import jakarta.servlet.http.HttpServletRequest;
 import org.perun.registrarprototype.exceptions.InsufficientRightsException;
 import org.perun.registrarprototype.exceptions.InvalidApplicationDataException;
 import org.perun.registrarprototype.models.Application;
-import org.perun.registrarprototype.models.Form;
 import org.perun.registrarprototype.security.CurrentUser;
 import org.perun.registrarprototype.models.FormItemData;
-import org.perun.registrarprototype.security.CurrentUserProvider;
+import org.perun.registrarprototype.security.SessionProvider;
 import org.perun.registrarprototype.services.ApplicationService;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
@@ -21,11 +20,11 @@ import java.util.List;
 public class ApplicationController {
 
   private final ApplicationService applicationService;
-  private final CurrentUserProvider currentUserProvider;
+  private final SessionProvider sessionProvider;
 
-  public ApplicationController(ApplicationService applicationService, CurrentUserProvider currentUserProvider) {
+  public ApplicationController(ApplicationService applicationService, SessionProvider sessionProvider) {
       this.applicationService = applicationService;
-      this.currentUserProvider = currentUserProvider;
+      this.sessionProvider = sessionProvider;
   }
 
 //  // --- User applies for membership ---
@@ -48,12 +47,9 @@ public class ApplicationController {
 
   // --- Manager approves an application ---
   @PostMapping("/{applicationId}/approve")
-  public ResponseEntity<Void> approveApplication(@PathVariable int applicationId, @RequestBody String message,
-                                                 HttpServletRequest request) {
-    String authHeader = request.getHeader(HttpHeaders.AUTHORIZATION); // replace with spring security/filter after done with testing
-    CurrentUser sess = currentUserProvider.getCurrentUser(authHeader);
+  public ResponseEntity<Void> approveApplication(@PathVariable int applicationId, @RequestBody String message) {
     try {
-      applicationService.approveApplication(sess, applicationId, message);
+      applicationService.approveApplication(sessionProvider.getCurrentSession(), applicationId, message);
     } catch (InsufficientRightsException e) {
       return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
     }
@@ -62,12 +58,9 @@ public class ApplicationController {
 
   // --- Manager rejects an application ---
   @PostMapping("/{applicationId}/reject")
-  public ResponseEntity<Void> rejectApplication(@PathVariable int applicationId, @RequestBody String message,
-                                                HttpServletRequest request) {
-    String authHeader = request.getHeader(HttpHeaders.AUTHORIZATION); // replace with spring security/filter after done with testing
-    CurrentUser sess = currentUserProvider.getCurrentUser(authHeader);
+  public ResponseEntity<Void> rejectApplication(@PathVariable int applicationId, @RequestBody String message) {
     try {
-      applicationService.rejectApplication(sess, applicationId, message);
+      applicationService.rejectApplication(sessionProvider.getCurrentSession(), applicationId, message);
     } catch (InsufficientRightsException e) {
       return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
     }
@@ -83,7 +76,7 @@ public class ApplicationController {
   ) {
     Application app;
     try {
-      app = applicationService.registerUserToGroup(new CurrentUser(userId, null), groupId, itemData);
+      app = applicationService.registerUserToGroup(new CurrentUser(), groupId, itemData);
     } catch (InvalidApplicationDataException e) {
       // probably modify to return ValidationErrors/Result
       throw new RuntimeException(e);
@@ -99,9 +92,7 @@ public class ApplicationController {
    *   Also potentially move this under forms, not important for now
    */
   @GetMapping("/loadForm")
-  public ResponseEntity<Application> loadForm(@RequestParam int formId, @RequestParam(required = false) String redirectUrl, HttpServletRequest request) {
-    String authHeader = request.getHeader(HttpHeaders.AUTHORIZATION);
-    CurrentUser user = currentUserProvider.getCurrentUser(authHeader);
+  public ResponseEntity<Application> loadForm(@RequestParam int formId, @RequestParam(required = false) String redirectUrl) {
 
 //    Application app = applicationService.loadForm(user, formId, redirectUrl);
 //    return ResponseEntity.ok(app);

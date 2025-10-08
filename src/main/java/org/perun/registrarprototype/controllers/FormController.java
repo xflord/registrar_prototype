@@ -1,6 +1,7 @@
 package org.perun.registrarprototype.controllers;
 
 import jakarta.servlet.http.HttpServletRequest;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import org.perun.registrarprototype.exceptions.FormItemRegexNotValid;
@@ -9,11 +10,14 @@ import org.perun.registrarprototype.models.AssignedFormModule;
 import org.perun.registrarprototype.models.Form;
 import org.perun.registrarprototype.models.FormItem;
 import org.perun.registrarprototype.security.CurrentUser;
-import org.perun.registrarprototype.security.CurrentUserProvider;
+import org.perun.registrarprototype.security.RegistrarAuthenticationToken;
+import org.perun.registrarprototype.security.SessionProvider;
 import org.perun.registrarprototype.services.FormService;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -25,19 +29,17 @@ import org.springframework.web.bind.annotation.RestController;
 public class FormController {
 
   private final FormService formService;
-  private final CurrentUserProvider currentUserProvider;
+  private final SessionProvider sessionProvider;
 
-  public FormController(FormService formService, CurrentUserProvider currentUserProvider) {
+  public FormController(FormService formService, SessionProvider sessionProvider) {
       this.formService = formService;
-      this.currentUserProvider = currentUserProvider;
+      this.sessionProvider = sessionProvider;
   }
 
   @PostMapping("/create")
-  public ResponseEntity<Form> createForm(@RequestParam int groupId, @RequestBody List<FormItem> items, HttpServletRequest request) {
-      String authHeader = request.getHeader(HttpHeaders.AUTHORIZATION); // replace with spring security/filter after done with testing
-      CurrentUser user = currentUserProvider.getCurrentUser(authHeader);
+  public ResponseEntity<Form> createForm(@RequestParam int groupId, @RequestBody List<FormItem> items) {
       try {
-        formService.createForm(user, groupId, items);
+        formService.createForm(sessionProvider.getCurrentSession(), groupId, items);
       } catch (FormItemRegexNotValid e) {
         throw new RuntimeException(e);
       } catch (InsufficientRightsException e) {
@@ -48,9 +50,8 @@ public class FormController {
 
   // TODO probably do not mix request params and body
   @PostMapping("/setModule")
-  public ResponseEntity<List<AssignedFormModule>> setModules(@RequestParam int formId, @RequestBody List<AssignedFormModule> modules, HttpServletRequest request) {
-    String authHeader = request.getHeader(HttpHeaders.AUTHORIZATION);
-    CurrentUser user = currentUserProvider.getCurrentUser(authHeader);
+  public ResponseEntity<List<AssignedFormModule>> setModules(@RequestParam int formId, @RequestBody List<AssignedFormModule> modules) {
+    RegistrarAuthenticationToken user = sessionProvider.getCurrentSession();
     List<AssignedFormModule> setModules;
     try {
       setModules = formService.setModules(user, formId, modules);
@@ -60,4 +61,14 @@ public class FormController {
     return ResponseEntity.ok(setModules);
   }
 
+  @GetMapping("/me")
+  public ResponseEntity<Map<String, Object>> me(@AuthenticationPrincipal CurrentUser principal) {
+    RegistrarAuthenticationToken session = sessionProvider.getCurrentSession();
+
+    if (!session.isAuthenticated()) {
+      return  ResponseEntity.ok(Map.of("authenticated", session.isAuthenticated()));
+    }
+
+    return ResponseEntity.ok(principal.getAttributes());
+  }
 }

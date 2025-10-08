@@ -1,5 +1,7 @@
 package org.perun.registrarprototype.security;
 
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 
@@ -9,26 +11,26 @@ import java.util.Set;
  */
 public class CurrentUser {
   private final int id;
-  private final Set<Integer> managedGroups;
-  private UserInfoEnrichedPrincipal principal = null;
+  private final Set<String> managedGroups;
+  private Map<String, Object> attributes = new HashMap<>();
 
-  public CurrentUser(int id, Set<Integer> managedGroups) {
+  public CurrentUser(int id, Set<String> managedGroups, Map<String, Object> attributes) {
     this.id = id;
     this.managedGroups = managedGroups;
+    this.attributes = attributes;
   }
 
-  public CurrentUser(int id, Set<Integer> managedGroups, UserInfoEnrichedPrincipal principal) {
-    this.id = id;
-    this.managedGroups = managedGroups;
-    this.principal = principal;
+  public CurrentUser() {
+    this.id = -1;
+    this.managedGroups = new HashSet<>();
   }
+
+  public Set<String> managedGroups() { return managedGroups; }
+  public String attribute(String name) { return getAttributes().get(name).toString(); }
+  public Map<String, Object> getAttributes() { return attributes; }
 
   public String id() {
-    // TODO figure this out -> hold internal ID or nah, etc.
-    return principal == null ? String.valueOf(id) : principal.getAttributes().get("sub").toString();
+    Object name = this.getAttributes().get("name");
+    return name == null ? (String) this.getAttributes().get("sub"): (String) name;
   }
-  public Set<Integer> managedGroups() { return managedGroups; }
-  public String attribute(String name) { return principal.getClaimAsString(name); }
-  public boolean isAuthenticated() { return principal != null; }
-  public Map<String, Object> getAttributes() { return principal.getAttributes(); }
 }

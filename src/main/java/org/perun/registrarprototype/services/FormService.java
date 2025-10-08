@@ -17,6 +17,7 @@ import org.perun.registrarprototype.repositories.FormModuleRepository;
 import org.perun.registrarprototype.repositories.FormRepository;
 import org.perun.registrarprototype.repositories.FormTransitionRepository;
 import org.perun.registrarprototype.security.CurrentUser;
+import org.perun.registrarprototype.security.RegistrarAuthenticationToken;
 import org.perun.registrarprototype.services.modules.FormModule;
 import org.springframework.beans.BeansException;
 import org.springframework.context.ApplicationContext;
@@ -42,7 +43,7 @@ public class FormService {
     this.formTransitionRepository = formTransitionRepository;
   }
 
-  public Form createForm(CurrentUser sess, int groupId)
+  public Form createForm(RegistrarAuthenticationToken sess, int groupId)
       throws FormItemRegexNotValid, InsufficientRightsException {
     if (!authorizationService.isAuthorized(sess, groupId)) {
       // 403
@@ -52,11 +53,11 @@ public class FormService {
     return formRepository.save(new Form(-1, groupId, new ArrayList<>()));
   }
 
-  public Form createForm(CurrentUser sess, int groupId, List<FormItem> items)
+  public Form createForm(RegistrarAuthenticationToken sess, int groupId, List<FormItem> items)
       throws FormItemRegexNotValid, InsufficientRightsException {
     Form form = createForm(sess, groupId);
 
-    setFormItems(sess, form.getId(), items);
+    setFormItems(form.getId(), items);
 
     return form;
   }
@@ -83,7 +84,7 @@ public class FormService {
     return formItem;
   }
 
-  public void setFormItems(CurrentUser sess, int formId, List<FormItem> items) throws FormItemRegexNotValid {
+  public void setFormItems(int formId, List<FormItem> items) throws FormItemRegexNotValid {
     Form form = formRepository.findById(formId).orElseThrow(() -> new IllegalArgumentException("Form with ID " + formId + " not found"));
 
     for (FormItem item : items) {
@@ -129,7 +130,7 @@ public class FormService {
    * @param modulesToAssign modules with module name and options set (the rest is ignored)
    * @return
    */
-  public List<AssignedFormModule> setModules(CurrentUser sess, int formId, List<AssignedFormModule> modulesToAssign)
+  public List<AssignedFormModule> setModules(RegistrarAuthenticationToken sess, int formId, List<AssignedFormModule> modulesToAssign)
       throws InsufficientRightsException {
     Form form = formRepository.findById(formId).orElseThrow(() -> new IllegalArgumentException("Form with ID " + formId + " not found"));
 
@@ -164,7 +165,7 @@ public class FormService {
     return modules;
   }
 
-  public Form getFormById(CurrentUser sess, int formId) {
+  public Form getFormById(int formId) {
     return formRepository.findById(formId).orElseThrow(() -> new DataInconsistencyException("Form with ID " + formId + " not found. "));
   }
 
@@ -210,11 +211,11 @@ public class FormService {
                .toList();
   }
 
-  public List<FormItem> getFormItems(CurrentUser sess, Form form, Form.FormType type) {
+  public List<FormItem> getFormItems(Form form, Form.FormType type) {
     return formItemRepository.getFormItemsByFormId(form.getId()).stream().filter(formItem -> formItem.getFormTypes().contains(type)).toList();
   }
 
-  public FormItem getFormItemById(CurrentUser sess, int formItemId) {
+  public FormItem getFormItemById(int formItemId) {
     return formItemRepository.getFormItemById(formItemId).orElseThrow(() -> new DataInconsistencyException("Form item with ID " + formItemId + " not found"));
   }
 

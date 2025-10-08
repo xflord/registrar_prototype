@@ -35,7 +35,10 @@ import org.perun.registrarprototype.repositories.DecisionRepository;
 import org.perun.registrarprototype.repositories.FormRepository;
 import org.perun.registrarprototype.repositories.SubmissionRepository;
 import org.perun.registrarprototype.security.CurrentUser;
+import org.perun.registrarprototype.security.RegistrarAuthenticationToken;
+import org.perun.registrarprototype.security.SessionProvider;
 import org.perun.registrarprototype.services.idmIntegration.IdMService;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -49,12 +52,13 @@ public class ApplicationService {
   private final AuthorizationService authorizationService;
   private final FormService formService;
   private final IdMService idmService;
+  private final SessionProvider sessionProvider;
 
   public ApplicationService(ApplicationRepository applicationRepository, FormRepository formRepository,
                             SubmissionRepository submissionRepository, DecisionRepository decisionRepository,
                             EventService eventService, PerunIntegrationService perunIntegrationService,
                             AuthorizationService authorizationService, FormService formService,
-                            IdMService idmService) {
+                            IdMService idmService, SessionProvider sessionProvider) {
     this.applicationRepository = applicationRepository;
     this.formRepository = formRepository;
     this.submissionRepository = submissionRepository;
@@ -64,13 +68,14 @@ public class ApplicationService {
     this.authorizationService = authorizationService;
     this.formService = formService;
     this.idmService = idmService;
+    this.sessionProvider = sessionProvider;
   }
 
   // TODO modify this to call all the new methods to test the flow
   public Application registerUserToGroup(CurrentUser sess, int groupId, List<FormItemData> itemData)
       throws InvalidApplicationDataException {
     Form form = formRepository.findByGroupId(groupId).orElseThrow(() -> new IllegalArgumentException("Form not found"));
-    Application app = this.applyForMembership(sess, new ApplicationContext(form, groupId, itemData, Form.FormType.INITIAL));
+    Application app = this.applyForMembership(new ApplicationContext(form, groupId, itemData, Form.FormType.INITIAL));
 
     try {
       app.approve();
@@ -85,9 +90,9 @@ public class ApplicationService {
     return app;
   }
 
-  public Application approveApplication(CurrentUser sess, int applicationId, String message) throws InsufficientRightsException {
+  public Application approveApplication(RegistrarAuthenticationToken sess, int applicationId, String message) throws InsufficientRightsException {
     Application app = applicationRepository.findById(applicationId).orElseThrow(() -> new IllegalArgumentException("Application not found"));
-    Form form = formService.getFormById(sess, app.getFormId());
+    Form form = formService.getFormById(app.getFormId());
 
     List<AssignedFormModule> modules = formService.getAssignedFormModules(form);
     for (AssignedFormModule module : modules) {
@@ -99,7 +104,7 @@ public class ApplicationService {
       throw new InsufficientRightsException("You are not authorized to approve this application");
     }
 
-    makeDecision(sess, app, message, Decision.DecisionType.APPROVED);
+    makeDecision(sess.getPrincipal(), app, message, Decision.DecisionType.APPROVED);
 
     try {
       app.approve();
@@ -123,16 +128,16 @@ public class ApplicationService {
     return app;
   }
 
-  public Application rejectApplication(CurrentUser sess, int applicationId, String message) throws InsufficientRightsException {
+  public Application rejectApplication(RegistrarAuthenticationToken sess, int applicationId, String message) throws InsufficientRightsException {
     Application app = applicationRepository.findById(applicationId).orElseThrow(() -> new IllegalArgumentException("Application not found"));
-    Form form = formService.getFormById(sess, app.getFormId());
+    Form form = formService.getFormById(app.getFormId());
 
     if (!authorizationService.isAuthorized(sess, form.getGroupId())) {
       // return 403
       throw new InsufficientRightsException("You are not authorized to reject this application");
     }
 
-    makeDecision(sess, app, message, Decision.DecisionType.REJECTED);
+    makeDecision(sess.getPrincipal(), app, message, Decision.DecisionType.REJECTED);
 
     try {
       app.reject("Manually rejected by manager");
@@ -155,20 +160,15 @@ public class ApplicationService {
     return app;
   }
 
-  public Application requestChanges(CurrentUser sess, int applicationId, String message) throws InsufficientRightsException {
+  public Application requestChanges(RegistrarAuthenticationToken sess, int applicationId, String message) throws InsufficientRightsException {
     Application app = applicationRepository.findById(applicationId).orElseThrow(() -> new IllegalArgumentException("Application not found"));
-    Form form = formService.getFormById(sess, app.getFormId());
+    Form form = formService.getFormById(app.getFormId());
 
     if (StringUtils.isEmpty(message)) {
       throw new IllegalArgumentException("Cannot request changes without a message");
     }
 
-    if (!authorizationService.isAuthorized(sess, form.getGroupId())) {
-      // return 403
-      throw new InsufficientRightsException("You are not authorized to request changes to this application");
-    }
-
-    makeDecision(sess, app, message, Decision.DecisionType.CHANGES_REQUESTED);
+    makeDecision(sess.getPrincipal(), app, message, Decision.DecisionType.CHANGES_REQUESTED);
 
     try {
       app.requestChanges();
@@ -204,20 +204,19 @@ public class ApplicationService {
    * Submits an application to each of the supplied forms, aggregates them under one submission object along with
    * information about the submitter, automatically submits applications (to forms that are marked as such), retrieves
    * forms to which to redirect, and displays result messages.
-   * @param sess
    * @param submissionData
    * @return
    */
-  public SubmissionResult applyForMemberships(CurrentUser sess, SubmissionContext submissionData) {
+  public SubmissionResult applyForMemberships(SubmissionContext submissionData) {
     List<Application> applications = submissionData.getPrefilledData().stream()
-                                         .map((data) -> applyForMembership(sess, data))
+                                         .map(this::applyForMembership)
                                          .peek((app) -> app.setRedirectUrl(submissionData.getRedirectUrl()))
                                          .toList();
 
     Submission submission = new Submission();
     submission.setApplications(applications);
 
-    setSubmissionMetadata(sess, submission);
+    setSubmissionMetadata(submission);
     submission = submissionRepository.save(submission);
 
     SubmissionResult result = new SubmissionResult();
@@ -246,24 +245,23 @@ public class ApplicationService {
    * Fills the submission object with metadata used to associate different submissions with the same user, display
    * information about the user in application detail, etc.
    * TODO inquire which claims/attributes to store
-   * @param sess
    * @param submission
    */
-  private void setSubmissionMetadata(CurrentUser sess, Submission submission) {
+  private void setSubmissionMetadata(Submission submission) {
     submission.setTimestamp(LocalDateTime.now());
-
+    RegistrarAuthenticationToken sess = sessionProvider.getCurrentSession();
     if (!sess.isAuthenticated()) {
       return;
     }
 
-    if (idmService.getUserByIdentifier(sess.id()) != null) {
-      submission.setSubmitterId(sess.id());
+    if (idmService.getUserByIdentifier(sess.getPrincipal().id()) != null) {
+      submission.setSubmitterId(sess.getPrincipal().id());
     }
 
-    submission.setSubmitterName(sess.id());
+    submission.setSubmitterName(sess.getPrincipal().id());
     // TODO inquire which claims/attributes to store
 
-    submission.setIdentityAttributes(sess.getAttributes().entrySet().stream()
+    submission.setIdentityAttributes(sess.getPrincipal().getAttributes().entrySet().stream()
                                          .filter(e -> e.getValue() != null)
                                          .collect(Collectors.toMap(Map.Entry::getKey, e -> e.getValue().toString())));
 
@@ -271,14 +269,14 @@ public class ApplicationService {
 
   /**
    * Validates the input data for the form, marks assured prefilled items, and submits an application.
-   * @param sess
    * @param applicationContext
    * @return
    */
-  public Application applyForMembership(CurrentUser sess, ApplicationContext applicationContext) {
+  public Application applyForMembership(ApplicationContext applicationContext) {
     Form form = formRepository.findById(applicationContext.getForm().getId()).orElseThrow(() -> new IllegalArgumentException("Form not found"));
+    RegistrarAuthenticationToken sess = sessionProvider.getCurrentSession();
 
-    if (applicationContext.getType() == Form.FormType.EXTENSION && !canExtendMembership(sess, applicationContext.getGroupId())) {
+    if (applicationContext.getType() == Form.FormType.EXTENSION && !canExtendMembership(applicationContext.getGroupId())) {
       throw new IllegalArgumentException("User cannot extend membership in group: " + applicationContext.getGroupId());
     }
 
@@ -287,12 +285,12 @@ public class ApplicationService {
       throw new IllegalArgumentException("User already has an open application in group: " + applicationContext.getGroupId());
     }
 
-    Map<String, String> reservedPrincipalLogins = getReservedLoginsForPrincipal(sess); // call here to avoid unnecessary idm calls
+    Map<String, String> reservedPrincipalLogins = getReservedLoginsForPrincipal(sess.getPrincipal()); // call here to avoid unnecessary idm calls
 
-    validateFilledFormData(sess, applicationContext);
-    applicationContext.getPrefilledItems().forEach(item -> checkPrefilledValueConsistency(sess, item, reservedPrincipalLogins));
+    validateFilledFormData(applicationContext);
+    applicationContext.getPrefilledItems().forEach(item -> checkPrefilledValueConsistency(sess.getPrincipal(), item, reservedPrincipalLogins));
 
-    Application app = new Application(0, Integer.parseInt(sess.id()), form.getId(),
+    Application app = new Application(0, Integer.parseInt(sess.getPrincipal().id()), form.getId(),
         applicationContext.getPrefilledItems(), null, applicationContext.getType());
     try {
       app.submit(form);
@@ -303,10 +301,10 @@ public class ApplicationService {
 
     app = applicationRepository.save(app);
 
-    reserveLogins(sess, applicationContext.getPrefilledItems());
+    reserveLogins(applicationContext.getPrefilledItems());
 
     // TODO if we emit events asynchronously this might be problematic (not sure rollback would work here)
-    eventService.emitEvent(new ApplicationSubmittedEvent(app.getId(), Integer.parseInt(sess.id()), applicationContext.getGroupId()));
+    eventService.emitEvent(new ApplicationSubmittedEvent(app.getId(), Integer.parseInt(sess.getPrincipal().id()), applicationContext.getGroupId()));
 
     return app;
   }
@@ -314,11 +312,10 @@ public class ApplicationService {
   /**
    * Validates that the submitted form data is correctly filled in (e.g. required items not empty, values match
    * constraints, etc.)
-   * @param sess
    * @param data
    */
-  private void validateFilledFormData(CurrentUser sess, ApplicationContext data) {
-    List<FormItem> items = formService.getFormItems(sess, data.getForm(), data.getType());
+  private void validateFilledFormData(ApplicationContext data) {
+    List<FormItem> items = formService.getFormItems(data.getForm(), data.getType());
 
     Set<Integer> itemIds = items.stream().map(FormItem::getId).collect(Collectors.toSet());
     List<FormItemData> foreignItems = data.getPrefilledItems().stream()
@@ -357,7 +354,7 @@ public class ApplicationService {
     }
 
     if (itemData.getFormItem().getType().equals(FormItem.Type.LOGIN)) {
-      String loginValue = tryToFillLoginItem(sess, itemData.getFormItem(), reservedLogins);
+      String loginValue = tryToFillLoginItem(itemData.getFormItem(), reservedLogins);
       if (!StringUtils.isEmpty(loginValue) && loginValue.equals(itemData.getValue())) {
         itemData.setValueAssured(true);
         return;
@@ -380,15 +377,14 @@ public class ApplicationService {
    * Perform auto-submission of a form marked for auto submit. Use data from principal and the previous submission to
    * fill out form item data.
    * TODO run this asynchronously?
-   * @param sess
    * @param form
    * @param submissionData
    */
-  public void autoSubmitForm(CurrentUser sess, Form form, SubmissionContext submissionData) {
+  public void autoSubmitForm(Form form, SubmissionContext submissionData) {
     SubmissionContext autoSubmitData;
     try {
-      autoSubmitData = assemblePrefilledForms(sess, List.of(form), null);
-      applyForMemberships(sess, autoSubmitData);
+      autoSubmitData = assemblePrefilledForms(List.of(form), null);
+      applyForMemberships(autoSubmitData);
     } catch (Exception e) {
       System.out.println("Error while auto-submitting application for form " + form.getId() + " with error: " + e.getMessage()); // TODO log properly
       // consider adding error into result messages?
@@ -422,7 +418,7 @@ public class ApplicationService {
       // TODO do we want to load prerequisites of redirect forms like so?
       List<Integer> groupIds = redirectForms.stream().map(Form::getGroupId).distinct().toList();
       try {
-        submissionResult.setRedirectForms(loadForms(sess, groupIds, submissionResult.getRedirectUrl()));
+        submissionResult.setRedirectForms(loadForms(groupIds, submissionResult.getRedirectUrl()));
         // theoretically just the set of ids (or whatever the API will take as the entrypoint of registration flow) is enough and just redirect user to that endpoint
       } catch (Exception e) {
         System.out.println("Error assembling redirect forms: " + e.getMessage()); // TODO log properly
@@ -436,32 +432,31 @@ public class ApplicationService {
   /**
    * Entry from GUI -> for a given group, determine which forms to display to the user, prefill form items, and return to GUI
    *
-   * @param sess
    * @param groupIds set of groups the user wants to apply for membership in
    * @return prefilled submission object, with the redirect URL and individual prefilled form data (prefilled items, form type) TODO should be enough to build the whole form page? or do we need more info?
    */
-  public SubmissionContext loadForms(CurrentUser sess, List<Integer> groupIds, String redirectUrl) {
-    List<Form> requiredForms = determineGroupSet(sess, groupIds);
-    return assemblePrefilledForms(sess, requiredForms, redirectUrl);
+  public SubmissionContext loadForms(List<Integer> groupIds, String redirectUrl) {
+    List<Form> requiredForms = determineGroupSet(groupIds);
+    return assemblePrefilledForms(requiredForms, redirectUrl);
   }
 
   /**
    * Determines the application types for each form, retrieves and prefills items for that form type, and returns this
    * aggregated data.
-   * @param sess
    * @param requiredForms
    * @param redirectUrl
    * @return
    */
-  private SubmissionContext assemblePrefilledForms(CurrentUser sess, List<Form> requiredForms, String redirectUrl) {
+  private SubmissionContext assemblePrefilledForms(List<Form> requiredForms, String redirectUrl) {
     List<ApplicationContext> applicationFormData = new ArrayList<>();
+    RegistrarAuthenticationToken sess = sessionProvider.getCurrentSession();
     for (Form form : requiredForms) {
       if (checkOpenApplications(sess, form) != null) {
         // TODO open existing
         continue;
       }
 
-      Form.FormType type = selectFormType(sess, form);
+      Form.FormType type = selectFormType(form);
       if (type == null) {
         continue;
       }
@@ -479,7 +474,7 @@ public class ApplicationService {
 //        }
 //      });
 
-      form.setItems(formService.getFormItems(sess, form, type));
+      form.setItems(formService.getFormItems(form, type));
 
       List<FormItemData> prefilledFormItemData = loadForm(sess, form, type);
 
@@ -494,14 +489,13 @@ public class ApplicationService {
 
   /**
    * For the group associated with the given form, determine the FormType (e.g. INITIAL, EXTENSION)
-   * @param sess
    * @param form
    * @return
    */
-  private Form.FormType selectFormType(CurrentUser sess, Form form) {
+  private Form.FormType selectFormType(Form form) {
 
-    if (checkUserMembership(sess, form.getGroupId())) {
-      if (canExtendMembership(sess, form.getGroupId())) {
+    if (checkUserMembership(form.getGroupId())) {
+      if (canExtendMembership(form.getGroupId())) {
         return Form.FormType.EXTENSION;
       }
       // todo display error message if no forms returned?
@@ -519,17 +513,17 @@ public class ApplicationService {
    * @param type
    * @return
    */
-  public List<FormItemData> loadForm(CurrentUser sess, Form form, Form.FormType type) {
+  public List<FormItemData> loadForm(RegistrarAuthenticationToken sess, Form form, Form.FormType type) {
 //    if (type.equals(Form.FormType.UPDATE)) {
 //      // TODO prefill form with data from already submitted app if loading modifying/update form type
 //    }
 
     List<AssignedFormModule> modules = formService.getAssignedFormModules(form);
-    modules.forEach(module -> module.getFormModule().canBeSubmitted(sess, type, module.getOptions()));
+    modules.forEach(module -> module.getFormModule().canBeSubmitted(sess.getPrincipal(), type, module.getOptions()));
 
-    List<FormItemData> prefilledFormItemData = prefillForm(sess, form);
+    List<FormItemData> prefilledFormItemData = prefillForm(sess.getPrincipal(), form);
 
-    modules.forEach(module -> module.getFormModule().afterFormItemsPrefilled(sess, type, prefilledFormItemData));
+    modules.forEach(module -> module.getFormModule().afterFormItemsPrefilled(sess.getPrincipal(), type, prefilledFormItemData));
 
     checkMissingPrefilledItems(sess, prefilledFormItemData);
 
@@ -561,7 +555,7 @@ public class ApplicationService {
    * @param sess
    * @param prefilledItems
    */
-  private void checkMissingPrefilledItems(CurrentUser sess, List<FormItemData> prefilledItems) {
+  private void checkMissingPrefilledItems(RegistrarAuthenticationToken sess, List<FormItemData> prefilledItems) {
     List<FormItemData> unmodifiableRequiredButEmpty = new ArrayList<>();
     List<FormItemData> itemsWithMissingData = new ArrayList<>();
     prefilledItems.stream()
@@ -654,7 +648,7 @@ public class ApplicationService {
    */
   private String calculatePrefilledValue(CurrentUser sess, FormItem item, Map<String, String> reservedLogins) { // again decide whether to pass principal as argument or retrieve it from the current session
    if (item.getType().equals(FormItem.Type.LOGIN)) {
-     String login = tryToFillLoginItem(sess, item, reservedLogins);
+     String login = tryToFillLoginItem(item, reservedLogins);
      if (!StringUtils.isEmpty(login)) {
        return login;
      }
@@ -712,12 +706,11 @@ public class ApplicationService {
 
   /**
    * Tries to fill items with the destination attribute matching the LOGIN urn
-   * @param sess
    * @param item
    * @param reservedLogins
    * @return
    */
-  private String tryToFillLoginItem(CurrentUser sess, FormItem item, Map<String, String> reservedLogins) {
+  private String tryToFillLoginItem( FormItem item, Map<String, String> reservedLogins) {
     for (String namespace : reservedLogins.keySet()) {
       String loginAttributeDefinition = "urn:perun:user:attribute-def:def:login-namespace:" + namespace;  // TODO add config property or constant
       if (item.getDestinationIdmAttribute().equals(loginAttributeDefinition)) {
@@ -733,7 +726,7 @@ public class ApplicationService {
    *  login (e.g. using service accounts).
    * @param itemData
    */
-  private void reserveLogins(CurrentUser sess, List<FormItemData> itemData) {
+  private void reserveLogins(List<FormItemData> itemData) {
 
     for (FormItemData formItemData : itemData) {
       if (formItemData.getFormItem().getType().equals(FormItem.Type.LOGIN)) {
@@ -773,13 +766,12 @@ public class ApplicationService {
    * to determine FormType (e.g., if user has open application, update this application -  TODO do we use separate application type or just update the data?)
    * TODO also check by data stored in the Submission object
    * @param form
-   * @param sess
    */
-  private Application checkOpenApplications(CurrentUser sess, Form form) {
+  private Application checkOpenApplications(RegistrarAuthenticationToken sess, Form form) {
     if (sess.isAuthenticated()) {
       Optional<Application> foundApp = applicationRepository.findByFormId(form.getId()).stream()
           .filter(app -> app.getState().isOpenState())
-          .filter(app -> app.getUserId() == Integer.parseInt(sess.id()))
+          .filter(app -> app.getUserId() == Integer.parseInt(sess.getPrincipal().id()))
                                 .findFirst(); // TODO utilize similarUsers as well?
       return foundApp.orElse(null);
     }
@@ -789,12 +781,12 @@ public class ApplicationService {
   /**
    * Check whether user is a member of the group/VO in the underlying IdM. If so, use this information to determine
    * FormType (e.g if user is member and is can extend, use EXTENSION form type) TODO UPDATE and CANCELLATION form types via different endpoint?
-   * @param sess
    * @param groupId
    */
-  private boolean checkUserMembership(CurrentUser sess, int groupId) {
+  private boolean checkUserMembership(int groupId) {
+    RegistrarAuthenticationToken sess = sessionProvider.getCurrentSession();
     if (sess.isAuthenticated()) {
-      return idmService.getGroupIdsWhereUserIsMember(sess.id()).contains(groupId);
+      return idmService.getGroupIdsWhereUserIsMember(sess.getPrincipal().id()).contains(groupId);
     }
     return false;
   }
@@ -803,13 +795,13 @@ public class ApplicationService {
    * Check whether user can extend membership in the group/VO in the underlying IdM.
    * TODO Either use a direct IdM call or operate using membershipExpiration attribute? Prolly direct call, more logic involved (rules, etc.)
    * operate using
-   * @param sess
    * @param groupId
    * @return
    */
-  private boolean canExtendMembership(CurrentUser sess, int groupId) {
-    if (sess.isAuthenticated() && checkUserMembership(sess, groupId)) {
-      return idmService.canExtendMembership(sess.id(), groupId);
+  private boolean canExtendMembership(int groupId) {
+    RegistrarAuthenticationToken sess = sessionProvider.getCurrentSession();
+    if (sess.isAuthenticated() && checkUserMembership(groupId)) {
+      return idmService.canExtendMembership(sess.getPrincipal().id(), groupId);
     }
     return false;
   }
@@ -817,11 +809,10 @@ public class ApplicationService {
   /**
    * Determine which groups to submit applications to based on the input parameters.
    * Meaning determine prerequisites for group based on form relationships, based on the input parameters (can be a list of ids/names)
-   * @param sess
    * @param groupIds TODO not sure what the input parameters will be
    * @return list of group ids to submit applications to
    */
-  private List<Form> determineGroupSet(CurrentUser sess, List<Integer> groupIds) {
+  private List<Form> determineGroupSet(List<Integer> groupIds) {
     List<Form> requiredForms = new ArrayList<>();
     for (Integer groupId : groupIds) {
       Form form = formRepository.findByGroupId(groupId).orElseThrow(() -> new IllegalArgumentException("Form for group " + groupId + " not found"));

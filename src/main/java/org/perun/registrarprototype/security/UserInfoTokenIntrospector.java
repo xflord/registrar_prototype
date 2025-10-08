@@ -4,6 +4,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.oauth2.core.OAuth2AuthenticatedPrincipal;
@@ -30,6 +31,7 @@ public class UserInfoTokenIntrospector implements OpaqueTokenIntrospector {
     System.out.println("Retrieved principal: " + principal.getName());
 
     Map<String, Object> attributes = getUserInfo(token);
+
     attributes.putAll(principal.getAttributes());
 
     return new UserInfoEnrichedPrincipal(attributes, (Collection<GrantedAuthority>) principal.getAuthorities());
