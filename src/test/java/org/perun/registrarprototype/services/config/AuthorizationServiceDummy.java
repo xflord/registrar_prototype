@@ -5,7 +5,12 @@ import org.perun.registrarprototype.services.AuthorizationService;
 
 public class AuthorizationServiceDummy implements AuthorizationService {
   @Override
-  public boolean isAuthorized(RegistrarAuthenticationToken sess, int groupId) {
+  public boolean canManage(RegistrarAuthenticationToken sess, int groupId) {
+    return true;
+  }
+
+  @Override
+  public boolean canDecide(RegistrarAuthenticationToken sess, int groupId) {
     return true;
   }
 }

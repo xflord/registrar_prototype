@@ -7,6 +7,8 @@ import org.perun.registrarprototype.models.Application;
 public interface ApplicationRepository {
   Application save(Application application);
 
+  List<Application> updateAll(List<Application> applications);
+
   Optional<Application> findById(int id);
 
   List<Application> findByFormId(int formId);

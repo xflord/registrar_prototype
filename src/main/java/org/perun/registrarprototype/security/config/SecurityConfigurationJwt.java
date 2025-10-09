@@ -56,7 +56,7 @@ public class SecurityConfigurationJwt {
 
   @Bean
   public UserInfoJwtAuthenticationConverter customJwtAuthenticationConverter() {
-    return new UserInfoJwtAuthenticationConverter("https://login.e-infra.cz/oidc/userinfo");
+    return new UserInfoJwtAuthenticationConverter();
   }
 
   @Bean

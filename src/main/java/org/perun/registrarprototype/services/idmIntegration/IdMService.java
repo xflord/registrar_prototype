@@ -5,6 +5,9 @@ import cz.metacentrum.perun.openapi.model.Identity;
 import cz.metacentrum.perun.openapi.model.User;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import org.perun.registrarprototype.models.Application;
+import org.perun.registrarprototype.models.Role;
 
 /**
  * Interface for interaction with the underlying IdM system (currently Perun/MidPoint?).
@@ -28,7 +31,7 @@ public interface IdMService {
    * @param identifier oauth identifier (e.g. sub in oidc)
    * @return either Perun User or custom User object
    */
-  User getUserByIdentifier(String identifier);
+  Integer getUserIdByIdentifier(String identifier);
 
   List<Integer> getGroupIdsWhereUserIsMember(Integer userId);
 
@@ -39,6 +42,8 @@ public interface IdMService {
    * @throws Exception
    */
   Map<String, List<Integer>> getAuthorizedObjects(Integer userId) throws Exception;
+
+  Map<Role, Set<Integer>> getRegistrarRolesByUserId(int userId) throws Exception;
 
   // TODO add custom exception for IdM errors? an ErrorHandler would be nice to have
   String getUserAttribute(Integer userId, String attributeName);
@@ -58,6 +63,22 @@ public interface IdMService {
   boolean isLoginAvailable(String namespace, String login);
 
   void reserveLogin(String namespace, String login);
+
+  String getLoginAttributeUrn();
+
+  String getUserAttributeUrn();
+
+  String getMemberAttributeUrn();
+
+  String getGroupAttributeUrn();
+
+  String getVoAttributeUrn();
+
+  Integer createMemberForCandidate(Application application, int groupId);
+
+  Integer createMemberForUser(Application application, int groupId);
+
+  Integer extendMembership(Application application, int groupId);
 
   /**
    * Retrieves User objects that match the attributes of the oauth principal (e.g. sub in oidc, email. etc.).

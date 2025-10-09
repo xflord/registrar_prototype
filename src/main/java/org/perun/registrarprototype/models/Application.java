@@ -1,19 +1,20 @@
 package org.perun.registrarprototype.models;
 
 import java.util.List;
+import java.util.Objects;
 import org.perun.registrarprototype.exceptions.InvalidApplicationDataException;
 import org.perun.registrarprototype.exceptions.InvalidApplicationStateTransitionException;
 
 public class Application {
   private int id;
-  private final Integer idmUserId;
+  private Integer idmUserId;
   private final int formId;
   private final List<FormItemData> formItemData;
   private ApplicationState state = ApplicationState.PENDING;
   private String rejectionReason;
   private String redirectUrl;
   private Form.FormType type;
-  private Submission submission;
+  private Submission submission = new Submission();
 
   public Application(int id, Integer idmUserId, int formId, List<FormItemData> formItemData, String redirectUrl, Form.FormType type) {
     this.id = id;
@@ -33,6 +34,9 @@ public class Application {
 
   public Integer getIdmUserId() {
     return idmUserId;
+  }
+  public void setIdmUserId(Integer idmUserId) {
+    this.idmUserId = idmUserId;
   }
 
   public List<FormItemData> getFormItemData() {
@@ -103,6 +107,28 @@ public class Application {
 
   public void setSubmission(Submission submission) {
     this.submission = submission;
+  }
+
+  public Form.FormType getType() {
+    return type;
+  }
+
+  public void setType(Form.FormType type) {
+    this.type = type;
+  }
+
+  @Override
+  public boolean equals(Object o) {
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    Application that = (Application) o;
+    return getId() == that.getId();
+  }
+
+  @Override
+  public int hashCode() {
+    return Objects.hashCode(getId());
   }
 }
 

@@ -1,7 +1,5 @@
 package org.perun.registrarprototype.controllers;
 
-import jakarta.servlet.http.HttpServletRequest;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import org.perun.registrarprototype.exceptions.FormItemRegexNotValid;
@@ -12,8 +10,7 @@ import org.perun.registrarprototype.models.FormItem;
 import org.perun.registrarprototype.security.CurrentUser;
 import org.perun.registrarprototype.security.RegistrarAuthenticationToken;
 import org.perun.registrarprototype.security.SessionProvider;
-import org.perun.registrarprototype.services.FormService;
-import org.springframework.http.HttpHeaders;
+import org.perun.registrarprototype.services.FormServiceImpl;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -28,10 +25,10 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/forms")
 public class FormController {
 
-  private final FormService formService;
+  private final FormServiceImpl formService;
   private final SessionProvider sessionProvider;
 
-  public FormController(FormService formService, SessionProvider sessionProvider) {
+  public FormController(FormServiceImpl formService, SessionProvider sessionProvider) {
       this.formService = formService;
       this.sessionProvider = sessionProvider;
   }

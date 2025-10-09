@@ -1,14 +1,12 @@
 package org.perun.registrarprototype.controllers;
 
-import jakarta.servlet.http.HttpServletRequest;
 import org.perun.registrarprototype.exceptions.InsufficientRightsException;
 import org.perun.registrarprototype.exceptions.InvalidApplicationDataException;
 import org.perun.registrarprototype.models.Application;
 import org.perun.registrarprototype.security.CurrentUser;
 import org.perun.registrarprototype.models.FormItemData;
 import org.perun.registrarprototype.security.SessionProvider;
-import org.perun.registrarprototype.services.ApplicationService;
-import org.springframework.http.HttpHeaders;
+import org.perun.registrarprototype.services.ApplicationServiceImpl;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -19,10 +17,10 @@ import java.util.List;
 @RequestMapping("/applications")
 public class ApplicationController {
 
-  private final ApplicationService applicationService;
+  private final ApplicationServiceImpl applicationService;
   private final SessionProvider sessionProvider;
 
-  public ApplicationController(ApplicationService applicationService, SessionProvider sessionProvider) {
+  public ApplicationController(ApplicationServiceImpl applicationService, SessionProvider sessionProvider) {
       this.applicationService = applicationService;
       this.sessionProvider = sessionProvider;
   }
@@ -67,22 +65,22 @@ public class ApplicationController {
     return ResponseEntity.ok().build();
   }
 
-  // --- Direct register (apply + auto-approve) ---
-  @PostMapping("/register")
-  public ResponseEntity<Application> registerUserToGroup(
-          @RequestParam int userId,
-          @RequestParam int groupId,
-          @RequestBody List<FormItemData> itemData
-  ) {
-    Application app;
-    try {
-      app = applicationService.registerUserToGroup(new CurrentUser(), groupId, itemData);
-    } catch (InvalidApplicationDataException e) {
-      // probably modify to return ValidationErrors/Result
-      throw new RuntimeException(e);
-    }
-    return ResponseEntity.ok(app);
-  }
+//  // --- Direct register (apply + auto-approve) ---
+//  @PostMapping("/register")
+//  public ResponseEntity<Application> registerUserToGroup(
+//          @RequestParam int userId,
+//          @RequestParam int groupId,
+//          @RequestBody List<FormItemData> itemData
+//  ) {
+//    Application app;
+//    try {
+//      app = applicationService.registerUserToGroup(new CurrentUser(), groupId, itemData);
+//    } catch (InvalidApplicationDataException e) {
+//      // probably modify to return ValidationErrors/Result
+//      throw new RuntimeException(e);
+//    }
+//    return ResponseEntity.ok(app);
+//  }
 
   /**
    * Loads form for given Group/Vo. This includes prefilling form items with data from IdMs/IdPs.

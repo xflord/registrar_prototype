@@ -16,7 +16,6 @@ import org.perun.registrarprototype.repositories.FormItemRepository;
 import org.perun.registrarprototype.repositories.FormModuleRepository;
 import org.perun.registrarprototype.repositories.FormRepository;
 import org.perun.registrarprototype.repositories.FormTransitionRepository;
-import org.perun.registrarprototype.security.CurrentUser;
 import org.perun.registrarprototype.security.RegistrarAuthenticationToken;
 import org.perun.registrarprototype.services.modules.FormModule;
 import org.springframework.beans.BeansException;
@@ -24,7 +23,7 @@ import org.springframework.context.ApplicationContext;
 import org.springframework.stereotype.Service;
 
 @Service
-public class FormService {
+public class FormServiceImpl {
   private final FormRepository formRepository;
   private final AuthorizationService authorizationService;
   private final FormModuleRepository formModuleRepository;
@@ -32,9 +31,9 @@ public class FormService {
   private final FormTransitionRepository formTransitionRepository;
   private final ApplicationContext context;
 
-  public FormService(FormRepository formRepository, AuthorizationService authorizationService,
-                     FormModuleRepository formModuleRepository, ApplicationContext context,
-                     FormItemRepository formItemRepository, FormTransitionRepository formTransitionRepository) {
+  public FormServiceImpl(FormRepository formRepository, AuthorizationService authorizationService,
+                         FormModuleRepository formModuleRepository, ApplicationContext context,
+                         FormItemRepository formItemRepository, FormTransitionRepository formTransitionRepository) {
     this.formRepository = formRepository;
     this.authorizationService = authorizationService;
     this.formModuleRepository = formModuleRepository;
@@ -45,7 +44,7 @@ public class FormService {
 
   public Form createForm(RegistrarAuthenticationToken sess, int groupId)
       throws FormItemRegexNotValid, InsufficientRightsException {
-    if (!authorizationService.isAuthorized(sess, groupId)) {
+    if (!authorizationService.canManage(sess, groupId)) {
       // 403
       throw new InsufficientRightsException("You are not authorized to create a form for this group");
     }
@@ -134,7 +133,7 @@ public class FormService {
       throws InsufficientRightsException {
     Form form = formRepository.findById(formId).orElseThrow(() -> new IllegalArgumentException("Form with ID " + formId + " not found"));
 
-    if (!authorizationService.isAuthorized(sess, form.getGroupId())) {
+    if (!authorizationService.canManage(sess, form.getGroupId())) {
       // 403
       throw new InsufficientRightsException("You are not authorized to create a form for this group");
     }

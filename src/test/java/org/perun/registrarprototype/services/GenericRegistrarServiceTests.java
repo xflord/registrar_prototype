@@ -1,13 +1,13 @@
 package org.perun.registrarprototype.services;
 
 import org.junit.jupiter.api.BeforeEach;
+import org.perun.registrarprototype.models.Submission;
 import org.perun.registrarprototype.repositories.ApplicationRepository;
 import org.perun.registrarprototype.repositories.FormModuleRepository;
 import org.perun.registrarprototype.repositories.FormRepository;
 import org.perun.registrarprototype.repositories.tempImpl.FormModuleRepositoryDummy;
 import org.perun.registrarprototype.security.SessionProvider;
 import org.perun.registrarprototype.services.config.TestConfig;
-import org.perun.registrarprototype.services.tempImpl.PerunIntegrationDummy;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.ImportAutoConfiguration;
 import org.springframework.boot.autoconfigure.security.oauth2.client.OAuth2ClientAutoConfiguration;
@@ -20,11 +20,10 @@ import org.springframework.test.context.ActiveProfiles;
 @Import(TestConfig.class)
 @ActiveProfiles( {"test", "basic-auth"} )
 public class GenericRegistrarServiceTests {
-   protected PerunIntegrationDummy perunIntegrationService;
    @Autowired
-   protected ApplicationService applicationService;
+   protected ApplicationServiceImpl applicationService;
    @Autowired
-   protected FormService formService;
+   protected FormServiceImpl formService;
    @Autowired
    protected SessionProvider sessionProvider;
    @Autowired
@@ -34,13 +33,16 @@ public class GenericRegistrarServiceTests {
    protected FormModuleRepository formModuleRepository;
 
    private static int groupId = 0;
+   protected Submission submission;
 
    @BeforeEach
     void setUp() {
-        perunIntegrationService = new PerunIntegrationDummy();
         FormModuleRepositoryDummy formModuleRep = new FormModuleRepositoryDummy();
         formModuleRep.reset();
         formModuleRepository = formModuleRep;
+        submission = new Submission();
+        submission.setIdentityIssuer("testIssuer");
+        submission.setIdentityIdentifier("testIdentifier");
     }
 
     protected int getGroupId() {

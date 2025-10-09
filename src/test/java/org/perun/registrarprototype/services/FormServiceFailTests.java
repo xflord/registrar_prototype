@@ -16,7 +16,6 @@ public class FormServiceFailTests extends GenericRegistrarServiceTests {
   @Test
   void createFormIncorrectConstraints() throws Exception {
     int groupId = getGroupId();
-    perunIntegrationService.createGroup(groupId);
 
     Form form = formService.createForm(null, groupId);
 
@@ -30,7 +29,6 @@ public class FormServiceFailTests extends GenericRegistrarServiceTests {
   @Test
   void setModuleMissingRequiredOptions() throws Exception {
     int groupId = getGroupId();
-    perunIntegrationService.createGroup(groupId);
 
     Form form = formService.createForm(null, groupId);
 
@@ -46,7 +44,6 @@ public class FormServiceFailTests extends GenericRegistrarServiceTests {
   @Test
   void setModuleWrongRequiredOptions() throws Exception {
     int groupId = getGroupId();
-    perunIntegrationService.createGroup(groupId);
 
     Form form = formService.createForm(null, groupId);
 

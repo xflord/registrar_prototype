@@ -22,6 +22,13 @@ public class ApplicationRepositoryDummy implements ApplicationRepository {
   }
 
   @Override
+  public List<Application> updateAll(List<Application> applicationsToUpdate) {
+    applications.removeIf(applicationsToUpdate::contains);
+    applications.addAll(applicationsToUpdate);
+    return applicationsToUpdate;
+  }
+
+  @Override
   public Optional<Application> findById(int id) {
     return applications.stream().filter(application -> application.getId() == id).findFirst();
   }

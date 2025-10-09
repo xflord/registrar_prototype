@@ -3,14 +3,26 @@ package org.perun.registrarprototype.services.idmIntegration.perun;
 import cz.metacentrum.perun.openapi.PerunRPC;
 import cz.metacentrum.perun.openapi.model.Attribute;
 import cz.metacentrum.perun.openapi.model.AttributeDefinition;
+import cz.metacentrum.perun.openapi.model.Candidate;
+import cz.metacentrum.perun.openapi.model.ExtSource;
 import cz.metacentrum.perun.openapi.model.Group;
 import cz.metacentrum.perun.openapi.model.Identity;
+import cz.metacentrum.perun.openapi.model.InputCreateMemberForCandidate;
+import cz.metacentrum.perun.openapi.model.InputCreateMemberForUser;
+import cz.metacentrum.perun.openapi.model.InputSetMemberAttributes;
 import cz.metacentrum.perun.openapi.model.Member;
 import cz.metacentrum.perun.openapi.model.User;
 import cz.metacentrum.perun.openapi.PerunException;
+import cz.metacentrum.perun.openapi.model.UserExtSource;
+import io.micrometer.common.util.StringUtils;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.stream.Collectors;
+import org.perun.registrarprototype.models.Application;
+import org.perun.registrarprototype.models.Role;
+import org.perun.registrarprototype.models.Submission;
 import org.perun.registrarprototype.services.idmIntegration.IdMService;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -32,7 +44,7 @@ public class PerunIdMService implements IdMService {
   }
 
   @Override
-  public User getUserByIdentifier(String identifier) {
+  public Integer getUserIdByIdentifier(String identifier) {
     User user;
     try {
       user = rpc.getUsersManager().getUserByExtSourceNameAndExtLogin(identifier, idmExtSourceName);
@@ -45,7 +57,11 @@ public class PerunIdMService implements IdMService {
       throw new RuntimeException(ex);
     }
 
-    return user;
+    if (user == null) {
+      return null;
+    }
+
+    return user.getId();
   }
 
   @Override
@@ -73,6 +89,7 @@ public class PerunIdMService implements IdMService {
       throw new RuntimeException(ex);
     }
 
+
     for (String role : perunRoles.keySet()) {
       if (GROUP_MANAGER_ROLES.contains(role)) {
         objects.get("Group").addAll(perunRoles.get(role).get("Group"));
@@ -81,11 +98,50 @@ public class PerunIdMService implements IdMService {
         objects.get("VO").addAll(perunRoles.get(role).get("Vo"));
       }
     }
-
     // TODO do we add all the groups for VO roles? Could be unnecessarily too many calls. Should be enough to save the
     //  ids and then fetch on demand (when checking permissions for group).
 
     return objects;
+  }
+
+  @Override
+  public Map<Role, Set<Integer>> getRegistrarRolesByUserId(int userId) throws Exception {
+    Map<Role, Set<Integer>> regRoles = new HashMap<>();
+    regRoles.put(Role.FORM_MANAGER, Set.of());
+    regRoles.put(Role.FORM_APPROVER, Set.of());
+
+    Map<String, Map<String, List<Integer>>> perunRoles;
+    try {
+      perunRoles = rpc.getAuthzResolver().getUserRoles(userId);
+    } catch (HttpClientErrorException ex) {
+      throw PerunException.to(ex);
+    } catch (RestClientException ex) {
+      throw new RuntimeException(ex);
+    }
+
+    for (String role : perunRoles.keySet()) {
+      switch (role) {
+        case "VOADMIN": // handle rights for groups currently
+          regRoles.get(Role.FORM_MANAGER).addAll(perunRoles.get(role).get("Vo").stream()
+                                                     .flatMap(
+                                                         voId -> rpc.getGroupsManager().getAllGroups(voId).stream())
+                                                     .map(Group::getId).collect(Collectors.toSet()));
+        case "ORGANIZATIONMEMBERSHIPMANAGER":
+          regRoles.get(Role.FORM_APPROVER).addAll(perunRoles.get(role).get("Vo").stream()
+                                                      .flatMap(
+                                                          voId -> rpc.getGroupsManager().getAllGroups(voId).stream())
+                                                      .map(Group::getId).collect(Collectors.toSet()));
+        case "GROUPADMIN":
+          regRoles.get(Role.FORM_MANAGER).addAll(perunRoles.get(role).get("Group"));
+        case "GROUPMEMBERSHIPMANAGER":
+          regRoles.get(Role.FORM_APPROVER).addAll(perunRoles.get(role).get("Group"));
+        case "PERUNADMIN":
+          regRoles.putIfAbsent(Role.ADMIN, Set.of());
+        default:
+          break;
+      }
+    }
+    return regRoles;
   }
 
   @Override
@@ -112,25 +168,14 @@ public class PerunIdMService implements IdMService {
       return null;
     }
 
-    Group group;
-    try {
-      group = rpc.getGroupsManager().getGroupById(groupId);
-    } catch (HttpClientErrorException ex) {
-      // another way of handling this - logging and returning null?
-      System.out.println(PerunException.to(ex).getMessage());
+    Group group = retrieveGroup(groupId);
+    if (group == null) {
       return null;
-    } catch (RestClientException ex) {
-      throw new RuntimeException(ex);
     }
 
-    Member member;
-    try {
-      member = rpc.getMembersManager().getMemberByUser(group.getVoId(), userId);
-    } catch (HttpClientErrorException ex) {
-      System.out.println(PerunException.to(ex).getMessage());
+    Member member = retrieveMember(userId, group);
+    if (member == null) {
       return null;
-    } catch (RestClientException ex) {
-      throw new RuntimeException(ex);
     }
 
     try {
@@ -150,25 +195,14 @@ public class PerunIdMService implements IdMService {
       return null;
     }
 
-    Group group;
-    try {
-      group = rpc.getGroupsManager().getGroupById(groupId);
-    } catch (HttpClientErrorException ex) {
-      // another way of handling this - logging and returning null?
-      System.out.println(PerunException.to(ex).getMessage());
+    Group group = retrieveGroup(groupId);
+    if (group == null) {
       return null;
-    } catch (RestClientException ex) {
-      throw new RuntimeException(ex);
     }
 
-    Member member;
-    try {
-      member = rpc.getMembersManager().getMemberByUser(group.getVoId(), userId);
-    } catch (HttpClientErrorException ex) {
-      System.out.println(PerunException.to(ex).getMessage());
+    Member member = retrieveMember(userId, group);
+    if (member == null) {
       return null;
-    } catch (RestClientException ex) {
-      throw new RuntimeException(ex);
     }
 
     try {
@@ -182,6 +216,19 @@ public class PerunIdMService implements IdMService {
     }
   }
 
+  private Member retrieveMember(Integer userId, Group group) {
+    Member member;
+    try {
+      member = rpc.getMembersManager().getMemberByUser(group.getVoId(), userId);
+    } catch (HttpClientErrorException ex) {
+      System.out.println(PerunException.to(ex).getMessage());
+      return null;
+    } catch (RestClientException ex) {
+      throw new RuntimeException(ex);
+    }
+    return member;
+  }
+
   @Override
   public boolean canExtendMembership(Integer userId, int groupId) {
     if (userId == null) {
@@ -189,25 +236,11 @@ public class PerunIdMService implements IdMService {
       return false;
     }
 
-    Group group;
-    try {
-      group = rpc.getGroupsManager().getGroupById(groupId);
-    } catch (HttpClientErrorException ex) {
-      // another way of handling this - logging and returning null?
-      System.out.println(PerunException.to(ex).getMessage());
-      return false;
-    } catch (RestClientException ex) {
-      throw new RuntimeException(ex);
-    }
+    Group group = retrieveGroup(groupId);
 
-    Member member;
-    try {
-      member = rpc.getMembersManager().getMemberByUser(group.getVoId(), userId);
-    } catch (HttpClientErrorException ex) {
-      System.out.println(PerunException.to(ex).getMessage());
+    Member member = retrieveMember(userId, group);
+    if (member == null) {
       return false;
-    } catch (RestClientException ex) {
-      throw new RuntimeException(ex);
     }
 
     try {
@@ -273,6 +306,137 @@ public class PerunIdMService implements IdMService {
   @Override
   public void reserveLogin(String namespace, String login) {
     // not implemented
+  }
+
+  @Override
+  public String getLoginAttributeUrn() {
+    return "urn:perun:user:attribute-def:def:login-namespace:";
+  }
+
+  @Override
+  public String getUserAttributeUrn() {
+    return "urn:perun:user";
+  }
+
+  @Override
+  public String getMemberAttributeUrn() {
+    return "urn:perun:member";
+  }
+
+  @Override
+  public String getGroupAttributeUrn() {
+    return "urn:perun:group";
+  }
+
+  @Override
+  public String getVoAttributeUrn() {
+    return "urn:perun:vo";
+  }
+
+  @Override
+  public Integer createMemberForCandidate(Application application, int groupId) {
+    Group group = retrieveGroup(groupId);
+    if (group == null) {
+      return null;
+    }
+
+    InputCreateMemberForCandidate input = new InputCreateMemberForCandidate();
+    input.setVo(group.getVoId());
+    input.addGroupsItem(group);
+    Candidate candidate = getCandidate(application.getSubmission());
+    Map<String, String> attributes = new HashMap<>();
+        application.getFormItemData().stream()
+            .filter(item -> StringUtils.isNotEmpty(item.getFormItem().getDestinationIdmAttribute()))
+            .forEach(item -> attributes.put(item.getFormItem().getDestinationIdmAttribute(), item.getValue()));
+    candidate.setAttributes(attributes);
+    input.setCandidate(candidate);
+    return rpc.getMembersManager().createMemberForCandidate(input).getUserId();
+
+  }
+
+  private Group retrieveGroup(int groupId) {
+    Group group;
+    try {
+      group = rpc.getGroupsManager().getGroupById(groupId);
+    } catch (HttpClientErrorException ex) {
+      // another way of handling this - logging and returning null?
+      System.out.println(PerunException.to(ex).getMessage());
+      return null;
+    } catch (RestClientException ex) {
+      throw new RuntimeException(ex);
+    }
+
+    if (group == null) {
+      throw new RuntimeException("Group with id " + groupId + " not found in Perun");
+    }
+    return group;
+  }
+
+  @Override
+  public Integer createMemberForUser(Application application, int groupId) {
+    Group group = retrieveGroup(groupId);
+    if (group == null) {
+      return null;
+    }
+
+    InputCreateMemberForUser input = new InputCreateMemberForUser();
+    input.setVo(group.getVoId());
+    input.addGroupsItem(group);
+    input.setUser(application.getIdmUserId());
+    Member member = rpc.getMembersManager().createMemberForUser(input);
+    updateMemberAttributesFromAppData(application, member);
+
+    return member.getUserId();
+  }
+
+  @Override
+  public Integer extendMembership(Application application, int groupId) {
+    Group group = retrieveGroup(groupId);
+    if (group == null) {
+      return null;
+    }
+
+    Member member = rpc.getMembersManager().getMemberByUser(group.getVoId(), application.getIdmUserId());
+    rpc.getMembersManager().extendMembership(member.getId());
+    updateMemberAttributesFromAppData(application, member);
+
+    return member.getUserId();
+  }
+
+  private void updateMemberAttributesFromAppData(Application application, Member member) {
+    InputSetMemberAttributes inputAttributes = new InputSetMemberAttributes();
+    inputAttributes.setMember(member.getId());
+    List<Attribute> attributes = application.getFormItemData().stream()
+                                     .map(item -> {
+                                       AttributeDefinition attrDef = rpc.getAttributesManager()
+                                                                         .getAttributeDefinitionByName(item.getFormItem().getDestinationIdmAttribute());
+                                       Attribute attr = new Attribute();
+                                       attr.setValue(item.getValue());
+                                       attr.setNamespace(attrDef.getNamespace());
+                                       attrDef.setFriendlyName(attrDef.getFriendlyName());
+                                       return attr;
+                                     }).toList();
+    inputAttributes.setAttributes(attributes);
+    // inputAttributes.setWorkWithUserAttributes(true) TODO this needs to be added to openapi
+    rpc.getAttributesManager().setMemberAttributes(inputAttributes);
+  }
+
+  private Candidate getCandidate(Submission submission) {
+    Candidate candidate = new Candidate();
+
+    candidate.setFirstName(submission.getIdentityAttributes().get("given_name"));
+    candidate.setLastName(submission.getIdentityAttributes().get("family_name"));
+    if (submission.getSubmitterName() != null) {
+      var ues = new UserExtSource();
+      ues.setLoa(1);
+      ues.setLogin(submission.getIdentityIdentifier());
+      var es = new ExtSource();
+      es.setName(submission.getIdentityIssuer());
+      es.setType("cz.metacentrum.perun.core.impl.ExtSourceIdp");
+      ues.setExtSource(es);
+      candidate.setUserExtSource(ues);
+    }
+    return candidate;
   }
 
   @Override

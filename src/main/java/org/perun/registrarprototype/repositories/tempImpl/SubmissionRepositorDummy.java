@@ -13,7 +13,22 @@ public class SubmissionRepositorDummy implements SubmissionRepository {
 
   @Override
   public Submission save(Submission submission) {
+    submission.setId(currId++);
     submissions.add(submission);
     return submission;
+  }
+
+  @Override
+  public List<Submission> updateAll(List<Submission> submissionsToUpdate) {
+    submissions.removeIf(submissionsToUpdate::contains);
+    submissions.addAll(submissionsToUpdate);
+    return submissionsToUpdate;
+  }
+
+  @Override
+  public List<Submission> findAllByIdentifierAndIssuer(String identifier, String issuer) {
+    return submissions.stream()
+               .filter(submission -> submission.getIdentityIssuer().equals(issuer) &&
+                          submission.getIdentityIdentifier().equals(identifier)).toList();
   }
 }

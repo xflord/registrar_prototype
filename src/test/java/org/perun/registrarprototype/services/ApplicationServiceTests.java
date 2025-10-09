@@ -10,7 +10,6 @@ import org.perun.registrarprototype.models.Form;
 import org.perun.registrarprototype.models.FormItem;
 import org.perun.registrarprototype.models.FormItemData;
 import org.perun.registrarprototype.models.ApplicationContext;
-import org.perun.registrarprototype.security.CurrentUser;
 import org.springframework.boot.test.context.SpringBootTest;
 
 @SpringBootTest
@@ -41,7 +40,6 @@ class ApplicationServiceTests extends GenericRegistrarServiceTests {
   @Test
   void applyWithCorrectItemConstraints() throws Exception {
     int groupId = getGroupId();
-    perunIntegrationService.createGroup(groupId);
     Form form = formService.createForm(null, groupId);
 
     FormItem item1 = new FormItem(1, FormItem.Type.EMAIL, "email", false, "^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$");
@@ -50,7 +48,7 @@ class ApplicationServiceTests extends GenericRegistrarServiceTests {
 
     FormItemData formItemData1 = new FormItemData(item1, "test@gmail.com");
 
-    Application app = applicationService.applyForMembership(new ApplicationContext(form, groupId, List.of(formItemData1), Form.FormType.INITIAL));
+    Application app = applicationService.applyForMembership(new ApplicationContext(form, groupId, List.of(formItemData1), Form.FormType.INITIAL), submission, "");
 
     Application createdApp = applicationRepository.findById(app.getId()).orElse(null);
 
@@ -61,7 +59,6 @@ class ApplicationServiceTests extends GenericRegistrarServiceTests {
   @Test
   void approveApplication() throws Exception {
     int groupId = getGroupId();
-    perunIntegrationService.createGroup(groupId);
 
     Form form = formService.createForm(null, groupId);
 
@@ -70,7 +67,7 @@ class ApplicationServiceTests extends GenericRegistrarServiceTests {
 
     FormItemData formItemData1 = new FormItemData(item1, "test@gmail.com");
 
-    Application app = applicationService.applyForMembership(new ApplicationContext(form, groupId, List.of(formItemData1), Form.FormType.INITIAL));
+    Application app = applicationService.applyForMembership(new ApplicationContext(form, groupId, List.of(formItemData1), Form.FormType.INITIAL), submission, "");
 
     Application createdApp = applicationRepository.findById(app.getId()).orElse(null);
 
@@ -87,7 +84,6 @@ class ApplicationServiceTests extends GenericRegistrarServiceTests {
   @Test
   void loadForm() throws Exception {
     int groupId = getGroupId();
-    perunIntegrationService.createGroup(groupId);
 
     Form form = formService.createForm(null, groupId);
 
@@ -104,7 +100,6 @@ class ApplicationServiceTests extends GenericRegistrarServiceTests {
   @Test
   void loadFormCallsAfterFormItemsPrefilledHook() throws Exception {
     int groupId = getGroupId();
-    perunIntegrationService.createGroup(groupId);
 
     Form form = formService.createForm(null, groupId);
 
@@ -126,7 +121,6 @@ class ApplicationServiceTests extends GenericRegistrarServiceTests {
   @Test
   void loadFormPrefillsValues() throws Exception {
     int groupId = getGroupId();
-    perunIntegrationService.createGroup(groupId);
     Form form = formService.createForm(null, groupId);
 
 

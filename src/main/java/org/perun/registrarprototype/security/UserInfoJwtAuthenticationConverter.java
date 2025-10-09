@@ -6,28 +6,20 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 
-import org.perun.registrarprototype.services.idmIntegration.IdMService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.core.convert.converter.Converter;
 import org.springframework.security.authentication.AbstractAuthenticationToken;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.security.oauth2.server.resource.authentication.JwtGrantedAuthoritiesConverter;
-import org.springframework.web.reactive.function.client.WebClient;
-
-import com.fasterxml.jackson.databind.ObjectMapper;
 
 public class UserInfoJwtAuthenticationConverter implements Converter<Jwt, AbstractAuthenticationToken> {
 
-  private final String userInfoEndpoint;
-  private final WebClient webClient = WebClient.create();
-  private final ObjectMapper objectMapper = new ObjectMapper();
   @Autowired
-  private IdMService idmService;
+  private UserLookupService userLookupService;
 
-  public UserInfoJwtAuthenticationConverter(String userInfoEndpoint) {
-    this.userInfoEndpoint = userInfoEndpoint;
-  }
+  public UserInfoJwtAuthenticationConverter() {}
 
   @Override
   public AbstractAuthenticationToken convert(Jwt jwt) {
@@ -35,12 +27,14 @@ public class UserInfoJwtAuthenticationConverter implements Converter<Jwt, Abstra
     Map<String, Object> claims = new HashMap<>(jwt.getClaims());
 
     // Optional: call userinfo
-    Map<String, Object> userInfo = getUserInfo(jwt.getTokenValue());
+    Map<String, Object> userInfo = userLookupService.getUserInfo(jwt);
     if (userInfo != null) {
       claims.putAll(userInfo);
     }
 
-    int perunUserId = perunUserData(jwt.getSubject());
+    int perunUserId = userLookupService.perunUserData(jwt);
+
+    // TODO do we get groups from `entitlements`, or do we get roles from perun/group memberships?
 
     // Convert scopes to authorities
     JwtGrantedAuthoritiesConverter authoritiesConverter = new JwtGrantedAuthoritiesConverter();
@@ -56,28 +50,10 @@ public class UserInfoJwtAuthenticationConverter implements Converter<Jwt, Abstra
 
     // Create authentication
     RegistrarAuthenticationToken token = new RegistrarAuthenticationToken(principal, authorities);
+
+    userLookupService.refreshAuthz(token);
+
     token.setCredentials(jwt.getTokenValue());
     return token;
-  }
-
-  // ideally eliminate this by including all in jwt
-  private Map<String, Object> getUserInfo(String accessToken) {
-    try {
-      String response = webClient.get()
-          .uri(userInfoEndpoint)
-          .header("Authorization", "Bearer " + accessToken)
-          .retrieve()
-          .bodyToMono(String.class)
-          .block();
-
-      return objectMapper.readValue(response, Map.class);
-    } catch (Exception e) {
-      return null;
-    }
-  }
-
-  private int perunUserData(String subject) {
-    User perunUser = idmService.getUserByIdentifier(subject);
-    return perunUser == null ? -1 : perunUser.getId();
   }
 }
