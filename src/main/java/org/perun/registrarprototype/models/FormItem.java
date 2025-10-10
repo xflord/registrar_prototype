@@ -182,7 +182,7 @@ public class FormItem {
 
   public enum Type {
     LOGIN,
-    EMAIL,
+    VALIDATED_EMAIL,
     TEXTFIELD
   }
 

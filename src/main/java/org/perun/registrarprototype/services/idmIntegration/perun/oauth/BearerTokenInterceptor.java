@@ -23,7 +23,7 @@ public class BearerTokenInterceptor implements ClientHttpRequestInterceptor {
         if (token != null) {
             request.getHeaders().set(HttpHeaders.AUTHORIZATION, "Bearer " + token);
         }
-        // TODO some session cookie handling here might be needed
+        // TODO some session cookie handling can be done here
         return execution.execute(request, body);
     }
 }

@@ -2,8 +2,10 @@ package org.perun.registrarprototype.security;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import org.perun.registrarprototype.models.Identity;
 import org.perun.registrarprototype.models.Role;
 import org.perun.registrarprototype.services.RoleService;
 import org.perun.registrarprototype.services.idmIntegration.IdMService;
@@ -43,7 +45,11 @@ public class UserLookupService {
     }
   }
 
-  @Cacheable(value = "perunUserId", key = "#jwt.subject")
+  @Cacheable(
+      value = "perunUserId",
+      key = "#jwt.subject",
+      unless = "#result == -1" // do not cache for users not in Perun, we want to check every request in case they consolidated
+  )
   public int perunUserData(Jwt jwt) {
     Integer perunUserId = idmService.getUserIdByIdentifier(jwt.getSubject());
     return perunUserId == null ? -1 : perunUserId;

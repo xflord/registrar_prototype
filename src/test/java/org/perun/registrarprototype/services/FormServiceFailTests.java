@@ -20,7 +20,7 @@ public class FormServiceFailTests extends GenericRegistrarServiceTests {
     Form form = formService.createForm(null, groupId);
 
 
-    FormItem item1 = formService.createFormItem(new FormItem(1, FormItem.Type.EMAIL, "email", false, "^[a-zA-Z0-9._%+-+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$"));
+    FormItem item1 = formService.createFormItem(new FormItem(1, FormItem.Type.VALIDATED_EMAIL, "email", false, "^[a-zA-Z0-9._%+-+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$"));
 
 
     assertThrows(FormItemRegexNotValid.class, () -> formService.setFormItem(form.getId(), item1));

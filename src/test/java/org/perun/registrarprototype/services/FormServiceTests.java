@@ -37,7 +37,7 @@ public class FormServiceTests extends GenericRegistrarServiceTests {
 
     Form form = formService.createForm(null, groupId);
 
-    FormItem item1 = new FormItem(1, FormItem.Type.EMAIL, "email", false, "^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$");
+    FormItem item1 = new FormItem(1, FormItem.Type.VALIDATED_EMAIL, "email", false, "^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$");
     item1 = formService.setFormItem(form.getId(), item1);
 
     Form createdForm = formRepository.findById(form.getId()).orElse(null);

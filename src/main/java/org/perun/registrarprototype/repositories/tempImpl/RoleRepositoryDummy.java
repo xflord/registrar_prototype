@@ -10,7 +10,7 @@ import org.springframework.stereotype.Component;
 
 @Component
 public class RoleRepositoryDummy implements RoleRepository {
-  private static final Map<Integer, Map<Role, Set<Integer>>> rolesByUserId = Map.of();
+  private static final Map<Integer, Map<Role, Set<Integer>>> rolesByUserId = new HashMap<>();
 
   @Override
   public Map<Role, Set<Integer>> getRolesByUserId(int userId) {

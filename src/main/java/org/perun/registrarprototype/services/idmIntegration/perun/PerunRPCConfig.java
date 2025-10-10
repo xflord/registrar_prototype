@@ -39,6 +39,8 @@ public class PerunRPCConfig {
   @Bean
   @Profile("basic-auth")
   public PerunRPC perunRpcBasicAuth() {
+      RestTemplate restTemplate = new RestTemplate(new HttpComponentsClientHttpRequestFactory());
+      restTemplate.setErrorHandler(new RpcErrorHandler());
       return new PerunRPC(idmUrl, idmUsername, idmPassword);
   }
 
@@ -80,7 +82,8 @@ public class PerunRPCConfig {
 
     HttpComponentsClientHttpRequestFactory factory =
             new HttpComponentsClientHttpRequestFactory(httpClient);
-
+    RestTemplate template = new RestTemplate(factory);
+    template.setErrorHandler(new RpcErrorHandler());
     return new RestTemplate(factory);
   }
 
@@ -94,6 +97,7 @@ public class PerunRPCConfig {
       // TODO this might not be necessary as the bearer token is set below
       //  but I THINK this way (interceptor/token service combo) ensures refreshing
       restTemplate.setInterceptors(List.of(new BearerTokenInterceptor(tokenService)));
+      restTemplate.setErrorHandler(new RpcErrorHandler());
 
       PerunRPC oauthRpc = new PerunRPC(restTemplate);
       oauthRpc.getApiClient().setBasePath(idmUrl);

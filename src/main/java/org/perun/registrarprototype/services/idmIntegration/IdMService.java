@@ -1,13 +1,14 @@
 package org.perun.registrarprototype.services.idmIntegration;
 
 import cz.metacentrum.perun.openapi.model.AttributeDefinition;
-import cz.metacentrum.perun.openapi.model.Identity;
-import cz.metacentrum.perun.openapi.model.User;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import org.perun.registrarprototype.models.Application;
+import org.perun.registrarprototype.models.FormItemData;
+import org.perun.registrarprototype.models.Identity;
 import org.perun.registrarprototype.models.Role;
+import org.perun.registrarprototype.security.RegistrarAuthenticationToken;
 
 /**
  * Interface for interaction with the underlying IdM system (currently Perun/MidPoint?).
@@ -39,11 +40,10 @@ public interface IdMService {
    *
    * @param userId
    * @return Map of authorized objects (e.g. Vos, Groups) and their IDs. Keys are `Group` and `VO`.
-   * @throws Exception
    */
-  Map<String, List<Integer>> getAuthorizedObjects(Integer userId) throws Exception;
+  Map<String, List<Integer>> getAuthorizedObjects(Integer userId);
 
-  Map<Role, Set<Integer>> getRegistrarRolesByUserId(int userId) throws Exception;
+  Map<Role, Set<Integer>> getRegistrarRolesByUserId(int userId);
 
   // TODO add custom exception for IdM errors? an ErrorHandler would be nice to have
   String getUserAttribute(Integer userId, String attributeName);
@@ -84,8 +84,9 @@ public interface IdMService {
    * Retrieves User objects that match the attributes of the oauth principal (e.g. sub in oidc, email. etc.).
    * Same situation as in getUserByIdentifier.
    *
-   * @param attributes
    * @return
    */
-  List<Identity> getSimilarUsers(Map<String, Object> attributes);
+  List<Identity> checkForSimilarUsers(String accessToken);
+
+  List<Identity> checkForSimilarUsers(List<FormItemData> itemData);
 }

@@ -9,7 +9,6 @@ import org.perun.registrarprototype.models.Form;
 import org.perun.registrarprototype.models.FormItem;
 import org.perun.registrarprototype.models.FormItemData;
 import org.perun.registrarprototype.models.ApplicationContext;
-import org.perun.registrarprototype.security.CurrentUser;
 import org.springframework.boot.test.context.SpringBootTest;
 
 @SpringBootTest
@@ -22,7 +21,7 @@ public class ApplicationServiceFailTests extends GenericRegistrarServiceTests {
     Form form = formService.createForm(null, groupId);
 
 
-    FormItem item1 = new FormItem(1, FormItem.Type.EMAIL, "email", true, "");
+    FormItem item1 = new FormItem(1, FormItem.Type.VALIDATED_EMAIL, "email", true, "");
     item1 = formService.setFormItem(form.getId(), item1);
     FormItem item2 = new FormItem(2, FormItem.Type.TEXTFIELD);
     item2 = formService.setFormItem(form.getId(), item2);
@@ -42,9 +41,9 @@ public class ApplicationServiceFailTests extends GenericRegistrarServiceTests {
     Form form = formService.createForm(null, groupId);
 
 
-    FormItem item1 = new FormItem(1, FormItem.Type.EMAIL, "email", true, "");
+    FormItem item1 = new FormItem(1, FormItem.Type.VALIDATED_EMAIL, "email", true, "");
     item1 = formService.setFormItem(form.getId(), item1);
-    FormItem item2 = new FormItem(2, FormItem.Type.EMAIL, "email", false, "^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$");
+    FormItem item2 = new FormItem(2, FormItem.Type.VALIDATED_EMAIL, "email", false, "^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$");
     item2 = formService.setFormItem(form.getId(), item2);
 
     FormItemData formItemData = new FormItemData(item2, "incorrectTestgmail.com");
@@ -63,7 +62,7 @@ public class ApplicationServiceFailTests extends GenericRegistrarServiceTests {
     Form form = formService.createForm(null, groupId);
 
 
-    FormItem item1 = new FormItem(1, FormItem.Type.EMAIL, "email", false, "^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$");
+    FormItem item1 = new FormItem(1, FormItem.Type.VALIDATED_EMAIL, "email", false, "^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$");
     item1 = formService.setFormItem(form.getId(), item1);
 
     FormItemData formItemData1 = new FormItemData(item1, "incorrectTestgmail.com");

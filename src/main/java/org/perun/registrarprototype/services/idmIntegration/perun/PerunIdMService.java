@@ -1,33 +1,44 @@
 package org.perun.registrarprototype.services.idmIntegration.perun;
 
 import cz.metacentrum.perun.openapi.PerunRPC;
+import cz.metacentrum.perun.openapi.model.ApplicationFormItem;
+import cz.metacentrum.perun.openapi.model.ApplicationFormItemData;
 import cz.metacentrum.perun.openapi.model.Attribute;
 import cz.metacentrum.perun.openapi.model.AttributeDefinition;
 import cz.metacentrum.perun.openapi.model.Candidate;
+import cz.metacentrum.perun.openapi.model.EnrichedIdentity;
 import cz.metacentrum.perun.openapi.model.ExtSource;
 import cz.metacentrum.perun.openapi.model.Group;
-import cz.metacentrum.perun.openapi.model.Identity;
 import cz.metacentrum.perun.openapi.model.InputCreateMemberForCandidate;
 import cz.metacentrum.perun.openapi.model.InputCreateMemberForUser;
 import cz.metacentrum.perun.openapi.model.InputSetMemberAttributes;
 import cz.metacentrum.perun.openapi.model.Member;
+import cz.metacentrum.perun.openapi.model.Type;
 import cz.metacentrum.perun.openapi.model.User;
 import cz.metacentrum.perun.openapi.PerunException;
 import cz.metacentrum.perun.openapi.model.UserExtSource;
 import io.micrometer.common.util.StringUtils;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
+import org.perun.registrarprototype.exceptions.DataInconsistencyException;
 import org.perun.registrarprototype.models.Application;
+import org.perun.registrarprototype.models.FormItem;
+import org.perun.registrarprototype.models.FormItemData;
+import org.perun.registrarprototype.models.Identity;
 import org.perun.registrarprototype.models.Role;
 import org.perun.registrarprototype.models.Submission;
 import org.perun.registrarprototype.services.idmIntegration.IdMService;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.client.HttpComponentsClientHttpRequestFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestClientException;
+import org.springframework.web.client.RestTemplate;
 
 
 @Service
@@ -71,23 +82,13 @@ public class PerunIdMService implements IdMService {
   }
 
   @Override
-  public Map<String, List<Integer>> getAuthorizedObjects(Integer userId) throws Exception {
-    if (userId == null) {
-      return new HashMap<>();
-    }
-
+  public Map<String, List<Integer>> getAuthorizedObjects(Integer userId) {
     Map<String, List<Integer>> objects = new HashMap<>();
     objects.put("Group", List.of());
     objects.put("VO", List.of());
 
     Map<String, Map<String, List<Integer>>> perunRoles;
-    try {
-      perunRoles = rpc.getAuthzResolver().getUserRoles(userId);
-    } catch (HttpClientErrorException ex) {
-      throw PerunException.to(ex);
-    } catch (RestClientException ex) {
-      throw new RuntimeException(ex);
-    }
+    perunRoles = rpc.getAuthzResolver().getUserRoles(userId);
 
 
     for (String role : perunRoles.keySet()) {
@@ -105,19 +106,14 @@ public class PerunIdMService implements IdMService {
   }
 
   @Override
-  public Map<Role, Set<Integer>> getRegistrarRolesByUserId(int userId) throws Exception {
+  public Map<Role, Set<Integer>> getRegistrarRolesByUserId(int userId) {
     Map<Role, Set<Integer>> regRoles = new HashMap<>();
-    regRoles.put(Role.FORM_MANAGER, Set.of());
-    regRoles.put(Role.FORM_APPROVER, Set.of());
+    regRoles.put(Role.FORM_MANAGER, new HashSet<>());
+    regRoles.put(Role.FORM_APPROVER, new HashSet<>());
 
     Map<String, Map<String, List<Integer>>> perunRoles;
-    try {
-      perunRoles = rpc.getAuthzResolver().getUserRoles(userId);
-    } catch (HttpClientErrorException ex) {
-      throw PerunException.to(ex);
-    } catch (RestClientException ex) {
-      throw new RuntimeException(ex);
-    }
+    perunRoles = rpc.getAuthzResolver().getUserRoles(userId);
+
 
     for (String role : perunRoles.keySet()) {
       switch (role) {
@@ -153,12 +149,13 @@ public class PerunIdMService implements IdMService {
     try {
       Attribute attr = rpc.getAttributesManager().getUserAttributeByName(userId, attributeName);
       return attr.getValue() == null ? null : attr.getValue().toString();
-    } catch (HttpClientErrorException ex) {
-      // another way of handling this - logging and returning null?
-      System.out.println(PerunException.to(ex).getMessage());
-      return null;
-    } catch (RestClientException ex) {
-      throw new RuntimeException(ex);
+    } catch (PerunRuntimeException ex) {
+      if (ex.getName().equals("AttributeNotExistsException")) {
+        // TODO log these (missing source attributes) as misconfigured forms
+        return null;
+      } else {
+        throw ex;
+      }
     }
   }
 
@@ -181,11 +178,13 @@ public class PerunIdMService implements IdMService {
     try {
       Attribute attr = rpc.getAttributesManager().getMemberAttributeByName(member.getId(), attributeName);
       return attr.getValue() == null ? null : attr.getValue().toString();
-    } catch (HttpClientErrorException ex) {
-      System.out.println(PerunException.to(ex).getMessage());
-      return null;
-    } catch (RestClientException ex) {
-      throw new RuntimeException(ex);
+    } catch (PerunRuntimeException ex) {
+      if (ex.getName().equals("AttributeNotExistsException")) {
+        // TODO log these (missing source attributes) as misconfigured forms
+        return null;
+      } else {
+        throw ex;
+      }
     }
   }
 
@@ -208,11 +207,13 @@ public class PerunIdMService implements IdMService {
     try {
       Attribute attr = rpc.getAttributesManager().getMemberGroupAttributeByName(member.getId(), groupId, attributeName);
       return attr.getValue() == null ? null : attr.getValue().toString();
-    } catch (HttpClientErrorException ex) {
-      System.out.println(PerunException.to(ex).getMessage());
-      return null;
-    } catch (RestClientException ex) {
-      throw new RuntimeException(ex);
+    } catch (PerunRuntimeException ex) {
+      if (ex.getName().equals("AttributeNotExistsException")) {
+        // TODO log these (missing source attributes) as misconfigured forms
+        return null;
+      } else {
+        throw ex;
+      }
     }
   }
 
@@ -220,22 +221,18 @@ public class PerunIdMService implements IdMService {
     Member member;
     try {
       member = rpc.getMembersManager().getMemberByUser(group.getVoId(), userId);
-    } catch (HttpClientErrorException ex) {
-      System.out.println(PerunException.to(ex).getMessage());
-      return null;
-    } catch (RestClientException ex) {
-      throw new RuntimeException(ex);
+    } catch (PerunRuntimeException ex) {
+      if (ex.getName().equals("MemberNotExistsException")) {
+        return null;
+      } else {
+        throw ex;
+      }
     }
     return member;
   }
 
   @Override
   public boolean canExtendMembership(Integer userId, int groupId) {
-    if (userId == null) {
-      // TODO what should we return here?
-      return false;
-    }
-
     Group group = retrieveGroup(groupId);
 
     Member member = retrieveMember(userId, group);
@@ -243,14 +240,7 @@ public class PerunIdMService implements IdMService {
       return false;
     }
 
-    try {
-      return rpc.getGroupsManager().canExtendMembershipInGroup(member.getId(), group.getId());
-    } catch (HttpClientErrorException ex) {
-      System.out.println(PerunException.to(ex).getMessage());
-      return false;
-    } catch (RestClientException ex) {
-      throw new RuntimeException(ex);
-    }
+    return rpc.getGroupsManager().canExtendMembershipInGroup(member.getId(), group.getId());
   }
 
   @Override
@@ -258,11 +248,12 @@ public class PerunIdMService implements IdMService {
     try {
       Attribute attr = rpc.getAttributesManager().getVoAttributeByName(voId, attributeName);
       return attr.getValue() == null ? null : attr.getValue().toString();
-    } catch (HttpClientErrorException ex) {
-      System.out.println(PerunException.to(ex).getMessage());
-      return null;
-    } catch (RestClientException ex) {
-      throw new RuntimeException(ex);
+    } catch (PerunRuntimeException ex) {
+      if (ex.getName().equals("AttributeNotExistsException")) {
+        return null;
+      } else {
+        throw ex;
+      }
     }
   }
 
@@ -271,11 +262,13 @@ public class PerunIdMService implements IdMService {
     try {
       Attribute attr = rpc.getAttributesManager().getGroupAttributeByName(groupId, attributeName);
       return attr.getValue() == null ? null : attr.getValue().toString();
-    } catch (HttpClientErrorException ex) {
-      System.out.println(PerunException.to(ex).getMessage());
-      return null;
-    } catch (RestClientException ex) {
-      throw new RuntimeException(ex);
+    } catch (PerunRuntimeException ex) {
+      if (ex.getName().equals("AttributeNotExistsException")) {
+        // TODO log these (missing source attributes) as misconfigured forms
+        return null;
+      } else {
+        throw ex;
+      }
     }
   }
 
@@ -283,11 +276,12 @@ public class PerunIdMService implements IdMService {
   public AttributeDefinition getAttributeDefinition(String attributeName) {
     try {
       return rpc.getAttributesManager().getAttributeDefinitionByName(attributeName);
-    } catch (HttpClientErrorException ex) {
-      System.out.println(PerunException.to(ex).getMessage());
-      return null;
-    } catch (RestClientException ex) {
-      throw new RuntimeException(ex);
+    } catch (PerunRuntimeException ex) {
+      if (ex.getName().equals("AttributeNotExistsException")) {
+        return null;
+      } else {
+        throw ex;
+      }
     }
   }
 
@@ -295,11 +289,13 @@ public class PerunIdMService implements IdMService {
   public boolean isLoginAvailable(String namespace, String login) {
     try {
       return rpc.getUsersManager().isLoginAvailable(namespace, login) == 1;
-    } catch (HttpClientErrorException ex) {
-      System.out.println(PerunException.to(ex).getMessage());
-      return false;
-    } catch (RestClientException ex) {
-      throw new RuntimeException(ex);
+    } catch (PerunRuntimeException ex) {
+      if (ex.getName().equals("InvalidLoginException")) {
+        // TODO throw custom exception?
+        throw ex;
+      } else {
+        throw ex;
+      }
     }
   }
 
@@ -358,17 +354,14 @@ public class PerunIdMService implements IdMService {
     Group group;
     try {
       group = rpc.getGroupsManager().getGroupById(groupId);
-    } catch (HttpClientErrorException ex) {
-      // another way of handling this - logging and returning null?
-      System.out.println(PerunException.to(ex).getMessage());
-      return null;
-    } catch (RestClientException ex) {
-      throw new RuntimeException(ex);
+    } catch (PerunRuntimeException ex) {
+      if (ex.getName().equals("GroupNotExistsException")) {
+        throw new DataInconsistencyException("Group with id " + groupId + " not found in Perun");
+      } else {
+        throw ex;
+      }
     }
 
-    if (group == null) {
-      throw new RuntimeException("Group with id " + groupId + " not found in Perun");
-    }
     return group;
   }
 
@@ -401,6 +394,57 @@ public class PerunIdMService implements IdMService {
     updateMemberAttributesFromAppData(application, member);
 
     return member.getUserId();
+  }
+
+  @Override
+  public List<Identity> checkForSimilarUsers(String accessToken) {
+    // hacky way to call Perun with user session
+    RestTemplate restTemplate = new RestTemplate(new HttpComponentsClientHttpRequestFactory());
+    restTemplate.setErrorHandler(new RpcErrorHandler());
+    PerunRPC tempRpc = new PerunRPC(restTemplate);
+    tempRpc.getApiClient().setBasePath(rpc.getApiClient().getBasePath());
+    tempRpc.getApiClient().setBearerToken(accessToken);
+
+    List<EnrichedIdentity> perunIdentities = tempRpc.getRegistrarManager().checkForSimilarRichIdentities();
+
+    return convertToDomainIdentities(perunIdentities);
+  }
+
+  @Override
+  public List<Identity> checkForSimilarUsers(List<FormItemData> itemData) {
+    // TODO consider placing `FormItemData` in the external api package and importing it in perun
+    List<ApplicationFormItemData> perunFormItems = new ArrayList<>();
+
+    itemData.stream()
+        .filter(item -> item.getFormItem().getDestinationIdmAttribute() != null ||
+                            item.getFormItem().getType().equals(FormItem.Type.VALIDATED_EMAIL))
+        .map(item -> {
+          ApplicationFormItemData perunAppData = new ApplicationFormItemData();
+          perunAppData.setValue(item.getValue());
+          ApplicationFormItem perunAppItem = new ApplicationFormItem();
+          perunAppItem.setPerunDestinationAttribute(item.getFormItem().getDestinationIdmAttribute());
+          if (item.getFormItem().getType().equals(FormItem.Type.VALIDATED_EMAIL)) {
+            perunAppItem.setType(Type.VALIDATED_EMAIL);
+          }
+          perunAppData.setFormItem(perunAppItem);
+          return perunAppData;
+        }).forEach(perunFormItems::add);
+
+    List<EnrichedIdentity> perunIdentities = new ArrayList<>();
+    // TODO add the method to openapi, it already exists
+    // List<EnrichedIdentity> perunIdentities = rpc.getRegistrarManager().checkForSimilarUsers(perunFormItems);
+    return convertToDomainIdentities(perunIdentities);
+  }
+
+  private List<Identity> convertToDomainIdentities(List<EnrichedIdentity> perunIdentities) {
+    List<Identity> domainIdentities = new ArrayList<>();
+    perunIdentities.forEach(identity -> {
+      identity.getIdentities().forEach(extSource -> {
+        domainIdentities.add(new Identity(identity.getName(), identity.getOrganization(),
+            identity.getEmail(), extSource.getExtSource().getType()));
+      });
+    });
+    return domainIdentities;
   }
 
   private void updateMemberAttributesFromAppData(Application application, Member member) {
@@ -437,10 +481,5 @@ public class PerunIdMService implements IdMService {
       candidate.setUserExtSource(ues);
     }
     return candidate;
-  }
-
-  @Override
-  public List<Identity> getSimilarUsers(Map<String, Object> attributes) {
-    return List.of();
   }
 }

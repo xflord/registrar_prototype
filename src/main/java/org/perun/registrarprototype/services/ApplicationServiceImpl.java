@@ -19,6 +19,7 @@ import org.perun.registrarprototype.exceptions.DataInconsistencyException;
 import org.perun.registrarprototype.exceptions.InsufficientRightsException;
 import org.perun.registrarprototype.exceptions.InvalidApplicationDataException;
 import org.perun.registrarprototype.exceptions.InvalidApplicationStateTransitionException;
+import org.perun.registrarprototype.exceptions.SimilarIdentitiesFoundException;
 import org.perun.registrarprototype.models.Application;
 import org.perun.registrarprototype.models.ApplicationState;
 import org.perun.registrarprototype.models.AssignedFormModule;
@@ -27,6 +28,7 @@ import org.perun.registrarprototype.models.Form;
 import org.perun.registrarprototype.models.FormItem;
 import org.perun.registrarprototype.models.FormItemData;
 import org.perun.registrarprototype.models.ApplicationContext;
+import org.perun.registrarprototype.models.Identity;
 import org.perun.registrarprototype.models.SubmissionContext;
 import org.perun.registrarprototype.models.Submission;
 import org.perun.registrarprototype.models.SubmissionResult;
@@ -118,14 +120,11 @@ public class ApplicationServiceImpl {
 
     app = applicationRepository.save(app);
 
-    // TODO directly call IdM (this could be done via module) / call adapter (again this could be done via modules) / or possibly emit event with whole app object + submission data
     Integer idmUserId = propagateApprovalToIdm(app, form.getGroupId());
     // consolidate all applications with the potentially newly created idmUserId
     consolidateSubmissions(idmUserId, app.getSubmission().getIdentityIdentifier(), app.getSubmission().getIdentityIssuer());
 
     for (AssignedFormModule module : modules) {
-      // TODO if this was the first approved initial app (e.g., user ID from IdM was not available before but is now)
-      //  update all other submissions matching this user with IdM ID (and possibly other attributes)
       module.getFormModule().onApproval(app);
     }
 
@@ -464,7 +463,7 @@ public class ApplicationServiceImpl {
       // TODO do we want to load prerequisites of redirect forms like so?
       List<Integer> groupIds = redirectForms.stream().map(Form::getGroupId).distinct().toList();
       try {
-        submissionResult.setRedirectForms(loadForms(groupIds, submissionResult.getRedirectUrl()));
+        submissionResult.setRedirectForms(loadForms(groupIds, submissionResult.getRedirectUrl(), false));
         // theoretically just the set of ids (or whatever the API will take as the entrypoint of registration flow) is enough and just redirect user to that endpoint
       } catch (Exception e) {
         System.out.println("Error assembling redirect forms: " + e.getMessage()); // TODO log properly
@@ -478,10 +477,21 @@ public class ApplicationServiceImpl {
   /**
    * Entry from GUI -> for a given group, determine which forms to display to the user, prefill form items, and return to GUI
    *
+   *
    * @param groupIds set of groups the user wants to apply for membership in
+   * @param checkSimilarUsers Call this with FALSE only from GUI after user decided on consolidation
    * @return prefilled submission object, with the redirect URL and individual prefilled form data (prefilled items, form type) TODO should be enough to build the whole form page? or do we need more info?
    */
-  public SubmissionContext loadForms(List<Integer> groupIds, String redirectUrl) {
+  public SubmissionContext loadForms(List<Integer> groupIds, String redirectUrl, boolean checkSimilarUsers) {
+    if (checkSimilarUsers) { // potentially enable/disable with config
+      // Check this once when loading registrar for the first time -> offer user the option to consolidate, do not check again afterwards
+      List<Identity> similarIdentities =
+          idmService.checkForSimilarUsers((String) sessionProvider.getCurrentSession().getCredentials());
+      if (!similarIdentities.isEmpty()) {
+        // handle this in gui to display message and offer consolidator redirect
+        throw new SimilarIdentitiesFoundException("Found similar identities: " + similarIdentities);
+      }
+    }
     List<Form> requiredForms = determineGroupSet(groupIds);
     return assemblePrefilledForms(requiredForms, redirectUrl);
   }
@@ -579,6 +589,16 @@ public class ApplicationServiceImpl {
     checkMissingPrefilledItems(sess, prefilledFormItemData);
 
     return prefilledFormItemData;
+  }
+
+  /**
+   * To be called from GUI in case the user modifies items that could provide us with information to connect identities
+   * with (e.g. email address, display name)
+   * @param itemData
+   * @return
+   */
+  public List<Identity> checkForSimilarIdentities(List<FormItemData> itemData) {
+    return idmService.checkForSimilarUsers(itemData);
   }
 
   /**
@@ -828,6 +848,7 @@ public class ApplicationServiceImpl {
    */
   private Application checkOpenApplications(RegistrarAuthenticationToken sess, Form form) {
     if (sess.isAuthenticated()) {
+      // TODO we need to have identities consolidated before this point
       Optional<Application> foundApp = applicationRepository.findByFormId(form.getId()).stream()
           .filter(app -> app.getState().isOpenState())
           .filter(app -> (app.getIdmUserId() != null && app.getIdmUserId() == sess.getPrincipal().id()) ||
