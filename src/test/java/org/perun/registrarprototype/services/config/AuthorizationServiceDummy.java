@@ -6,6 +6,7 @@ import org.perun.registrarprototype.services.AuthorizationService;
 public class AuthorizationServiceDummy implements AuthorizationService {
   @Override
   public boolean canManage(RegistrarAuthenticationToken sess, int groupId) {
+    System.out.println("AuthorizationServiceDummy.canManage");
     return true;
   }
 

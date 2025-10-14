@@ -23,6 +23,8 @@ public class FormItem {
   private Integer hiddenDependencyItemId;
   private Integer disabledDependencyItemId;
 
+  public FormItem() {}
+
   public FormItem(int id, Type type) {
     this.id = id;
     this.type = type;
@@ -46,8 +48,8 @@ public class FormItem {
 
   public FormItem(int id, int formId, Type type, Map<Locale, ItemTexts> texts, boolean required, String constraint,
                   String sourceIdentityAttribute, String sourceIdmAttribute, String destinationIdmAttribute,
-                  boolean preferIdentityAttribute, List<Form.FormType> formTypes, String defaultValue,
-                  Condition hidden, Condition disabled) {
+                  boolean preferIdentityAttribute, String defaultValue, List<Form.FormType> formTypes, Condition hidden,
+                  Condition disabled, Integer hiddenDependencyItemId, Integer disabledDependencyItemId) {
     this.id = id;
     this.formId = formId;
     this.type = type;
@@ -58,11 +60,12 @@ public class FormItem {
     this.sourceIdmAttribute = sourceIdmAttribute;
     this.destinationIdmAttribute = destinationIdmAttribute;
     this.preferIdentityAttribute = preferIdentityAttribute;
-    this.formTypes = formTypes;
     this.defaultValue = defaultValue;
-    // TODO use positive naming for these two fields (and related methods)
+    this.formTypes = formTypes;
     this.hidden = hidden;
     this.disabled = disabled;
+    this.hiddenDependencyItemId = hiddenDependencyItemId;
+    this.disabledDependencyItemId = disabledDependencyItemId;
   }
 
   public int getId() {
@@ -105,7 +108,8 @@ public class FormItem {
   }
 
   public String getLabel() {
-    return texts.get(Locale.ENGLISH).getLabel();
+    return "defalt";
+//    return texts.get(Locale.ENGLISH).getLabel();
   }
 
   public boolean isPreferIdentityAttribute() {
@@ -180,14 +184,36 @@ public class FormItem {
     return hiddenDependencyItemId;
   }
 
-  public enum Type {
-    LOGIN,
-    VALIDATED_EMAIL,
-    TEXTFIELD
+  public void setDisabledDependencyItemId(Integer disabledDependencyItemId) {
+    this.disabledDependencyItemId = disabledDependencyItemId;
   }
 
-  public enum Condition {
-    NEVER, ALWAYS, IF_PREFILLED, IF_EMPTY
+  public void setHiddenDependencyItemId(Integer hiddenDependencyItemId) {
+    this.hiddenDependencyItemId = hiddenDependencyItemId;
+  }
+
+  public void setFormTypes(List<Form.FormType> formTypes) {
+    this.formTypes = formTypes;
+  }
+
+  public void setDefaultValue(String defaultValue) {
+    this.defaultValue = defaultValue;
+  }
+
+  public void setConstraint(String constraint) {
+    this.constraint = constraint;
+  }
+
+  public void setRequired(boolean required) {
+    this.required = required;
+  }
+
+  public Map<Locale, ItemTexts> getTexts() {
+    return texts;
+  }
+
+  public void setTexts(Map<Locale, ItemTexts> texts) {
+    this.texts = texts;
   }
 
   @Override
@@ -210,5 +236,15 @@ public class FormItem {
                ", hiddenDependencyItemId=" + hiddenDependencyItemId +
                ", disabledDependencyItemId=" + disabledDependencyItemId +
                '}';
+  }
+
+  public enum Type {
+    LOGIN,
+    VALIDATED_EMAIL,
+    TEXTFIELD
+  }
+
+  public enum Condition {
+    NEVER, ALWAYS, IF_PREFILLED, IF_EMPTY
   }
 }

@@ -18,7 +18,7 @@ public class ApplicationServiceFailTests extends GenericRegistrarServiceTests {
   @Test
   void applyMissingRequiredItems() throws Exception {
     int groupId = getGroupId();
-    Form form = formService.createForm(null, groupId);
+    Form form = formService.createForm(groupId);
 
 
     FormItem item1 = new FormItem(1, FormItem.Type.VALIDATED_EMAIL, "email", true, "");
@@ -38,7 +38,7 @@ public class ApplicationServiceFailTests extends GenericRegistrarServiceTests {
   void applyMissingRequiredItemsIncorrectConstraints() throws Exception {
     int groupId = getGroupId();
 
-    Form form = formService.createForm(null, groupId);
+    Form form = formService.createForm(groupId);
 
 
     FormItem item1 = new FormItem(1, FormItem.Type.VALIDATED_EMAIL, "email", true, "");
@@ -59,7 +59,7 @@ public class ApplicationServiceFailTests extends GenericRegistrarServiceTests {
   void applyWithIncorrectItemConstraints() throws Exception {
     int groupId = getGroupId();
 
-    Form form = formService.createForm(null, groupId);
+    Form form = formService.createForm(groupId);
 
 
     FormItem item1 = new FormItem(1, FormItem.Type.VALIDATED_EMAIL, "email", false, "^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$");

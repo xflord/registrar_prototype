@@ -17,7 +17,7 @@ public class FormServiceFailTests extends GenericRegistrarServiceTests {
   void createFormIncorrectConstraints() throws Exception {
     int groupId = getGroupId();
 
-    Form form = formService.createForm(null, groupId);
+    Form form = formService.createForm(groupId);
 
 
     FormItem item1 = formService.createFormItem(new FormItem(1, FormItem.Type.VALIDATED_EMAIL, "email", false, "^[a-zA-Z0-9._%+-+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$"));
@@ -30,7 +30,7 @@ public class FormServiceFailTests extends GenericRegistrarServiceTests {
   void setModuleMissingRequiredOptions() throws Exception {
     int groupId = getGroupId();
 
-    Form form = formService.createForm(null, groupId);
+    Form form = formService.createForm(groupId);
 
     FormItem item1 = new FormItem(1, FormItem.Type.TEXTFIELD);
     item1 = formService.setFormItem(form.getId(), item1);
@@ -45,7 +45,7 @@ public class FormServiceFailTests extends GenericRegistrarServiceTests {
   void setModuleWrongRequiredOptions() throws Exception {
     int groupId = getGroupId();
 
-    Form form = formService.createForm(null, groupId);
+    Form form = formService.createForm(groupId);
 
 
     FormItem item1 = new FormItem(1, FormItem.Type.TEXTFIELD);

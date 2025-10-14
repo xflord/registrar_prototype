@@ -49,7 +49,7 @@ public class UserInfoJwtAuthenticationConverter implements Converter<Jwt, Abstra
     // Create authentication
     RegistrarAuthenticationToken token = new RegistrarAuthenticationToken(principal, authorities);
 
-    userLookupService.refreshAuthz(token);
+    principal.setRoles(userLookupService.refreshAuthz(token));
 
     token.setCredentials(jwt.getTokenValue());
     return token;

@@ -2,10 +2,9 @@ package org.perun.registrarprototype.security;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.HashMap;
-import java.util.List;
+import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
-import org.perun.registrarprototype.models.Identity;
 import org.perun.registrarprototype.models.Role;
 import org.perun.registrarprototype.services.RoleService;
 import org.perun.registrarprototype.services.idmIntegration.IdMService;
@@ -41,6 +40,7 @@ public class UserLookupService {
 
       return objectMapper.readValue(response, Map.class);
     } catch (Exception e) {
+      System.err.println("Error getting user info: " + e.getMessage());
       return null;
     }
   }
@@ -55,16 +55,20 @@ public class UserLookupService {
     return perunUserId == null ? -1 : perunUserId;
   }
 
-  @Cacheable("roles")
-  public void refreshAuthz(RegistrarAuthenticationToken sess) {
+  // TODO refactor the MEMBERSHIP role (remove probs)
+  @Cacheable(value = "roles", key = "#sess.principal.attribute('sub')")
+  public Map<Role, Set<Integer>> refreshAuthz(RegistrarAuthenticationToken sess) {
     if (!sess.isAuthenticated()) {
-      return;
+      return new HashMap<>(Map.of(Role.MEMBERSHIP, Set.of(), Role.FORM_MANAGER, Set.of(), Role.FORM_APPROVER, Set.of()));
     }
     Map<Role, Set<Integer>> roles = roleService.getRolesByUserId(sess.getPrincipal().id());
+    roles.putIfAbsent(Role.MEMBERSHIP, new HashSet<>());
     Map<Role, Set<Integer>> rolesFromIdM = new HashMap<>();
     try {
-      rolesFromIdM = idmService.getRegistrarRolesByUserId(sess.getPrincipal().id());
+      rolesFromIdM = idmService.getRolesByUserId(sess.getPrincipal().id());
     } catch (Exception e) {
+      System.err.println("Error getting roles from IDM: " + e.getMessage());
+      throw e;
       // do nothing
     }
     roles.get(Role.FORM_MANAGER).addAll(rolesFromIdM.getOrDefault(Role.FORM_MANAGER, Set.of()));
@@ -72,7 +76,8 @@ public class UserLookupService {
     if (rolesFromIdM.containsKey(Role.ADMIN)) {
       roles.putIfAbsent(Role.ADMIN, Set.of());
     }
+    roles.get(Role.MEMBERSHIP).addAll(rolesFromIdM.getOrDefault(Role.MEMBERSHIP, Set.of()));
 
-    sess.getPrincipal().setRoles(roles);
+    return roles;
   }
 }

@@ -29,6 +29,7 @@ import org.perun.registrarprototype.models.FormItem;
 import org.perun.registrarprototype.models.FormItemData;
 import org.perun.registrarprototype.models.ApplicationContext;
 import org.perun.registrarprototype.models.Identity;
+import org.perun.registrarprototype.models.Role;
 import org.perun.registrarprototype.models.SubmissionContext;
 import org.perun.registrarprototype.models.Submission;
 import org.perun.registrarprototype.models.SubmissionResult;
@@ -72,23 +73,6 @@ public class ApplicationServiceImpl {
     this.idmService = idmService;
     this.sessionProvider = sessionProvider;
   }
-
-  // TODO modify this to call all the new methods to test the flow
-//  public Application registerUserToGroup(CurrentUser sess, int groupId, List<FormItemData> itemData)
-//      throws InvalidApplicationDataException {
-//    Form form = formRepository.findByGroupId(groupId).orElseThrow(() -> new IllegalArgumentException("Form not found"));
-//    Application app = this.applyForMembership(new ApplicationContext(form, groupId, itemData, Form.FormType.INITIAL));
-//
-//    try {
-//      app.approve();
-//    } catch (InvalidApplicationStateTransitionException e) {
-//      throw new RuntimeException(e);
-//    }
-//    app = applicationRepository.save(app);
-//    eventService.emitEvent(new ApplicationApprovedEvent(app.getId(), Integer.parseInt(sess.name()), groupId));
-//
-//    return app;
-//  }
 
   public Application approveApplication(RegistrarAuthenticationToken sess, int applicationId, String message) throws InsufficientRightsException {
     Application app = applicationRepository.findById(applicationId).orElseThrow(() -> new IllegalArgumentException("Application not found"));
@@ -329,7 +313,7 @@ public class ApplicationServiceImpl {
     validateFilledFormData(applicationContext);
     applicationContext.getPrefilledItems().forEach(item -> checkPrefilledValueConsistency(sess, item, reservedPrincipalLogins));
 
-    Application app = new Application(0, Integer.parseInt(sess.getPrincipal().name()), form.getId(),
+    Application app = new Application(0, sess.getPrincipal().id(), form.getId(),
         applicationContext.getPrefilledItems(), null, applicationContext.getType());
     app.setRedirectUrl(redirectUrl);
     app.setSubmission(submission);
@@ -345,9 +329,13 @@ public class ApplicationServiceImpl {
     reserveLogins(applicationContext.getPrefilledItems());
 
     // TODO if we emit events asynchronously this might be problematic (not sure rollback would work here)
-    eventService.emitEvent(new ApplicationSubmittedEvent(app.getId(), Integer.parseInt(sess.getPrincipal().name()), applicationContext.getGroupId()));
+    eventService.emitEvent(new ApplicationSubmittedEvent(app.getId(), sess.getPrincipal().id(), applicationContext.getGroupId()));
 
     return app;
+  }
+
+  public List<Application> getAllApplications() {
+    return applicationRepository.findAll();
   }
 
   /**
@@ -870,7 +858,9 @@ public class ApplicationServiceImpl {
   private boolean checkUserMembership(int groupId) {
     RegistrarAuthenticationToken sess = sessionProvider.getCurrentSession();
     if (sess.isAuthenticated()) {
-      return idmService.getGroupIdsWhereUserIsMember(sess.getPrincipal().id()).contains(groupId);
+      // TODO remove once we have IdM methods to check membership
+      return sess.getPrincipal().getRoles().get(Role.MEMBERSHIP).contains(groupId);
+      // return idmService.getGroupIdsWhereUserIsMember(sess.getPrincipal().id()).contains(groupId);
     }
     return false;
   }

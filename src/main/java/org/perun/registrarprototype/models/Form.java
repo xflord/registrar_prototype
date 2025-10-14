@@ -6,8 +6,11 @@ import java.util.List;
 public class Form {
   private int id;
   private int voId;
-  private final int groupId;
+  private int groupId;
   private List<FormItem> items;
+
+  public Form() {
+  }
 
   public Form(int id, int groupId, List<FormItem> items) {
     this.id = id;
@@ -66,5 +69,13 @@ public class Form {
     EXTENSION,
     CANCELLATION, // cancel membership
     UPDATE; // update attribute value
+  }
+
+  public void setVoId(int voId) {
+    this.voId = voId;
+  }
+
+  public void setGroupId(int groupId) {
+    this.groupId = groupId;
   }
 }

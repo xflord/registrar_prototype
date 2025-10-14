@@ -12,22 +12,22 @@ import org.perun.registrarprototype.models.Role;
  */
 public class CurrentUser {
   private final int id; // TODO do we want to have a separate id for registrar users / perun users?
-  private final Set<String> managedGroups;
+  private final Set<Integer> groups;
   private Map<String, Object> attributes = new HashMap<>();
   private Map<Role, Set<Integer>> roles = new HashMap<>();
 
-  public CurrentUser(int id, Set<String> managedGroups, Map<String, Object> attributes) {
+  public CurrentUser(int id, Set<Integer> groups, Map<String, Object> attributes) {
     this.id = id;
-    this.managedGroups = managedGroups;
+    this.groups = groups;
     this.attributes = attributes;
   }
 
   public CurrentUser() {
     this.id = -1;
-    this.managedGroups = new HashSet<>();
+    this.groups = new HashSet<>();
   }
 
-  public Set<String> managedGroups() { return managedGroups; }
+  public Set<Integer> groups() { return groups; }
   public String attribute(String name) {
     return getAttributes().get(name) != null ? (String) getAttributes().get(name) : null;
   }

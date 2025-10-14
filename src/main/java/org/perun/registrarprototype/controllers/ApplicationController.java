@@ -3,6 +3,8 @@ package org.perun.registrarprototype.controllers;
 import org.perun.registrarprototype.exceptions.InsufficientRightsException;
 import org.perun.registrarprototype.exceptions.InvalidApplicationDataException;
 import org.perun.registrarprototype.models.Application;
+import org.perun.registrarprototype.models.SubmissionContext;
+import org.perun.registrarprototype.models.SubmissionResult;
 import org.perun.registrarprototype.security.CurrentUser;
 import org.perun.registrarprototype.models.FormItemData;
 import org.perun.registrarprototype.security.SessionProvider;
@@ -24,24 +26,6 @@ public class ApplicationController {
       this.applicationService = applicationService;
       this.sessionProvider = sessionProvider;
   }
-
-//  // --- User applies for membership ---
-//  @PostMapping("/apply")
-//  public ResponseEntity<Application> applyForMembership(
-//          @RequestParam int groupId,
-//          @RequestBody List<FormItemData> itemData, HttpServletRequest request
-//  ) {
-//    String authHeader = request.getHeader(HttpHeaders.AUTHORIZATION); // replace with spring security/filter after done with testing
-//    CurrentUser user = currentUserProvider.getCurrentUser(authHeader);
-//    Application app;
-//    try {
-//      app = applicationService.applyForMembership(user, groupId, Form.FormType.INITIAL, itemData);
-//    } catch (InvalidApplicationDataException e) {
-//      // probably modify to return ValidationErrors/Result
-//      throw new RuntimeException(e);
-//    }
-//    return ResponseEntity.ok(app);
-//  }
 
   // --- Manager approves an application ---
   @PostMapping("/{applicationId}/approve")
@@ -65,35 +49,19 @@ public class ApplicationController {
     return ResponseEntity.ok().build();
   }
 
-//  // --- Direct register (apply + auto-approve) ---
-//  @PostMapping("/register")
-//  public ResponseEntity<Application> registerUserToGroup(
-//          @RequestParam int userId,
-//          @RequestParam int groupId,
-//          @RequestBody List<FormItemData> itemData
-//  ) {
-//    Application app;
-//    try {
-//      app = applicationService.registerUserToGroup(new CurrentUser(), groupId, itemData);
-//    } catch (InvalidApplicationDataException e) {
-//      // probably modify to return ValidationErrors/Result
-//      throw new RuntimeException(e);
-//    }
-//    return ResponseEntity.ok(app);
-//  }
-
-  /**
-   * Loads form for given Group/Vo. This includes prefilling form items with data from IdMs/IdPs.
-   * Also sets the redirect URL based on the passed argument.
-   * TODO how to get form id? Since we want multiple forms for object, name/id is not enough
-   *   maybe take operation type (e.g. EXTENSION/INITIAL) as an argument as well?
-   *   Also potentially move this under forms, not important for now
-   */
-  @GetMapping("/loadForm")
-  public ResponseEntity<Application> loadForm(@RequestParam int formId, @RequestParam(required = false) String redirectUrl) {
-
-//    Application app = applicationService.loadForm(user, formId, redirectUrl);
-//    return ResponseEntity.ok(app);
-    return ResponseEntity.ok().build();
+  @GetMapping()
+  public ResponseEntity<List<Application>> getApplications() {
+    return ResponseEntity.ok(applicationService.getAllApplications());
   }
+
+  @GetMapping("/loadForms")
+  public ResponseEntity<SubmissionContext> getSubmissionContext(@RequestParam int groupId) {
+    return ResponseEntity.ok(applicationService.loadForms(List.of(groupId), "", false));
+  }
+
+  @PostMapping("/applyForMembership")
+  public ResponseEntity<SubmissionResult> applyForMembership(@RequestBody SubmissionContext context) {
+    return ResponseEntity.ok(applicationService.applyForMemberships(context));
+  }
+
 }

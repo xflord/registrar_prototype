@@ -56,6 +56,7 @@ public class PerunIdMService implements IdMService {
 
   @Override
   public Integer getUserIdByIdentifier(String identifier) {
+    System.out.println("Calling getUserIdByIdentifier with parameter " + identifier);
     User user;
     try {
       user = rpc.getUsersManager().getUserByExtSourceNameAndExtLogin(identifier, idmExtSourceName);
@@ -77,6 +78,7 @@ public class PerunIdMService implements IdMService {
 
   @Override
   public List<Integer> getGroupIdsWhereUserIsMember(Integer userId) {
+    // TODO update this on demand, currently retrieved with user roles
 
     return List.of();
   }
@@ -106,14 +108,18 @@ public class PerunIdMService implements IdMService {
   }
 
   @Override
-  public Map<Role, Set<Integer>> getRegistrarRolesByUserId(int userId) {
+  public Map<Role, Set<Integer>> getRolesByUserId(Integer userId) {
+    System.out.println("Calling getRegistrarRolesByUserId with parameter " + userId);
     Map<Role, Set<Integer>> regRoles = new HashMap<>();
+    if (userId == null) {
+      return regRoles;
+    }
     regRoles.put(Role.FORM_MANAGER, new HashSet<>());
     regRoles.put(Role.FORM_APPROVER, new HashSet<>());
+    regRoles.put(Role.MEMBERSHIP, new HashSet<>());
 
     Map<String, Map<String, List<Integer>>> perunRoles;
     perunRoles = rpc.getAuthzResolver().getUserRoles(userId);
-
 
     for (String role : perunRoles.keySet()) {
       switch (role) {
@@ -122,17 +128,25 @@ public class PerunIdMService implements IdMService {
                                                      .flatMap(
                                                          voId -> rpc.getGroupsManager().getAllGroups(voId).stream())
                                                      .map(Group::getId).collect(Collectors.toSet()));
+          break;
         case "ORGANIZATIONMEMBERSHIPMANAGER":
           regRoles.get(Role.FORM_APPROVER).addAll(perunRoles.get(role).get("Vo").stream()
                                                       .flatMap(
                                                           voId -> rpc.getGroupsManager().getAllGroups(voId).stream())
                                                       .map(Group::getId).collect(Collectors.toSet()));
+          break;
         case "GROUPADMIN":
           regRoles.get(Role.FORM_MANAGER).addAll(perunRoles.get(role).get("Group"));
+          break;
         case "GROUPMEMBERSHIPMANAGER":
           regRoles.get(Role.FORM_APPROVER).addAll(perunRoles.get(role).get("Group"));
+          break;
         case "PERUNADMIN":
           regRoles.putIfAbsent(Role.ADMIN, Set.of());
+          break;
+        case "MEMBERSHIP":
+          // TODO probably not ideal way to store membership (retrieve on demand)
+          regRoles.get(Role.MEMBERSHIP).addAll(perunRoles.get(role).get("Group"));
         default:
           break;
       }
@@ -142,6 +156,8 @@ public class PerunIdMService implements IdMService {
 
   @Override
   public String getUserAttribute(Integer userId, String attributeName) {
+    System.out.println("Calling getRegistrarRolesByUserId with parameter " + userId + " and attribute " + attributeName);
+
     if (userId == null) {
       return null;
     }
@@ -161,6 +177,8 @@ public class PerunIdMService implements IdMService {
 
   @Override
   public String getMemberAttribute(Integer userId, String attributeName, int groupId) {
+    System.out.println("Calling getRegistrarRolesByUserId with parameter " + userId + " and attribute " + attributeName);
+
     if (userId == null) {
       return null;
     }
@@ -233,6 +251,9 @@ public class PerunIdMService implements IdMService {
 
   @Override
   public boolean canExtendMembership(Integer userId, int groupId) {
+    if (userId == null) {
+      return false;
+    }
     Group group = retrieveGroup(groupId);
 
     Member member = retrieveMember(userId, group);
@@ -455,9 +476,11 @@ public class PerunIdMService implements IdMService {
                                        AttributeDefinition attrDef = rpc.getAttributesManager()
                                                                          .getAttributeDefinitionByName(item.getFormItem().getDestinationIdmAttribute());
                                        Attribute attr = new Attribute();
+                                       attr.setId(attrDef.getId());
                                        attr.setValue(item.getValue());
                                        attr.setNamespace(attrDef.getNamespace());
-                                       attrDef.setFriendlyName(attrDef.getFriendlyName());
+                                       attr.setType(attrDef.getType());
+                                       attr.setFriendlyName(attrDef.getFriendlyName());
                                        return attr;
                                      }).toList();
     inputAttributes.setAttributes(attributes);

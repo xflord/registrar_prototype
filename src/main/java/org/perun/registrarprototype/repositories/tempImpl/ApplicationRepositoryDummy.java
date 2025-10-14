@@ -39,6 +39,11 @@ public class ApplicationRepositoryDummy implements ApplicationRepository {
   }
 
   @Override
+  public List<Application> findAll() {
+    return List.copyOf(applications);
+  }
+
+  @Override
   public int getNextId() {
     return currId++;
   }

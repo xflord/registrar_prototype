@@ -8,7 +8,6 @@ import org.perun.registrarprototype.models.Application;
 import org.perun.registrarprototype.models.FormItemData;
 import org.perun.registrarprototype.models.Identity;
 import org.perun.registrarprototype.models.Role;
-import org.perun.registrarprototype.security.RegistrarAuthenticationToken;
 
 /**
  * Interface for interaction with the underlying IdM system (currently Perun/MidPoint?).
@@ -43,7 +42,7 @@ public interface IdMService {
    */
   Map<String, List<Integer>> getAuthorizedObjects(Integer userId);
 
-  Map<Role, Set<Integer>> getRegistrarRolesByUserId(int userId);
+  Map<Role, Set<Integer>> getRolesByUserId(Integer userId);
 
   // TODO add custom exception for IdM errors? an ErrorHandler would be nice to have
   String getUserAttribute(Integer userId, String attributeName);

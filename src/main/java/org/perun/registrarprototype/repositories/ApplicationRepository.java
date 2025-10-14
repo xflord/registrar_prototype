@@ -12,6 +12,7 @@ public interface ApplicationRepository {
   Optional<Application> findById(int id);
 
   List<Application> findByFormId(int formId);
+  List<Application> findAll();
 
   int getNextId();
 }

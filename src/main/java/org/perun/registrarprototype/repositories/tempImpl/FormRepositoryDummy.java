@@ -46,6 +46,11 @@ public class FormRepositoryDummy implements FormRepository {
     return existingForm;
   }
 
+  @Override
+  public List<Form> findAll() {
+    return List.copyOf(forms);
+  }
+
   // for testing purposes
   public void reset()  {
     forms.clear();

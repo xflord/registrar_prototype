@@ -36,7 +36,7 @@ public class FormController {
   @PostMapping("/create")
   public ResponseEntity<Form> createForm(@RequestParam int groupId, @RequestBody List<FormItem> items) {
       try {
-        formService.createForm(sessionProvider.getCurrentSession(), groupId, items);
+        formService.createForm(groupId, items);
       } catch (FormItemRegexNotValid e) {
         throw new RuntimeException(e);
       } catch (InsufficientRightsException e) {
@@ -58,6 +58,11 @@ public class FormController {
     return ResponseEntity.ok(setModules);
   }
 
+  @GetMapping
+  public ResponseEntity<List<Form>> getForms() {
+    return ResponseEntity.ok(formService.getAllFormsWithItems());
+  }
+
   @GetMapping("/me")
   public ResponseEntity<Map<String, Object>> me(@AuthenticationPrincipal CurrentUser principal) {
     RegistrarAuthenticationToken session = sessionProvider.getCurrentSession();
@@ -65,7 +70,7 @@ public class FormController {
     if (!session.isAuthenticated()) {
       return  ResponseEntity.ok(Map.of("authenticated", session.isAuthenticated()));
     }
-
+    System.out.println(principal.getRoles());
     return ResponseEntity.ok(principal.getAttributes());
   }
 }

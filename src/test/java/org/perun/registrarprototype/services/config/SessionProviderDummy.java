@@ -16,7 +16,7 @@ public class SessionProviderDummy extends SessionProvider {
   public RegistrarAuthenticationToken getCurrentSession() {
     int id = -1;
 
-    Set<String> managedGroups = new HashSet<>();
+    Set<Integer> managedGroups = new HashSet<>();
 
     Map<String, Object> attributes = new HashMap<>();
     attributes.put("sub", String.valueOf(id));

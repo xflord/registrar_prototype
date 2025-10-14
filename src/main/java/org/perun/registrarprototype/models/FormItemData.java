@@ -10,6 +10,8 @@ public class FormItemData {
   private String idmAttributeValue;
   private boolean valueAssured;
 
+  public FormItemData() {}
+
   public FormItemData(FormItem formItem, String value) {
     this.formItem = formItem;
     this.value = value;
@@ -21,6 +23,15 @@ public class FormItemData {
     this.prefilledValue = prefilledValue;
   }
 
+  public FormItemData(FormItem formItem, String value, String prefilledValue, String identityAttributeValue,
+                      String idmAttributeValue, boolean valueAssured) {
+    this.formItem = formItem;
+    this.value = value;
+    this.prefilledValue = prefilledValue;
+    this.identityAttributeValue = identityAttributeValue;
+    this.idmAttributeValue = idmAttributeValue;
+    this.valueAssured = valueAssured;
+  }
 
   public String getValue() {
     return value;

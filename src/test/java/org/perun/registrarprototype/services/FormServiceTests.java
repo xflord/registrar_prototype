@@ -16,7 +16,7 @@ public class FormServiceTests extends GenericRegistrarServiceTests {
   void createFormWithoutConstraints() throws Exception {
     int groupId = getGroupId();
 
-    Form form = formService.createForm(null, groupId);
+    Form form = formService.createForm(groupId);
 
     FormItem item1 = new FormItem(1, FormItem.Type.TEXTFIELD);
     item1 = formService.setFormItem(form.getId(), item1);
@@ -35,7 +35,7 @@ public class FormServiceTests extends GenericRegistrarServiceTests {
   void createFormCorrectConstraints() throws Exception {
     int groupId = getGroupId();
 
-    Form form = formService.createForm(null, groupId);
+    Form form = formService.createForm(groupId);
 
     FormItem item1 = new FormItem(1, FormItem.Type.VALIDATED_EMAIL, "email", false, "^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$");
     item1 = formService.setFormItem(form.getId(), item1);
@@ -51,7 +51,7 @@ public class FormServiceTests extends GenericRegistrarServiceTests {
   void setModulesWithoutOptions() throws Exception {
     int groupId = getGroupId();
 
-    Form form = formService.createForm(null, groupId);
+    Form form = formService.createForm(groupId);
 
     FormItem item1 = new FormItem(1, FormItem.Type.TEXTFIELD);
     item1 = formService.setFormItem(form.getId(), item1);
@@ -75,7 +75,7 @@ public class FormServiceTests extends GenericRegistrarServiceTests {
   void setModulesWithOptions() throws Exception {
     int groupId = getGroupId();
 
-    Form form = formService.createForm(null, groupId);
+    Form form = formService.createForm(groupId);
 
     FormItem item1 = new FormItem(1, FormItem.Type.TEXTFIELD);
     item1 = formService.setFormItem(form.getId(), item1);

@@ -42,19 +42,15 @@ public class FormServiceImpl {
     this.formTransitionRepository = formTransitionRepository;
   }
 
-  public Form createForm(RegistrarAuthenticationToken sess, int groupId)
+  public Form createForm(int groupId)
       throws FormItemRegexNotValid, InsufficientRightsException {
-    if (!authorizationService.canManage(sess, groupId)) {
-      // 403
-      throw new InsufficientRightsException("You are not authorized to create a form for this group");
-    }
 
     return formRepository.save(new Form(-1, groupId, new ArrayList<>()));
   }
 
-  public Form createForm(RegistrarAuthenticationToken sess, int groupId, List<FormItem> items)
+  public Form createForm(int groupId, List<FormItem> items)
       throws FormItemRegexNotValid, InsufficientRightsException {
-    Form form = createForm(sess, groupId);
+    Form form = createForm(groupId);
 
     setFormItems(form.getId(), items);
 
@@ -162,6 +158,12 @@ public class FormServiceImpl {
 
     formModuleRepository.saveAll(modules);
     return modules;
+  }
+
+  public List<Form> getAllFormsWithItems() {
+    List<Form> forms = formRepository.findAll();
+    forms.forEach(form -> form.setItems(formItemRepository.getFormItemsByFormId(form.getId())));
+    return forms;
   }
 
   public Form getFormById(int formId) {

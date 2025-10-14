@@ -2,6 +2,7 @@ package org.perun.registrarprototype.repositories.tempImpl;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import org.perun.registrarprototype.models.Submission;
 import org.perun.registrarprototype.repositories.SubmissionRepository;
 import org.springframework.stereotype.Component;
@@ -16,6 +17,11 @@ public class SubmissionRepositorDummy implements SubmissionRepository {
     submission.setId(currId++);
     submissions.add(submission);
     return submission;
+  }
+
+  @Override
+  public Optional<Submission> findById(int id) {
+    return submissions.stream().filter(submission -> submission.getId() == id).findFirst();
   }
 
   @Override
