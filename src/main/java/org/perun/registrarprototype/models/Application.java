@@ -11,7 +11,6 @@ public class Application {
   private final int formId;
   private final List<FormItemData> formItemData;
   private ApplicationState state = ApplicationState.PENDING;
-  private String rejectionReason;
   private String redirectUrl;
   private Form.FormType type;
   private Submission submission = new Submission();
@@ -51,9 +50,6 @@ public class Application {
     return formId;
   }
 
-  public String getRejectionReason() {
-    return rejectionReason;
-  }
 
   public String getRedirectUrl() {
     return redirectUrl;
@@ -87,7 +83,6 @@ public class Application {
         throw new IllegalArgumentException("Rejection reason is required");
     }
     this.state = ApplicationState.REJECTED;
-    this.rejectionReason = reason;
   }
 
   public void requestChanges() throws InvalidApplicationStateTransitionException {

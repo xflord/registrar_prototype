@@ -338,6 +338,10 @@ public class ApplicationServiceImpl {
     return applicationRepository.findAll();
   }
 
+  public Application getApplicationById(int id) {
+    return applicationRepository.findById(id).orElse(null);
+  }
+
   /**
    * Validates that the submitted form data is correctly filled in (e.g. required items not empty, values match
    * constraints, etc.)

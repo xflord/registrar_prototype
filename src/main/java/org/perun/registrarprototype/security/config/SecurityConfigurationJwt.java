@@ -2,6 +2,7 @@ package org.perun.registrarprototype.security.config;
 
 import com.nimbusds.jose.JOSEObjectType;
 import com.nimbusds.jose.proc.DefaultJOSEObjectTypeVerifier;
+import java.util.List;
 import org.perun.registrarprototype.security.UserInfoJwtAuthenticationConverter;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -13,6 +14,9 @@ import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.oauth2.jwt.NimbusJwtDecoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.AnonymousAuthenticationFilter;
+import org.springframework.web.cors.CorsConfiguration;
+import org.springframework.web.cors.CorsConfigurationSource;
+import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
 @Configuration
 @EnableWebSecurity
@@ -25,6 +29,9 @@ public class SecurityConfigurationJwt {
         .anonymous(AbstractHttpConfigurer::disable) // <-- CRITICAL: Prevents AnonymousAuthenticationToken so that anonymous RegistrarAuthenticationToken can be created
         .authorizeHttpRequests(auth -> auth
             .requestMatchers("forms/me").permitAll()
+            .requestMatchers("forms").permitAll()
+            .requestMatchers("applications/loadForms/**").permitAll()
+            .requestMatchers("applications/applyForMembership/**").permitAll()
             .anyRequest().authenticated()
         )
         .oauth2ResourceServer(oauth2 -> oauth2
@@ -36,6 +43,7 @@ public class SecurityConfigurationJwt {
 
         )
         .addFilterAfter(unauthenticatedUserFilter(), AnonymousAuthenticationFilter.class)
+        .cors(cors -> cors.configurationSource(corsConfigurationSource()))
         .csrf(AbstractHttpConfigurer::disable) // TODO configure later on
         .sessionManagement(session ->
                                session.sessionCreationPolicy(SessionCreationPolicy.STATELESS)); // TODO configure later, might be useful when redirecting between forms?
@@ -62,5 +70,17 @@ public class SecurityConfigurationJwt {
   @Bean
   public UnauthenticatedUserFilter unauthenticatedUserFilter() {
       return new UnauthenticatedUserFilter();
+  }
+
+  @Bean
+  public CorsConfigurationSource corsConfigurationSource() {
+    CorsConfiguration config = new CorsConfiguration();
+    config.setAllowedOriginPatterns(List.of("http://localhost:*", "http://127.0.0.1:*"));
+    config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
+    config.setAllowedHeaders(List.of("Authorization", "Content-Type"));
+    config.setAllowCredentials(false);
+    UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+    source.registerCorsConfiguration("/**", config);
+    return source;
   }
 }

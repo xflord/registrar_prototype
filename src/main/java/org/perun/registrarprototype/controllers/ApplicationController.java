@@ -14,6 +14,9 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.stream.Collectors;
+import org.perun.registrarprototype.controllers.dto.ApplicationDTO;
+import org.perun.registrarprototype.controllers.dto.ApplicationDetailDTO;
 
 @RestController
 @RequestMapping("/applications")
@@ -50,8 +53,34 @@ public class ApplicationController {
   }
 
   @GetMapping()
-  public ResponseEntity<List<Application>> getApplications() {
-    return ResponseEntity.ok(applicationService.getAllApplications());
+  public ResponseEntity<List<ApplicationDTO>> getApplications() {
+    List<ApplicationDTO> dtos = applicationService.getAllApplications().stream()
+        .map(app -> new ApplicationDTO(
+            app.getId(),
+            app.getFormId(),
+            app.getState(),
+            app.getSubmission() != null ? app.getSubmission().getSubmitterName() : null,
+            app.getSubmission() != null ? app.getSubmission().getId() : null
+        ))
+        .collect(Collectors.toList());
+    return ResponseEntity.ok(dtos);
+  }
+
+  @GetMapping("/{id}")
+  public ResponseEntity<ApplicationDetailDTO> getApplication(@PathVariable int id) {
+    Application app = applicationService.getApplicationById(id);
+    if (app == null) {
+      return ResponseEntity.notFound().build();
+    }
+    ApplicationDetailDTO dto = new ApplicationDetailDTO(
+        app.getId(),
+        app.getFormId(),
+        app.getState(),
+        app.getSubmission() != null ? app.getSubmission().getSubmitterName() : null,
+        app.getSubmission() != null ? app.getSubmission().getId() : null,
+        app.getFormItemData()
+    );
+    return ResponseEntity.ok(dto);
   }
 
   @GetMapping("/loadForms")
