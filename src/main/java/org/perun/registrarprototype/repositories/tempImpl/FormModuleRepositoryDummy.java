@@ -17,7 +17,15 @@ public class FormModuleRepositoryDummy implements FormModuleRepository {
 
   @Override
   public void saveAll(List<AssignedFormModule> modulesToSave) {
-    modules.addAll(modulesToSave);
+    for (AssignedFormModule module : modulesToSave) {
+      // Remove existing module with same formId and moduleName if present
+      modules.removeIf(existing -> 
+          existing.getFormId() == module.getFormId() && 
+          existing.getModuleName().equals(module.getModuleName())
+      );
+      modules.add(module);
+      System.out.println("Saved/Updated module " + module.getModuleName() + " for form " + module.getFormId());
+    }
   }
 
 

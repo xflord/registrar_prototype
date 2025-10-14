@@ -31,8 +31,23 @@ public class FormRepositoryDummy implements FormRepository {
 
   @Override
   public Form save(Form form) {
+    // Check if form already exists (has an ID > 0 and is in the list)
+    if (form.getId() > 0) {
+      // Remove existing form with the same ID
+      boolean removed = forms.removeIf(f -> f.getId() == form.getId());
+      forms.add(form);
+      if (removed) {
+        System.out.println("Updated form " + form.getId());
+      } else {
+        System.out.println("Created form " + form.getId() + " (with existing ID)");
+      }
+      return form;
+    }
+    
+    // Create new form
     form.setId(currId++);
     forms.add(form);
+    System.out.println("Created form " + form.getId());
     return form;
   }
 

@@ -56,7 +56,7 @@ public class UserLookupService {
   }
 
   // TODO refactor the MEMBERSHIP role (remove probs)
-  @Cacheable(value = "roles", key = "#sess.principal.attribute('sub')")
+//  @Cacheable(value = "roles", key = "#sess.principal.attribute('sub')")
   public Map<Role, Set<Integer>> refreshAuthz(RegistrarAuthenticationToken sess) {
     if (!sess.isAuthenticated()) {
       return new HashMap<>(Map.of(Role.MEMBERSHIP, Set.of(), Role.FORM_MANAGER, Set.of(), Role.FORM_APPROVER, Set.of()));

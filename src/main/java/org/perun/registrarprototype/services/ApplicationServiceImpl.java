@@ -219,6 +219,7 @@ public class ApplicationServiceImpl {
     decision.setApproverName(principal.name());
     decision.setDecisionType(decisionType);
     decision.setMessage(message);
+    decision.setTimestamp(LocalDateTime.now());
     return decisionRepository.save(decision);
   }
 
@@ -340,6 +341,21 @@ public class ApplicationServiceImpl {
 
   public Application getApplicationById(int id) {
     return applicationRepository.findById(id).orElse(null);
+  }
+
+  public List<Decision> getDecisionsByApplicationId(int applicationId) {
+    return decisionRepository.findByApplicationId(applicationId);
+  }
+
+  public Decision getLatestDecisionByApplicationId(int applicationId) {
+    return decisionRepository.findByApplicationId(applicationId).stream()
+        .max((d1, d2) -> {
+          if (d1.getTimestamp() == null && d2.getTimestamp() == null) return 0;
+          if (d1.getTimestamp() == null) return -1;
+          if (d2.getTimestamp() == null) return 1;
+          return d1.getTimestamp().compareTo(d2.getTimestamp());
+        })
+        .orElse(null);
   }
 
   /**

@@ -24,8 +24,23 @@ public class FormItemRepositoryDummy implements FormItemRepository {
 
   @Override
   public FormItem save(FormItem formItem) {
+    // Check if formItem already exists (has an ID > 0 and is in the list)
+    if (formItem.getId() > 0) {
+      // Remove existing formItem with the same ID
+      boolean removed = formItems.removeIf(item -> item.getId() == formItem.getId());
+      formItems.add(formItem);
+      if (removed) {
+        System.out.println("Updated formItem " + formItem.getId());
+      } else {
+        System.out.println("Created formItem " + formItem.getId() + " (with existing ID)");
+      }
+      return formItem;
+    }
+    
+    // Create new formItem
     formItem.setId(currId++);
     formItems.add(formItem);
+    System.out.println("Created formItem " + formItem.getId());
     return formItem;
   }
 

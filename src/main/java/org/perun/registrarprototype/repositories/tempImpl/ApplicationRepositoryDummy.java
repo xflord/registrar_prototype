@@ -15,9 +15,23 @@ public class ApplicationRepositoryDummy implements ApplicationRepository {
 
   @Override
   public Application save(Application application) {
+    // Check if application already exists (has an ID > 0 and is in the list)
+    if (application.getId() > 0) {
+      // Remove existing application with the same ID
+      boolean removed = applications.removeIf(app -> app.getId() == application.getId());
+      applications.add(application);
+      if (removed) {
+        System.out.println("Updated application " + application.getId());
+      } else {
+        System.out.println("Created application " + application.getId() + " (with existing ID)");
+      }
+      return application;
+    }
+    
+    // Create new application
     application.setId(currId++);
     applications.add(application);
-    System.out.println("Created application " + application);
+    System.out.println("Created application " + application.getId());
     return application;
   }
 
