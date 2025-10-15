@@ -8,17 +8,17 @@ import org.perun.registrarprototype.exceptions.InvalidApplicationStateTransition
 public class Application {
   private int id;
   private Integer idmUserId;
-  private final int formId;
+  private Form form;
   private final List<FormItemData> formItemData;
   private ApplicationState state = ApplicationState.PENDING;
   private String redirectUrl;
   private Form.FormType type;
   private Submission submission = new Submission();
 
-  public Application(int id, Integer idmUserId, int formId, List<FormItemData> formItemData, String redirectUrl, Form.FormType type) {
+  public Application(int id, Integer idmUserId, Form form, List<FormItemData> formItemData, String redirectUrl, Form.FormType type) {
     this.id = id;
     this.idmUserId = idmUserId;
-    this.formId = formId;
+    this.form = form;
     this.formItemData = formItemData;
     this.redirectUrl = redirectUrl;
     this.type = type;
@@ -46,10 +46,13 @@ public class Application {
     return state;
   }
 
-  public int getFormId() {
-    return formId;
+  public Form getForm() {
+    return form;
   }
 
+  public void setForm(Form form) {
+    this.form = form;
+  }
 
   public String getRedirectUrl() {
     return redirectUrl;

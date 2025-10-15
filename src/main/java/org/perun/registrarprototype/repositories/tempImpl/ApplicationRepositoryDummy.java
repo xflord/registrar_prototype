@@ -3,8 +3,11 @@ package org.perun.registrarprototype.repositories.tempImpl;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import org.perun.registrarprototype.exceptions.DataInconsistencyException;
 import org.perun.registrarprototype.models.Application;
 import org.perun.registrarprototype.repositories.ApplicationRepository;
+import org.perun.registrarprototype.repositories.FormRepository;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 // in-memory dummy implementation of persistent storage
@@ -12,6 +15,8 @@ import org.springframework.stereotype.Component;
 public class ApplicationRepositoryDummy implements ApplicationRepository {
   private static List<Application> applications = new ArrayList<>();
   private static int currId = 0;
+  @Autowired
+  private FormRepository formRepository;
 
   @Override
   public Application save(Application application) {
@@ -44,12 +49,19 @@ public class ApplicationRepositoryDummy implements ApplicationRepository {
 
   @Override
   public Optional<Application> findById(int id) {
-    return applications.stream().filter(application -> application.getId() == id).findFirst();
+    Optional<Application> optionalApplication = applications.stream()
+                                                    .filter(application -> application.getId() == id)
+                                                    .findFirst();
+    optionalApplication.ifPresent(
+        application -> application.setForm(formRepository.findById(application.getForm().getId())
+                                               .orElseThrow(() -> new DataInconsistencyException("Application: " + id +
+                                                                                                     " has no form."))));
+    return optionalApplication;
   }
 
   @Override
   public List<Application> findByFormId(int formId) {
-    return applications.stream().filter(application -> application.getFormId() == formId).toList();
+    return applications.stream().filter(application -> application.getForm().getId() == formId).toList();
   }
 
   @Override

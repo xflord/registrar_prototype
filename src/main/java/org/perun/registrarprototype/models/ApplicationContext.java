@@ -4,23 +4,17 @@ import java.util.List;
 
 public class ApplicationContext {
   private Form form;
-  private int groupId;
   private List<FormItemData> prefilledItems;
   private Form.FormType type;
 
-  public ApplicationContext(Form form, int groupId, List<FormItemData> prefilledItems, Form.FormType type) {
+  public ApplicationContext(Form form, List<FormItemData> prefilledItems, Form.FormType type) {
     this.form = form;
-    this.groupId = groupId;
     this.prefilledItems = prefilledItems;
     this.type = type;
   }
 
   public Form getForm() {
     return form;
-  }
-
-  public int getGroupId() {
-    return groupId;
   }
 
   public List<FormItemData> getPrefilledItems() {

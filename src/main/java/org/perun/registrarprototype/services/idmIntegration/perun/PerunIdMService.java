@@ -351,8 +351,8 @@ public class PerunIdMService implements IdMService {
   }
 
   @Override
-  public Integer createMemberForCandidate(Application application, int groupId) {
-    Group group = retrieveGroup(groupId);
+  public Integer createMemberForCandidate(Application application) {
+    Group group = retrieveGroup(application.getForm().getGroupId());
     if (group == null) {
       return null;
     }
@@ -387,8 +387,8 @@ public class PerunIdMService implements IdMService {
   }
 
   @Override
-  public Integer createMemberForUser(Application application, int groupId) {
-    Group group = retrieveGroup(groupId);
+  public Integer createMemberForUser(Application application) {
+    Group group = retrieveGroup(application.getForm().getGroupId());
     if (group == null) {
       return null;
     }
@@ -404,8 +404,8 @@ public class PerunIdMService implements IdMService {
   }
 
   @Override
-  public Integer extendMembership(Application application, int groupId) {
-    Group group = retrieveGroup(groupId);
+  public Integer extendMembership(Application application) {
+    Group group = retrieveGroup(application.getForm().getGroupId());
     if (group == null) {
       return null;
     }

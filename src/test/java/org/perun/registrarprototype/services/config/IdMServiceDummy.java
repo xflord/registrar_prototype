@@ -102,17 +102,17 @@ public class IdMServiceDummy implements IdMService {
   }
 
   @Override
-  public Integer createMemberForCandidate(Application application, int groupId) {
+  public Integer createMemberForCandidate(Application application) {
     return 0;
   }
 
   @Override
-  public Integer createMemberForUser(Application application, int groupId) {
+  public Integer createMemberForUser(Application application) {
     return 0;
   }
 
   @Override
-  public Integer extendMembership(Application application, int groupId) {
+  public Integer extendMembership(Application application) {
     return 0;
   }
 

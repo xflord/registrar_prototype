@@ -7,8 +7,8 @@ import java.util.Map;
 
 public class FormItem {
   private int id;
-  private int formId;
-  private Type type; // replace with enum/inheritance
+  private int formId; // TODO this probably does not belong to the domain
+  private Type type;
   private Map<Locale, ItemTexts> texts = new HashMap<>();
   private boolean required;
   private String constraint; // regex or similar

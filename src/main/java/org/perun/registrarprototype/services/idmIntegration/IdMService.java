@@ -73,11 +73,11 @@ public interface IdMService {
 
   String getVoAttributeUrn();
 
-  Integer createMemberForCandidate(Application application, int groupId);
+  Integer createMemberForCandidate(Application application);
 
-  Integer createMemberForUser(Application application, int groupId);
+  Integer createMemberForUser(Application application);
 
-  Integer extendMembership(Application application, int groupId);
+  Integer extendMembership(Application application);
 
   /**
    * Retrieves User objects that match the attributes of the oauth principal (e.g. sub in oidc, email. etc.).

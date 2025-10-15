@@ -5,7 +5,7 @@ import org.perun.registrarprototype.models.Application;
 import org.perun.registrarprototype.models.SubmissionContext;
 import org.perun.registrarprototype.models.SubmissionResult;
 import org.perun.registrarprototype.security.SessionProvider;
-import org.perun.registrarprototype.services.ApplicationServiceImpl;
+import org.perun.registrarprototype.services.ApplicationService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -24,10 +24,10 @@ import org.perun.registrarprototype.models.Submission;
 @RequestMapping("/applications")
 public class ApplicationController {
 
-  private final ApplicationServiceImpl applicationService;
+  private final ApplicationService applicationService;
   private final SessionProvider sessionProvider;
 
-  public ApplicationController(ApplicationServiceImpl applicationService, SessionProvider sessionProvider) {
+  public ApplicationController(ApplicationService applicationService, SessionProvider sessionProvider) {
       this.applicationService = applicationService;
       this.sessionProvider = sessionProvider;
   }
@@ -84,11 +84,11 @@ public class ApplicationController {
     return ResponseEntity.ok(toSubmissionResultDTO(result));
   }
 
-
+ // TODO use mappers in the future
   private ApplicationDTO toApplicationDTO(Application app) {
     return new ApplicationDTO(
         app.getId(),
-        app.getFormId(),
+        app.getForm(),
         app.getState(),
         app.getSubmission() != null ? app.getSubmission().getSubmitterName() : null,
         app.getSubmission() != null ? app.getSubmission().getId() : null,
@@ -102,7 +102,7 @@ public class ApplicationController {
 
     return new ApplicationDetailDTO(
         app.getId(),
-        app.getFormId(),
+        app.getForm(),
         app.getState(),
         app.getSubmission() != null ? app.getSubmission().getSubmitterName() : null,
         app.getSubmission() != null ? app.getSubmission().getId() : null,
