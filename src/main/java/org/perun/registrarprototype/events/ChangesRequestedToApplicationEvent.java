@@ -2,7 +2,7 @@ package org.perun.registrarprototype.events;
 
 public class ChangesRequestedToApplicationEvent extends ApplicationEvent {
 
-  public ChangesRequestedToApplicationEvent(int applicationId, int userId, int groupId) {
+  public ChangesRequestedToApplicationEvent(int applicationId, Integer userId, int groupId) {
     super(applicationId, userId, groupId);
   }
 

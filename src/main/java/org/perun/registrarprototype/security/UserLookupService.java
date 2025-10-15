@@ -48,11 +48,10 @@ public class UserLookupService {
   @Cacheable(
       value = "perunUserId",
       key = "#jwt.subject",
-      unless = "#result == -1" // do not cache for users not in Perun, we want to check every request in case they consolidated
+      unless = "#result == null " // do not cache for users not in Perun, we want to check every request in case they consolidated
   )
-  public int perunUserData(Jwt jwt) {
-    Integer perunUserId = idmService.getUserIdByIdentifier(jwt.getSubject());
-    return perunUserId == null ? -1 : perunUserId;
+  public Integer perunUserData(Jwt jwt) {
+    return idmService.getUserIdByIdentifier(jwt.getSubject());
   }
 
   // TODO refactor the MEMBERSHIP role (remove probs)

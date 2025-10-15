@@ -2,7 +2,7 @@ package org.perun.registrarprototype.events;
 
 public class ApplicationRejectedEvent extends ApplicationEvent {
 
-  public ApplicationRejectedEvent(int applicationId, int userId, int groupId) {
+  public ApplicationRejectedEvent(int applicationId, Integer userId, int groupId) {
     super(applicationId, userId, groupId);
   }
 

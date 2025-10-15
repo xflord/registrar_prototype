@@ -9,7 +9,6 @@ import org.perun.registrarprototype.repositories.tempImpl.FormModuleRepositoryDu
 import org.perun.registrarprototype.security.SessionProvider;
 import org.perun.registrarprototype.services.config.TestConfig;
 import org.perun.registrarprototype.services.idmIntegration.IdMService;
-import org.perun.registrarprototype.services.idmIntegration.perun.PerunIdMService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.ImportAutoConfiguration;
 import org.springframework.boot.autoconfigure.security.oauth2.client.OAuth2ClientAutoConfiguration;
@@ -36,7 +35,7 @@ public class GenericRegistrarServiceTests {
    protected FormRepository formRepository;
    protected FormModuleRepository formModuleRepository;
 
-   private static int groupId = 0;
+   private static int groupId = 1;
    protected Submission submission;
 
    @BeforeEach

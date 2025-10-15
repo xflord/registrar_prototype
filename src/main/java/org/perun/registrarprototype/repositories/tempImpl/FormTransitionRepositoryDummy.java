@@ -10,7 +10,7 @@ import org.springframework.stereotype.Component;
 @Component
 public class FormTransitionRepositoryDummy implements FormTransitionRepository {
   private static List<FormTransition> formTransitions = new ArrayList<>();
-  private static int currId = 0;
+  private static int currId = 1;
 
   @Override
   public List<FormTransition> getAllBySourceFormAndType(Form form, FormTransition.TransitionType type) {

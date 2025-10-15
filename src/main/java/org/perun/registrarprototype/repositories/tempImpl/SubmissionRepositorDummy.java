@@ -10,7 +10,7 @@ import org.springframework.stereotype.Component;
 @Component
 public class SubmissionRepositorDummy implements SubmissionRepository {
   private static List<Submission> submissions = new ArrayList<>();
-  private static int currId = 0;
+  private static int currId = 1;
 
   @Override
   public Submission save(Submission submission) {

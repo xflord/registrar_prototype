@@ -364,6 +364,7 @@ public class PerunIdMService implements IdMService {
     Map<String, String> attributes = new HashMap<>();
         application.getFormItemData().stream()
             .filter(item -> StringUtils.isNotEmpty(item.getFormItem().getDestinationIdmAttribute()))
+            // TODO some necessary filtering/processing might be done here, see `createCandidateFromApplicationData` in Perun
             .forEach(item -> attributes.put(item.getFormItem().getDestinationIdmAttribute(), item.getValue()));
     candidate.setAttributes(attributes);
     input.setCandidate(candidate);
@@ -433,7 +434,7 @@ public class PerunIdMService implements IdMService {
 
   @Override
   public List<Identity> checkForSimilarUsers(List<FormItemData> itemData) {
-    // TODO consider placing `FormItemData` in the external api package and importing it in perun
+    // TODO consider placing `FormItemData` in the external api package and importing it in perun (once old Registrar gets removed)
     List<ApplicationFormItemData> perunFormItems = new ArrayList<>();
 
     itemData.stream()
@@ -490,9 +491,13 @@ public class PerunIdMService implements IdMService {
 
   private Candidate getCandidate(Submission submission) {
     Candidate candidate = new Candidate();
+    // TODO what to do for unauthenticated users that do not consolidate and do not fill out any information (e.g no display name, given/last name in form)
+    //  do not allow such forms, do not allow anonymous users?
+    //  Old registrar currently uses `LOCAL` internal ExtSource with `createdBy` (e.g. timestamp) as login in such situations
 
     candidate.setFirstName(submission.getIdentityAttributes().get("given_name"));
     candidate.setLastName(submission.getIdentityAttributes().get("family_name"));
+    // TODO try to parse name from submitted data
     if (submission.getSubmitterName() != null) {
       var ues = new UserExtSource();
       ues.setLoa(1);

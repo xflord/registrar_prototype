@@ -2,10 +2,10 @@ package org.perun.registrarprototype.events;
 
 public abstract class ApplicationEvent extends Event {
   protected int applicationId;
-  protected int userId;
+  protected Integer userId;
   protected int groupId;
 
-  protected ApplicationEvent(int applicationId, int userId, int groupId) {
+  protected ApplicationEvent(int applicationId, Integer userId, int groupId) {
     this.applicationId = applicationId;
     this.userId = userId;
     this.groupId = groupId;

@@ -23,9 +23,9 @@ import org.springframework.web.client.RestTemplate;
 public class PerunRPCConfig {
   @Value("${idm.url}")
   private String idmUrl;
-  @Value("${idm.username}")
+  @Value("${idm.ba-username}")
   private String idmUsername;
-  @Value("${idm.password}")
+  @Value("${idm.ba-password}")
   private String idmPassword;
 
   @Value("${idm.ssl.keystore-password}")

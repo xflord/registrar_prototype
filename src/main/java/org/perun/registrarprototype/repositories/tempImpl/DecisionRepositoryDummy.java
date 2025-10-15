@@ -9,7 +9,7 @@ import org.springframework.stereotype.Component;
 @Component
 public class DecisionRepositoryDummy implements DecisionRepository {
   private static List<Decision> decisions = new ArrayList<>();
-  private static int currId = 0;
+  private static int currId = 1;
 
   @Override
   public Decision save(Decision decision) {

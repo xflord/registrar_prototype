@@ -10,7 +10,7 @@ import org.springframework.stereotype.Component;
 @Component
 public class FormItemRepositoryDummy implements FormItemRepository {
   private static List<FormItem> formItems = new ArrayList<>();
-  private static int currId = 0;
+  private static int currId = 1;
 
   @Override
   public List<FormItem> getFormItemsByFormId(int formId) {

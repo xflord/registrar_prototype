@@ -14,7 +14,7 @@ import org.springframework.stereotype.Component;
 @Component
 public class ApplicationRepositoryDummy implements ApplicationRepository {
   private static List<Application> applications = new ArrayList<>();
-  private static int currId = 0;
+  private static int currId = 1;
   @Autowired
   private FormRepository formRepository;
 

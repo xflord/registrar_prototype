@@ -11,19 +11,19 @@ import org.perun.registrarprototype.models.Role;
  * This will likely be replaced by an extension of the Spring security principal class
  */
 public class CurrentUser {
-  private final int id; // TODO do we want to have a separate id for registrar users / perun users?
+  private final Integer id; // TODO do we want to have a separate id for registrar users / perun users?
   private final Set<Integer> groups;
   private Map<String, Object> attributes = new HashMap<>();
   private Map<Role, Set<Integer>> roles = new HashMap<>();
 
-  public CurrentUser(int id, Set<Integer> groups, Map<String, Object> attributes) {
+  public CurrentUser(Integer id, Set<Integer> groups, Map<String, Object> attributes) {
     this.id = id;
     this.groups = groups;
     this.attributes = attributes;
   }
 
   public CurrentUser() {
-    this.id = -1;
+    this.id = null;
     this.groups = new HashSet<>();
   }
 
@@ -33,7 +33,7 @@ public class CurrentUser {
   }
   public Map<String, Object> getAttributes() { return attributes; }
 
-  public int id() { return id; }
+  public Integer id() { return id; }
 
   public String name() {
     Object name = this.getAttributes().get("name");

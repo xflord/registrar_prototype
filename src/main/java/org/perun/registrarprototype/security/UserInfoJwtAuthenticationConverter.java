@@ -30,7 +30,7 @@ public class UserInfoJwtAuthenticationConverter implements Converter<Jwt, Abstra
       claims.putAll(userInfo);
     }
 
-    int perunUserId = userLookupService.perunUserData(jwt);
+    Integer perunUserId = userLookupService.perunUserData(jwt);
 
     // TODO do we get groups from `entitlements`, or do we get roles from perun/group memberships?
 

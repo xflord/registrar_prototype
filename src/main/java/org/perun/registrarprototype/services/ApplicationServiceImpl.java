@@ -125,6 +125,7 @@ public class ApplicationServiceImpl implements ApplicationService {
     // TODO unreserve logins
 
     if (application.getType().equals(Form.FormType.INITIAL)) {
+      System.out.println(application.getIdmUserId());
       if (application.getIdmUserId() == null) {
         return idmService.createMemberForCandidate(application);
       }
@@ -837,7 +838,7 @@ public class ApplicationServiceImpl implements ApplicationService {
       // TODO we need to have identities consolidated before this point
       Optional<Application> foundApp = applicationRepository.findByFormId(form.getId()).stream()
           .filter(app -> app.getState().isOpenState())
-          .filter(app -> (app.getIdmUserId() != null && app.getIdmUserId() == sess.getPrincipal().id()) ||
+          .filter(app -> (app.getIdmUserId() != null && Objects.equals(app.getIdmUserId(), sess.getPrincipal().id())) ||
                              (Objects.equals(app.getSubmission().getIdentityIssuer(),
                                  sess.getPrincipal().attribute(ISSUER_CLAIM))) &&
                                  app.getSubmission().getIdentityIdentifier().equals(sess.getPrincipal().attribute(

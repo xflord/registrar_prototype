@@ -39,20 +39,15 @@ public class ClientAccessTokenService {
     }
 
     public String getAccessToken() {
-      return "";
+        OAuth2AuthorizeRequest request = OAuth2AuthorizeRequest
+                .withClientRegistrationId("core-api-client")
+                .principal(principal)
+                .build();
+
+        OAuth2AuthorizedClient client = manager.authorize(request);
+        if (client == null || client.getAccessToken() == null) {
+            throw new IllegalStateException("Could not obtain access token");
+        }
+        return client.getAccessToken().getTokenValue();
     }
-
-
-//    public String getAccessToken() {
-//        OAuth2AuthorizeRequest request = OAuth2AuthorizeRequest
-//                .withClientRegistrationId("core-api-client")
-//                .principal(principal)
-//                .build();
-//
-//        OAuth2AuthorizedClient client = manager.authorize(request);
-//        if (client == null || client.getAccessToken() == null) {
-//            throw new IllegalStateException("Could not obtain access token");
-//        }
-//        return client.getAccessToken().getTokenValue();
-//    }
 }

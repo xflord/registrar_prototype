@@ -11,7 +11,7 @@ import org.springframework.stereotype.Component;
 @Component
 public class FormRepositoryDummy implements FormRepository {
   private static List<Form> forms = new ArrayList<>();
-  private static int currId = 0;
+  private static int currId = 1;
 
 
   @Override
