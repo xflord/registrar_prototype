@@ -1,7 +1,7 @@
 package org.perun.registrarprototype.controllers;
 
 import java.util.List;
-import java.util.Map;
+import org.perun.registrarprototype.controllers.dto.PrincipalInfoDTO;
 import org.perun.registrarprototype.exceptions.FormItemRegexNotValid;
 import org.perun.registrarprototype.exceptions.InsufficientRightsException;
 import org.perun.registrarprototype.models.AssignedFormModule;
@@ -10,7 +10,7 @@ import org.perun.registrarprototype.models.FormItem;
 import org.perun.registrarprototype.security.CurrentUser;
 import org.perun.registrarprototype.security.RegistrarAuthenticationToken;
 import org.perun.registrarprototype.security.SessionProvider;
-import org.perun.registrarprototype.services.FormServiceImpl;
+import org.perun.registrarprototype.services.FormService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -25,10 +25,10 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/forms")
 public class FormController {
 
-  private final FormServiceImpl formService;
+  private final FormService formService;
   private final SessionProvider sessionProvider;
 
-  public FormController(FormServiceImpl formService, SessionProvider sessionProvider) {
+  public FormController(FormService formService, SessionProvider sessionProvider) {
       this.formService = formService;
       this.sessionProvider = sessionProvider;
   }
@@ -63,14 +63,23 @@ public class FormController {
     return ResponseEntity.ok(formService.getAllFormsWithItems());
   }
 
+  // Testing principal endpoint
   @GetMapping("/me")
-  public ResponseEntity<Map<String, Object>> me(@AuthenticationPrincipal CurrentUser principal) {
+  public ResponseEntity<PrincipalInfoDTO> me(@AuthenticationPrincipal CurrentUser principal) {
     RegistrarAuthenticationToken session = sessionProvider.getCurrentSession();
 
-    if (!session.isAuthenticated()) {
-      return  ResponseEntity.ok(Map.of("authenticated", session.isAuthenticated()));
-    }
     System.out.println(principal.getRoles());
-    return ResponseEntity.ok(principal.getAttributes());
+
+    if (!session.isAuthenticated()) {
+      return ResponseEntity.ok(new PrincipalInfoDTO(false));
+    }
+
+    return ResponseEntity.ok(new PrincipalInfoDTO(
+      true,
+      principal.id(),
+      principal.name(),
+      principal.getAttributes(),
+      principal.getRoles()
+    ));
   }
 }

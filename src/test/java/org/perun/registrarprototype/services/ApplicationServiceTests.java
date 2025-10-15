@@ -48,7 +48,7 @@ class ApplicationServiceTests extends GenericRegistrarServiceTests {
 
     FormItemData formItemData1 = new FormItemData(item1, "test@gmail.com");
 
-    Application app = applicationService.applyForMembership(new ApplicationContext(form, groupId, List.of(formItemData1), Form.FormType.INITIAL), submission, "");
+    Application app = applicationService.applyForMembership(new ApplicationContext(form, List.of(formItemData1), Form.FormType.INITIAL), submission, "");
 
     Application createdApp = applicationRepository.findById(app.getId()).orElse(null);
 
@@ -67,7 +67,7 @@ class ApplicationServiceTests extends GenericRegistrarServiceTests {
 
     FormItemData formItemData1 = new FormItemData(item1, "test@gmail.com");
 
-    Application app = applicationService.applyForMembership(new ApplicationContext(form, groupId, List.of(formItemData1), Form.FormType.INITIAL), submission, "");
+    Application app = applicationService.applyForMembership(new ApplicationContext(form, List.of(formItemData1), Form.FormType.INITIAL), submission, "");
 
     Application createdApp = applicationRepository.findById(app.getId()).orElse(null);
 

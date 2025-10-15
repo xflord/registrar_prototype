@@ -5,15 +5,15 @@ import org.perun.registrarprototype.models.Form;
 
 public class ApplicationDTO {
   private int id;
-  private int formId;
+  private Form form;
   private ApplicationState state;
   private String submitterName;
   private Integer submissionId;
   private Form.FormType type;
 
-  public ApplicationDTO(int id, int formId, ApplicationState state, String submitterName, Integer submissionId, Form.FormType type) {
+  public ApplicationDTO(int id, Form form, ApplicationState state, String submitterName, Integer submissionId, Form.FormType type) {
     this.id = id;
-    this.formId = formId;
+    this.form = form;
     this.state = state;
     this.submitterName = submitterName;
     this.submissionId = submissionId;
@@ -24,8 +24,8 @@ public class ApplicationDTO {
     return id;
   }
 
-  public int getFormId() {
-    return formId;
+  public Form getForm() {
+    return form;
   }
 
   public ApplicationState getState() {

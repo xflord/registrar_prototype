@@ -23,9 +23,9 @@ import org.springframework.test.context.ActiveProfiles;
 @ActiveProfiles( {"test", "basic-auth"} )
 public class GenericRegistrarServiceTests {
    @Autowired
-   protected ApplicationServiceImpl applicationService;
+   protected ApplicationService applicationService;
    @Autowired
-   protected FormServiceImpl formService;
+   protected FormService formService;
    @Autowired
    protected SessionProvider sessionProvider;
    @Autowired

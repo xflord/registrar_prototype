@@ -23,7 +23,7 @@ import org.springframework.context.ApplicationContext;
 import org.springframework.stereotype.Service;
 
 @Service
-public class FormServiceImpl {
+public class FormServiceImpl implements FormService {
   private final FormRepository formRepository;
   private final AuthorizationService authorizationService;
   private final FormModuleRepository formModuleRepository;
@@ -42,12 +42,14 @@ public class FormServiceImpl {
     this.formTransitionRepository = formTransitionRepository;
   }
 
+  @Override
   public Form createForm(int groupId)
       throws FormItemRegexNotValid, InsufficientRightsException {
 
     return formRepository.save(new Form(-1, groupId, new ArrayList<>()));
   }
 
+  @Override
   public Form createForm(int groupId, List<FormItem> items)
       throws FormItemRegexNotValid, InsufficientRightsException {
     Form form = createForm(groupId);
@@ -57,6 +59,7 @@ public class FormServiceImpl {
     return form;
   }
 
+  @Override
   public FormItem setFormItem(int formId, FormItem formItem) throws FormItemRegexNotValid {
     Form form = formRepository.findById(formId).orElseThrow(() -> new IllegalArgumentException("Form with ID " + formId + " not found"));
 
@@ -79,6 +82,7 @@ public class FormServiceImpl {
     return formItem;
   }
 
+  @Override
   public void setFormItems(int formId, List<FormItem> items) throws FormItemRegexNotValid {
     Form form = formRepository.findById(formId).orElseThrow(() -> new IllegalArgumentException("Form with ID " + formId + " not found"));
 
@@ -103,6 +107,7 @@ public class FormServiceImpl {
 
   }
 
+  @Override
   public List<AssignedFormModule> getAssignedFormModules(Form form) {
     List<AssignedFormModule> modules = formModuleRepository.findAllByFormId(form.getId());
 
@@ -118,13 +123,7 @@ public class FormServiceImpl {
     return modules;
   }
 
-  /**
-   * Sets modules for the form. Checks whether the module actually exists and whether all the required options are set.
-   *
-   * @param formId id of the form to assign modules to
-   * @param modulesToAssign modules with module name and options set (the rest is ignored)
-   * @return
-   */
+  @Override
   public List<AssignedFormModule> setModules(RegistrarAuthenticationToken sess, int formId, List<AssignedFormModule> modulesToAssign)
       throws InsufficientRightsException {
     Form form = formRepository.findById(formId).orElseThrow(() -> new IllegalArgumentException("Form with ID " + formId + " not found"));
@@ -160,21 +159,21 @@ public class FormServiceImpl {
     return modules;
   }
 
+  @Override
   public List<Form> getAllFormsWithItems() {
     List<Form> forms = formRepository.findAll();
     forms.forEach(form -> form.setItems(formItemRepository.getFormItemsByFormId(form.getId())));
     return forms;
   }
 
+  @Override
   public Form getFormById(int formId) {
     return formRepository.findById(formId).orElseThrow(() -> new DataInconsistencyException("Form with ID " + formId + " not found. "));
   }
 
-  /**
-   * Retrieves all forms that are required to be filled before applying for membership via the supplied form.
-   * TODO what about PRE forms that also have prerequisites? Recursively check all prerequisites or do not allow?
-   * @return
-   */
+
+  //TODO what about PRE forms that also have prerequisites? Recursively check all prerequisites or do not allow?
+  @Override
   public List<FormTransition> getPrerequisiteTransitions(Form form, Form.FormType type) {
     List<FormTransition> transitions = formTransitionRepository.getAllBySourceFormAndType(form, FormTransition.TransitionType.PREREQUISITE);
     // TODO add some logic to determine the order of PRE forms? More so if we want recursive prerequisites.
@@ -184,12 +183,8 @@ public class FormServiceImpl {
                .toList();
   }
 
-  /**
-   * Retrieves all forms that are automatically submitted after the supplied form is submitted (AKA embedded).
-   * TODO again what to do with autosubmit forms with autosubmit forms?
-   * @param form
-   * @return
-   */
+  //TODO again what to do with autosubmit forms with autosubmit forms?
+  @Override
   public List<Form> getAutosubmitForms(Form form, Form.FormType type) {
     List<FormTransition> transitions = formTransitionRepository.getAllBySourceFormAndType(form, FormTransition.TransitionType.AUTO_SUBMIT);
     return transitions.stream()
@@ -198,12 +193,8 @@ public class FormServiceImpl {
                .toList();
   }
 
-  /**
-   * Retrieves all forms that user is redirected to after submitting the supplied form.
-   * TODO do we allow multiple forms? Probably yes, build composite form with them in GUI
-   * @param form
-   * @return
-   */
+  // TODO do we allow multiple forms? Probably yes, build composite form with them in GUI
+  @Override
   public List<Form> getRedirectForms(Form form, Form.FormType type) {
     List<FormTransition> transitions = formTransitionRepository.getAllBySourceFormAndType(form, FormTransition.TransitionType.REDIRECT);
     return transitions.stream()
@@ -212,14 +203,17 @@ public class FormServiceImpl {
                .toList();
   }
 
+  @Override
   public List<FormItem> getFormItems(Form form, Form.FormType type) {
     return formItemRepository.getFormItemsByFormId(form.getId()).stream().filter(formItem -> formItem.getFormTypes().contains(type)).toList();
   }
 
+  @Override
   public FormItem getFormItemById(int formItemId) {
     return formItemRepository.getFormItemById(formItemId).orElseThrow(() -> new DataInconsistencyException("Form item with ID " + formItemId + " not found"));
   }
 
+  @Override
   public FormItem createFormItem(FormItem item) {
     return formItemRepository.save(item);
   }

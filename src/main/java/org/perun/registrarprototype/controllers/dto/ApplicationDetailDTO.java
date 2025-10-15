@@ -10,10 +10,10 @@ public class ApplicationDetailDTO extends ApplicationDTO {
   private SubmissionDTO submission;
   private DecisionDTO latestDecision;
 
-  public ApplicationDetailDTO(int id, int formId, ApplicationState state, String submitterName, Integer submissionId,
+  public ApplicationDetailDTO(int id, Form form, ApplicationState state, String submitterName, Integer submissionId,
                               Form.FormType type, List<FormItemData> formItemData, SubmissionDTO submission,
                               DecisionDTO latestDecision) {
-    super(id, formId, state, submitterName, submissionId, type);
+    super(id, form, state, submitterName, submissionId, type);
     this.formItemData = formItemData;
     this.submission = submission;
     this.latestDecision = latestDecision;
