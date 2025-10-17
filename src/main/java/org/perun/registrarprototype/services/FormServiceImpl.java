@@ -18,6 +18,7 @@ import org.perun.registrarprototype.repositories.FormRepository;
 import org.perun.registrarprototype.repositories.FormTransitionRepository;
 import org.perun.registrarprototype.security.RegistrarAuthenticationToken;
 import org.perun.registrarprototype.services.modules.FormModule;
+import org.perun.registrarprototype.services.modules.ModulesManager;
 import org.springframework.beans.BeansException;
 import org.springframework.context.ApplicationContext;
 import org.springframework.stereotype.Service;
@@ -27,16 +28,19 @@ public class FormServiceImpl implements FormService {
   private final FormRepository formRepository;
   private final AuthorizationService authorizationService;
   private final FormModuleRepository formModuleRepository;
+  private final ModulesManager modulesManager;
   private final FormItemRepository formItemRepository;
   private final FormTransitionRepository formTransitionRepository;
   private final ApplicationContext context;
 
   public FormServiceImpl(FormRepository formRepository, AuthorizationService authorizationService,
-                         FormModuleRepository formModuleRepository, ApplicationContext context,
+                         FormModuleRepository formModuleRepository, ModulesManager modulesManager,
+                         ApplicationContext context,
                          FormItemRepository formItemRepository, FormTransitionRepository formTransitionRepository) {
     this.formRepository = formRepository;
     this.authorizationService = authorizationService;
     this.formModuleRepository = formModuleRepository;
+    this.modulesManager = modulesManager;
     this.context = context;
     this.formItemRepository = formItemRepository;
     this.formTransitionRepository = formTransitionRepository;
@@ -112,9 +116,10 @@ public class FormServiceImpl implements FormService {
     List<AssignedFormModule> modules = formModuleRepository.findAllByFormId(form.getId());
 
     for (AssignedFormModule module : modules) {
-      try {
-        setModule(module);
-      } catch (FormModuleNotExistsException e) {
+      FormModule moduleComponent = modulesManager.getModule(module.getModuleName());
+      if (moduleComponent != null) {
+        module.setFormModule(moduleComponent);
+      } else {
         throw new DataInconsistencyException("Already assigned module class " + module.getModuleName() + " not found" +
                                                  " when retrieving modules for form " + form.getId());
       }
@@ -124,7 +129,8 @@ public class FormServiceImpl implements FormService {
   }
 
   @Override
-  public List<AssignedFormModule> setModules(RegistrarAuthenticationToken sess, int formId, List<AssignedFormModule> modulesToAssign)
+  public List<AssignedFormModule> setModules(RegistrarAuthenticationToken sess, int formId,
+                                             List<AssignedFormModule> modulesToAssign)
       throws InsufficientRightsException {
     Form form = formRepository.findById(formId).orElseThrow(() -> new IllegalArgumentException("Form with ID " + formId + " not found"));
 
@@ -135,26 +141,24 @@ public class FormServiceImpl implements FormService {
 
     List<AssignedFormModule> modules = new ArrayList<>();
 
-    for (AssignedFormModule module : modulesToAssign) {
-      try {
-        AssignedFormModule moduleWithComponent = this.setModule(module);
-        if (!moduleWithComponent.getFormModule().getRequiredOptions().isEmpty()) {
-          if (moduleWithComponent.getOptions() == null || moduleWithComponent.getOptions().isEmpty()) {
-            throw new IllegalArgumentException("Module " + module.getModuleName() + " requires options.");
+    for (AssignedFormModule assignedFormModule : modulesToAssign) {
+        FormModule moduleComponent = modulesManager.getModule(assignedFormModule.getModuleName());
+        if (moduleComponent == null) {
+          throw new IllegalArgumentException("Module " + assignedFormModule.getModuleName() + " not found");
+        }
+        if (!moduleComponent.getRequiredOptions().isEmpty()) {
+          if (assignedFormModule.getOptions() == null || assignedFormModule.getOptions().isEmpty()) {
+            throw new IllegalArgumentException("Module " + assignedFormModule.getModuleName() + " requires options.");
           }
-          for (String requiredOption : moduleWithComponent.getFormModule().getRequiredOptions()) {
-            if (!moduleWithComponent.getOptions().containsKey(requiredOption)) {
-              throw new IllegalArgumentException("Module " + module.getModuleName() + " requires option " + requiredOption);
+          for (String requiredOption : moduleComponent.getRequiredOptions()) {
+            if (!assignedFormModule.getOptions().containsKey(requiredOption)) {
+              throw new IllegalArgumentException("Module " + assignedFormModule.getModuleName() + " requires option " + requiredOption);
             }
           }
         }
-        moduleWithComponent.setFormId(form.getId());
-        modules.add(moduleWithComponent);
-      } catch (FormModuleNotExistsException e) {
-        throw new IllegalArgumentException("Module " + module.getModuleName() + " not found");
+        assignedFormModule.setFormId(form.getId());
+        modules.add(assignedFormModule);
       }
-    }
-
     formModuleRepository.saveAll(modules);
     return modules;
   }
@@ -216,21 +220,5 @@ public class FormServiceImpl implements FormService {
   @Override
   public FormItem createFormItem(FormItem item) {
     return formItemRepository.save(item);
-  }
-
-  /**
-   * Sets module components by the name of the module.
-   * @param module
-   * @return
-   */
-  private AssignedFormModule setModule(AssignedFormModule module) throws FormModuleNotExistsException {
-    try {
-      FormModule formModule = context.getBean(module.getModuleName(), FormModule.class);
-      module.setFormModule(formModule);
-      return module;
-    } catch (BeansException e) {
-      throw new FormModuleNotExistsException("Could not find definition for module " + module.getModuleName() +
-                                                 " when retrieving modules for form " + module.getFormId());
-    }
   }
 }
