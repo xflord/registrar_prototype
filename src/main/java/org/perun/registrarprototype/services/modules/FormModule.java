@@ -13,6 +13,14 @@ import org.perun.registrarprototype.security.CurrentUser;
 public interface FormModule {
 
   /**
+   * Make sure this is unique.
+   * @return
+   */
+  default String getName() {
+    return this.getClass().getSimpleName();
+  }
+
+  /**
    * Called before an application is submitted, already containing prefilled data.
    * Use to check whether the application can be submitted or whether prefilled data is valid.
    * @param sess

@@ -3,28 +3,32 @@ package org.perun.registrarprototype.services.modules;
 import java.util.List;
 import java.util.Map;
 import org.perun.registrarprototype.models.Application;
-import org.perun.registrarprototype.models.FormSpecification;
+import org.perun.registrarprototype.models.Form;
 import org.perun.registrarprototype.models.FormItemData;
 import org.perun.registrarprototype.security.CurrentUser;
-import org.springframework.context.annotation.Profile;
+import org.perun.registrarprototype.services.ApplicationService;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 @Component
-@Profile("test")
-public class TestModuleWithOptions implements FormModule {
+public class ExampleModule implements FormModule {
+
+  @Autowired
+  private ApplicationService applicationService;
 
   @Override
   public String getName() {
-    return "TestModuleWithOptions";
+    System.out.println(applicationService.getAllApplications());
+    return "ExampleModule";
   }
 
   @Override
-  public void canBeSubmitted(CurrentUser sess, FormSpecification.FormType type, Map<String, String> options) {
+  public void canBeSubmitted(CurrentUser sess, Form.FormType type, Map<String, String> options) {
 
   }
 
   @Override
-  public void afterFormItemsPrefilled(CurrentUser sess, FormSpecification.FormType type, List<FormItemData> prefilledFormItems) {
+  public void afterFormItemsPrefilled(CurrentUser sess, Form.FormType type, List<FormItemData> prefilledFormItems) {
 
   }
 
@@ -55,6 +59,6 @@ public class TestModuleWithOptions implements FormModule {
 
   @Override
   public List<String> getRequiredOptions() {
-    return List.of("option1", "option2");
+    return List.of();
   }
 }
