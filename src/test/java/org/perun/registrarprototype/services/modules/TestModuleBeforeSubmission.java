@@ -19,6 +19,11 @@ public class TestModuleBeforeSubmission implements FormModule {
   }
 
   @Override
+  public String getName() {
+    return "TestModuleBeforeSubmission";
+  }
+
+  @Override
   public void canBeSubmitted(CurrentUser sess, FormSpecification.FormType type, Map<String, String> options) {
 
   }
