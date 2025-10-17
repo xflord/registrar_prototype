@@ -41,7 +41,8 @@ public class PerunRPCConfig {
   public PerunRPC perunRpcBasicAuth() {
       RestTemplate restTemplate = new RestTemplate(new HttpComponentsClientHttpRequestFactory());
       restTemplate.setErrorHandler(new RpcErrorHandler());
-      return new PerunRPC(idmUrl, idmUsername, idmPassword);
+      restTemplate.setInterceptors(List.of(new BracketEncodingInterceptor()));
+      return new PerunRPC(idmUrl, idmUsername, idmPassword, restTemplate);
   }
 
   // Bean for X.509 Certificate Authentication
@@ -84,6 +85,7 @@ public class PerunRPCConfig {
             new HttpComponentsClientHttpRequestFactory(httpClient);
     RestTemplate template = new RestTemplate(factory);
     template.setErrorHandler(new RpcErrorHandler());
+    template.setInterceptors(List.of(new BracketEncodingInterceptor()));
     return new RestTemplate(factory);
   }
 
@@ -98,6 +100,7 @@ public class PerunRPCConfig {
       //  but I THINK this way (interceptor/token service combo) ensures refreshing
       restTemplate.setInterceptors(List.of(new BearerTokenInterceptor(tokenService)));
       restTemplate.setErrorHandler(new RpcErrorHandler());
+      restTemplate.setInterceptors(List.of(new BracketEncodingInterceptor()));
 
       PerunRPC oauthRpc = new PerunRPC(restTemplate);
       oauthRpc.getApiClient().setBasePath(idmUrl);

@@ -122,7 +122,7 @@ public class IdMServiceDummy implements IdMService {
   }
 
   @Override
-  public List<Identity> checkForSimilarUsers(List<FormItemData> itemData) {
+  public List<Identity> checkForSimilarUsers(String accessToken, List<FormItemData> itemData) {
     return List.of();
   }
 }

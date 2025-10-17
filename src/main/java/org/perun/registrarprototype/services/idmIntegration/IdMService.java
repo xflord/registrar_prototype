@@ -87,5 +87,5 @@ public interface IdMService {
    */
   List<Identity> checkForSimilarUsers(String accessToken);
 
-  List<Identity> checkForSimilarUsers(List<FormItemData> itemData);
+  List<Identity> checkForSimilarUsers(String accessToken, List<FormItemData> itemData);
 }

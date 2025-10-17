@@ -14,6 +14,7 @@ public class RpcErrorHandler extends DefaultResponseErrorHandler {
   protected void handleError(ClientHttpResponse response, HttpStatusCode statusCode, URI url, HttpMethod method)
       throws IOException {
     try {
+      System.out.println("Error while calling " + url + " - " + statusCode);
       super.handleError(response, statusCode, url, method);
     } catch (HttpClientErrorException ex) {
       throw PerunRuntimeException.to(ex);

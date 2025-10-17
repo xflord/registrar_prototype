@@ -12,6 +12,8 @@ import cz.metacentrum.perun.openapi.model.Group;
 import cz.metacentrum.perun.openapi.model.InputCreateMemberForCandidate;
 import cz.metacentrum.perun.openapi.model.InputCreateMemberForUser;
 import cz.metacentrum.perun.openapi.model.InputSetMemberAttributes;
+import cz.metacentrum.perun.openapi.model.InputSetMemberGroupWithUserAttributes;
+import cz.metacentrum.perun.openapi.model.InputSetMemberWithUserAttributes;
 import cz.metacentrum.perun.openapi.model.Member;
 import cz.metacentrum.perun.openapi.model.Type;
 import cz.metacentrum.perun.openapi.model.User;
@@ -393,13 +395,34 @@ public class PerunIdMService implements IdMService {
     if (group == null) {
       return null;
     }
+    Member member;
+    try {
+      member = rpc.getMembersManager().getMemberByUser(group.getVoId(), application.getIdmUserId());
+    } catch (PerunRuntimeException ex) {
+      if (ex.getName().equals("MemberNotExistsException")) {
+        member = null;
+      } else {
+        throw ex;
+      }
+    }
 
-    InputCreateMemberForUser input = new InputCreateMemberForUser();
-    input.setVo(group.getVoId());
-    input.addGroupsItem(group);
-    input.setUser(application.getIdmUserId());
-    Member member = rpc.getMembersManager().createMemberForUser(input);
-    updateMemberAttributesFromAppData(application, member);
+    if (member == null) {
+      InputCreateMemberForUser input = new InputCreateMemberForUser();
+      input.setVo(group.getVoId());
+      input.addGroupsItem(group);
+      input.setUser(application.getIdmUserId());
+      member = rpc.getMembersManager().createMemberForUser(input);
+      updateMemberAttributesFromAppData(application, member, group);
+
+      return member.getUserId();
+    }
+
+    // Already VO member
+    List<Integer> members = new ArrayList<>();
+    members.add(member.getId());
+    // TODO this seems to not work (openapi generator or definition issue? list parameter does not reach perun be)
+    rpc.getGroupsManager().addMembers(group.getId(), members);
+    updateMemberAttributesFromAppData(application, member, group);
 
     return member.getUserId();
   }
@@ -413,7 +436,7 @@ public class PerunIdMService implements IdMService {
 
     Member member = rpc.getMembersManager().getMemberByUser(group.getVoId(), application.getIdmUserId());
     rpc.getMembersManager().extendMembership(member.getId());
-    updateMemberAttributesFromAppData(application, member);
+    updateMemberAttributesFromAppData(application, member, group);
 
     return member.getUserId();
   }
@@ -433,7 +456,13 @@ public class PerunIdMService implements IdMService {
   }
 
   @Override
-  public List<Identity> checkForSimilarUsers(List<FormItemData> itemData) {
+  public List<Identity> checkForSimilarUsers(String accessToken, List<FormItemData> itemData) {
+    // hacky way to call Perun with user session
+    RestTemplate restTemplate = new RestTemplate(new HttpComponentsClientHttpRequestFactory());
+    restTemplate.setErrorHandler(new RpcErrorHandler());
+    PerunRPC tempRpc = new PerunRPC(restTemplate);
+    tempRpc.getApiClient().setBasePath(rpc.getApiClient().getBasePath());
+    tempRpc.getApiClient().setBearerToken(accessToken);
     // TODO consider placing `FormItemData` in the external api package and importing it in perun (once old Registrar gets removed)
     List<ApplicationFormItemData> perunFormItems = new ArrayList<>();
 
@@ -454,7 +483,7 @@ public class PerunIdMService implements IdMService {
 
     List<EnrichedIdentity> perunIdentities = new ArrayList<>();
     // TODO add the method to openapi, it already exists
-    // List<EnrichedIdentity> perunIdentities = rpc.getRegistrarManager().checkForSimilarUsers(perunFormItems);
+    // List<EnrichedIdentity> perunIdentities = tempRpc.getRegistrarManager().checkForSimilarUsers(perunFormItems);
     return convertToDomainIdentities(perunIdentities);
   }
 
@@ -463,30 +492,47 @@ public class PerunIdMService implements IdMService {
     perunIdentities.forEach(identity -> {
       identity.getIdentities().forEach(extSource -> {
         domainIdentities.add(new Identity(identity.getName(), identity.getOrganization(),
-            identity.getEmail(), extSource.getExtSource().getType()));
+            identity.getEmail(), extSource.getExtSource().getType(), extSource.getAttributes()));
       });
     });
     return domainIdentities;
   }
 
   private void updateMemberAttributesFromAppData(Application application, Member member) {
-    InputSetMemberAttributes inputAttributes = new InputSetMemberAttributes();
+    InputSetMemberWithUserAttributes inputAttributes = new InputSetMemberWithUserAttributes();
     inputAttributes.setMember(member.getId());
-    List<Attribute> attributes = application.getFormItemData().stream()
-                                     .map(item -> {
-                                       AttributeDefinition attrDef = rpc.getAttributesManager()
-                                                                         .getAttributeDefinitionByName(item.getFormItem().getDestinationIdmAttribute());
-                                       Attribute attr = new Attribute();
-                                       attr.setId(attrDef.getId());
-                                       attr.setValue(item.getValue());
-                                       attr.setNamespace(attrDef.getNamespace());
-                                       attr.setType(attrDef.getType());
-                                       attr.setFriendlyName(attrDef.getFriendlyName());
-                                       return attr;
-                                     }).toList();
+    List<Attribute> attributes = mapFormDataToAttributeObjects(application.getFormItemData());
     inputAttributes.setAttributes(attributes);
-    // inputAttributes.setWorkWithUserAttributes(true) TODO this needs to be added to openapi
-    rpc.getAttributesManager().setMemberAttributes(inputAttributes);
+    inputAttributes.setWorkWithUserAttributes(true);
+    rpc.getAttributesManager().setMemberWithUserAttributes(inputAttributes);
+  }
+
+  private void updateMemberAttributesFromAppData(Application application, Member member, Group group) {
+    InputSetMemberGroupWithUserAttributes inputAttributes = new InputSetMemberGroupWithUserAttributes();
+    inputAttributes.setMember(member.getId());
+    inputAttributes.setGroup(group.getId());
+    List<Attribute> attributes = mapFormDataToAttributeObjects(application.getFormItemData());
+    inputAttributes.setAttributes(attributes);
+    inputAttributes.setWorkWithUserAttributes(true);
+    rpc.getAttributesManager().setMemberGroupWithUserAttributes(inputAttributes);
+  }
+
+  private List<Attribute> mapFormDataToAttributeObjects(List<FormItemData> itemData) {
+    return itemData.stream()
+               .filter(item -> item.getFormItem().getDestinationIdmAttribute() != null)
+               // TODO do we need to filter out login attributes here?
+               .map(item -> {
+                 AttributeDefinition attrDef = rpc.getAttributesManager()
+                                                   .getAttributeDefinitionByName(item.getFormItem().getDestinationIdmAttribute());
+                 Attribute attr = new Attribute();
+                 attr.setId(attrDef.getId());
+                 attr.setValue(item.getValue());
+                 attr.setNamespace(attrDef.getNamespace());
+                 attr.setType(attrDef.getType());
+                 attr.setFriendlyName(attrDef.getFriendlyName());
+                 return attr;
+               })
+               .toList();
   }
 
   private Candidate getCandidate(Submission submission) {

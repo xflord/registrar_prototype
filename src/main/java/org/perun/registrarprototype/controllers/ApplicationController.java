@@ -2,6 +2,8 @@ package org.perun.registrarprototype.controllers;
 
 import org.perun.registrarprototype.exceptions.InsufficientRightsException;
 import org.perun.registrarprototype.models.Application;
+import org.perun.registrarprototype.models.FormItemData;
+import org.perun.registrarprototype.models.Identity;
 import org.perun.registrarprototype.models.SubmissionContext;
 import org.perun.registrarprototype.models.SubmissionResult;
 import org.perun.registrarprototype.security.SessionProvider;
@@ -52,6 +54,11 @@ public class ApplicationController {
       return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
     }
     return ResponseEntity.ok().build();
+  }
+
+  @GetMapping("/similarIdentities")
+  public ResponseEntity<List<Identity>> getSimilarIdentitiesForPossibleConsolidation(@RequestBody List<FormItemData> itemData) {
+    return ResponseEntity.ok(applicationService.checkForSimilarIdentities(itemData));
   }
 
   @GetMapping()

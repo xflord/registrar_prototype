@@ -125,7 +125,6 @@ public class ApplicationServiceImpl implements ApplicationService {
     // TODO unreserve logins
 
     if (application.getType().equals(Form.FormType.INITIAL)) {
-      System.out.println(application.getIdmUserId());
       if (application.getIdmUserId() == null) {
         return idmService.createMemberForCandidate(application);
       }
@@ -585,7 +584,7 @@ public class ApplicationServiceImpl implements ApplicationService {
 
   @Override
   public List<Identity> checkForSimilarIdentities(List<FormItemData> itemData) {
-    return idmService.checkForSimilarUsers(itemData);
+    return idmService.checkForSimilarUsers((String) sessionProvider.getCurrentSession().getCredentials(), itemData);
   }
 
   /**

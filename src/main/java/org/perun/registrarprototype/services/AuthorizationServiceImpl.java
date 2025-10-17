@@ -9,7 +9,6 @@ import org.perun.registrarprototype.services.idmIntegration.IdMService;
 import org.springframework.stereotype.Service;
 
 // Role-based access control implementation
-// TODO discuss how exactly to implement group-based access control, (concurrency with perun etc.)
 @Service
 public class AuthorizationServiceImpl implements AuthorizationService {
 
