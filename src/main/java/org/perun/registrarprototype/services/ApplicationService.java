@@ -4,6 +4,7 @@ import java.util.List;
 import org.perun.registrarprototype.exceptions.InsufficientRightsException;
 import org.perun.registrarprototype.models.Application;
 import org.perun.registrarprototype.models.ApplicationContext;
+import org.perun.registrarprototype.models.ApplicationState;
 import org.perun.registrarprototype.models.Decision;
 import org.perun.registrarprototype.models.Form;
 import org.perun.registrarprototype.models.FormItemData;
@@ -145,5 +146,7 @@ public interface ApplicationService {
    * @return list of similar identities found in the IdM system
    */
   List<Identity> checkForSimilarIdentities(List<FormItemData> itemData);
+
+  List<Application> getApplicationsForForm(int formId, List<ApplicationState> states);
 }
 

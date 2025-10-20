@@ -4,10 +4,31 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
 
+/**
+ * Represents a single form item.
+ * To provide a more structured (and customizable) way of storing form items, compared to old registrar, this
+ * implementation provides a way to define a "forest" structure of form items.
+ * In the GUI, position same level items vertically by default, use e.g. `ROW` item type to create a row.
+ * The design of the item type can then potentially be customized by the GUI for each form.
+ * e.g.:
+ * Form:
+ *  SECTION "User Information"
+ *  │     ├── ROW
+ *  │     │    ├── TEXTFIELD "First Name"
+ *  │     │    └── TEXTFIELD "Last Name"
+ *  │     ├── ROW
+ *  │     │    ├── VALIDATED_EMAIL "Email"
+ *  │     │    └── DATE_PICKER "Birth Date"
+ *  SECTION "Actions"
+ *  │     └── SUBMIT_BUTTON "Register"
+ */
 public class FormItem {
   private int id;
   private int formId; // TODO this probably does not belong to the domain
+  private Integer parentId; // null for root, ID of parent element in the form, allows for hierarchical tree structure
+  private int ordNum;
   private Type type;
   private Map<Locale, ItemTexts> texts = new HashMap<>();
   private boolean required;
@@ -216,6 +237,22 @@ public class FormItem {
     this.texts = texts;
   }
 
+  public Integer getParentId() {
+    return parentId;
+  }
+
+  public void setParentId(Integer parentId) {
+    this.parentId = parentId;
+  }
+
+  public int getOrdNum() {
+    return ordNum;
+  }
+
+  public void setOrdNum(int ordNum) {
+    this.ordNum = ordNum;
+  }
+
   @Override
   public String toString() {
     return "FormItem{" +
@@ -239,9 +276,21 @@ public class FormItem {
   }
 
   public enum Type {
+    ROW,
+    SECTION,
+    SUBMIT_BUTTON,
+    DATE_PICKER,
     LOGIN,
+    PASSWORD,
     VALIDATED_EMAIL,
-    TEXTFIELD
+    HTML_COMMENT,
+    TEXTFIELD;
+
+    public static final Set<Type> HTML_ITEMS = Set.of(HTML_COMMENT);
+
+    public boolean isHtmlItem() {
+      return HTML_ITEMS.contains(this);
+    }
   }
 
   public enum Condition {

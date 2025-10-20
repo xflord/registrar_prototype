@@ -12,4 +12,6 @@ public interface FormItemRepository {
   FormItem save(FormItem formItem);
 
   FormItem update(FormItem formItem);
+
+  void delete(FormItem formItem);
 }

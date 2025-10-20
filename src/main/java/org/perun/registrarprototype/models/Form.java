@@ -8,6 +8,8 @@ public class Form {
   private int voId;
   private int groupId;
   private List<FormItem> items;
+  private boolean autoApprove = false;
+  private boolean autoApproveExtension = false;
 
   public Form() {
   }
@@ -18,11 +20,13 @@ public class Form {
     this.items = items;
   }
 
-  public Form(int id, int voId, int groupId, List<FormItem> items) {
+  public Form(int id, int voId, int groupId, List<FormItem> items, boolean autoApprove, boolean autoApproveExtension) {
     this.id = id;
     this.voId = voId;
     this.groupId = groupId;
     this.items = items;
+    this.autoApprove = autoApprove;
+    this.autoApproveExtension = autoApproveExtension;
   }
 
   public ValidationResult validateItemData(List<FormItemData> itemData) {
@@ -77,5 +81,21 @@ public class Form {
 
   public void setGroupId(int groupId) {
     this.groupId = groupId;
+  }
+
+  public boolean isAutoApproveExtension() {
+    return autoApproveExtension;
+  }
+
+  public void setAutoApproveExtension(boolean autoApproveExtension) {
+    this.autoApproveExtension = autoApproveExtension;
+  }
+
+  public boolean isAutoApprove() {
+    return autoApprove;
+  }
+
+  public void setAutoApprove(boolean autoApprove) {
+    this.autoApprove = autoApprove;
   }
 }

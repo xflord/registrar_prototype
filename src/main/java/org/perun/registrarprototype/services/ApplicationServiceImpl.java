@@ -306,6 +306,7 @@ public class ApplicationServiceImpl implements ApplicationService {
     Map<String, String> reservedPrincipalLogins = getReservedLoginsForPrincipal(sess.getPrincipal()); // call here to avoid unnecessary idm calls
 
     validateFilledFormData(applicationContext);
+    normalizeFilledFormData(applicationContext);
     applicationContext.getPrefilledItems().forEach(item -> checkPrefilledValueConsistency(sess, item, reservedPrincipalLogins));
 
     Application app = new Application(0, sess.getPrincipal().id(), form,
@@ -385,6 +386,14 @@ public class ApplicationServiceImpl implements ApplicationService {
       throw new InvalidApplicationDataException("Some of the form items were incorrectly filled in",
             result, null);
     }
+  }
+
+  /**
+   * Fix data format
+   * @param data
+   */
+  private void normalizeFilledFormData(ApplicationContext data) {
+
   }
 
   /**
@@ -585,6 +594,16 @@ public class ApplicationServiceImpl implements ApplicationService {
   @Override
   public List<Identity> checkForSimilarIdentities(List<FormItemData> itemData) {
     return idmService.checkForSimilarUsers((String) sessionProvider.getCurrentSession().getCredentials(), itemData);
+  }
+
+  @Override
+  public List<Application> getApplicationsForForm(int formId, List<ApplicationState> states) {
+    if (states == null || states.isEmpty()) {
+      return applicationRepository.findByFormId(formId);
+    }
+    return applicationRepository.findByFormId(formId).stream()
+               .filter(app -> states.contains(app.getState()))
+               .toList();
   }
 
   /**

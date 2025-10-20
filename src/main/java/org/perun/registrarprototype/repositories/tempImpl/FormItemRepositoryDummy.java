@@ -53,4 +53,9 @@ public class FormItemRepositoryDummy implements FormItemRepository {
     item.setFormId(formItem.getFormId());
     return item;
   }
+
+  @Override
+  public void delete(FormItem formItem) {
+    formItems.removeIf(item -> item.getId() == formItem.getId());
+  }
 }

@@ -25,6 +25,14 @@ public interface FormService {
   Form createForm(int groupId) throws FormItemRegexNotValid, InsufficientRightsException;
 
   /**
+   * Creates a new form for the group and other properties specified in the form object and assigns the specified modules.
+   * @param form form object with group id, name, description, etc., id will be assigned
+   * @param moduleNames module objects with the name and options set, form id will be overwritten
+   * @return created form
+   */
+  Form createForm(Form form, List<AssignedFormModule> moduleNames) throws InsufficientRightsException;
+
+  /**
    * Creates a new form for the specified group with the provided list of items.
    *
    * @param groupId ID of the group for which to create the form
@@ -140,5 +148,7 @@ public interface FormService {
    * @return the created form item
    */
   FormItem createFormItem(FormItem item);
+
+  void updateFormItems( int formId, List<FormItem> newItems);
 }
 
