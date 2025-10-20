@@ -27,6 +27,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
+import org.perun.registrarprototype.events.IdMUserCreatedEvent;
+import org.perun.registrarprototype.events.MemberCreatedEvent;
 import org.perun.registrarprototype.exceptions.DataInconsistencyException;
 import org.perun.registrarprototype.models.Application;
 import org.perun.registrarprototype.models.FormItem;
@@ -34,6 +36,8 @@ import org.perun.registrarprototype.models.FormItemData;
 import org.perun.registrarprototype.models.Identity;
 import org.perun.registrarprototype.models.Role;
 import org.perun.registrarprototype.models.Submission;
+import org.perun.registrarprototype.services.EventService;
+import org.perun.registrarprototype.services.EventServiceImpl;
 import org.perun.registrarprototype.services.idmIntegration.IdMService;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.client.HttpComponentsClientHttpRequestFactory;
@@ -51,9 +55,12 @@ public class PerunIdMService implements IdMService {
   private String idmExtSourceName = "test-ext-source";
 
   private final PerunRPC rpc;
+  private final EventService eventService;
 
-  public PerunIdMService(PerunRPC rpc) {
+
+  public PerunIdMService(PerunRPC rpc, EventService eventService) {
     this.rpc = rpc;
+    this.eventService = eventService;
   }
 
   @Override
@@ -370,8 +377,14 @@ public class PerunIdMService implements IdMService {
             .forEach(item -> attributes.put(item.getFormItem().getDestinationIdmAttribute(), item.getValue()));
     candidate.setAttributes(attributes);
     input.setCandidate(candidate);
-    return rpc.getMembersManager().createMemberForCandidate(input).getUserId();
+    Member createdMember = rpc.getMembersManager().createMemberForCandidate(input);
 
+    rpc.getMembersManager().validateMemberAsync(createdMember.getId());
+
+    eventService.emitEvent(new IdMUserCreatedEvent(createdMember.getUserId()));
+    eventService.emitEvent(new MemberCreatedEvent(createdMember.getUserId(), group.getId(), createdMember.getId()));
+
+    return createdMember.getUserId();
   }
 
   private Group retrieveGroup(int groupId) {
@@ -413,6 +426,10 @@ public class PerunIdMService implements IdMService {
       input.setUser(application.getIdmUserId());
       member = rpc.getMembersManager().createMemberForUser(input);
       updateMemberAttributesFromAppData(application, member, group);
+
+      rpc.getMembersManager().validateMemberAsync(member.getId());
+
+      eventService.emitEvent(new MemberCreatedEvent(member.getUserId(), group.getId(), member.getId()));
 
       return member.getUserId();
     }

@@ -3,6 +3,7 @@ package org.perun.registrarprototype.idmIntegration.oauth;
 import cz.metacentrum.perun.openapi.PerunRPC;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.perun.registrarprototype.services.EventServiceImpl;
 import org.perun.registrarprototype.services.idmIntegration.perun.PerunIdMService;
 import org.perun.registrarprototype.services.idmIntegration.perun.oauth.BearerTokenInterceptor;
 import org.perun.registrarprototype.services.idmIntegration.perun.oauth.ClientAccessTokenService;
@@ -50,7 +51,7 @@ public class PerunOauthTest {
           .andExpect(MockRestRequestMatchers.header("Authorization", "Bearer fake-access-token"))
           .andRespond(MockRestResponseCreators.withSuccess());
 
-    PerunIdMService perunIdMService = new PerunIdMService(perunRpc);
+    PerunIdMService perunIdMService = new PerunIdMService(perunRpc, new EventServiceImpl());
     perunIdMService.getUserIdByIdentifier("test-id");
 
     mockServer.verify();
