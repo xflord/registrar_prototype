@@ -3,54 +3,57 @@ package org.perun.registrarprototype.models;
 import java.util.List;
 
 public class FormTransition {
-  private Form sourceForm;
-  private Form targetForm;
-  private List<Form.FormType> sourceFormTypes = List.of(Form.FormType.INITIAL, Form.FormType.EXTENSION);
-  private List<Form.FormType> targetFormTypes = List.of(Form.FormType.INITIAL, Form.FormType.EXTENSION);
+  private FormSpecification sourceFormSpecification;
+  private FormSpecification targetFormSpecification;
+//  private List<FormSpecification.FormType> sourceFormTypes = List.of(FormSpecification.FormType.INITIAL, FormSpecification.FormType.EXTENSION);
+//  private List<FormSpecification.FormType> targetFormTypes = List.of(FormSpecification.FormType.INITIAL, FormSpecification.FormType.EXTENSION);
+  private List<Requirement.TargetState> sourceFormStates;
+  private Requirement.TargetState targetFormState;
   private TransitionType type;
 
   public FormTransition() {
   }
 
-  public FormTransition(Form sourceForm, Form targetForm, List<Form.FormType> sourceFormTypes,
-                        List<Form.FormType> targetFormTypes, TransitionType type) {
-    this.sourceForm = sourceForm;
-    this.targetForm = targetForm;
-    this.sourceFormTypes = sourceFormTypes;
-    this.targetFormTypes = targetFormTypes;
+  public FormTransition(FormSpecification sourceFormSpecification, FormSpecification targetFormSpecification,
+                        List<Requirement.TargetState> sourceFormStates, Requirement.TargetState targetFormState,
+                        TransitionType type) {
+    this.sourceFormSpecification = sourceFormSpecification;
+    this.targetFormSpecification = targetFormSpecification;
+    this.sourceFormStates = sourceFormStates;
+    this.targetFormState = targetFormState;
     this.type = type;
   }
 
-  public Form getSourceForm() {
-    return sourceForm;
+  public FormSpecification getSourceForm() {
+    return sourceFormSpecification;
   }
 
-  public void setSourceForm(Form sourceForm) {
-    this.sourceForm = sourceForm;
+  public void setSourceForm(FormSpecification sourceFormSpecification) {
+    this.sourceFormSpecification = sourceFormSpecification;
   }
 
-  public Form getTargetForm() {
-    return targetForm;
+  public FormSpecification getTargetForm() {
+    return targetFormSpecification;
   }
 
-  public void setTargetForm(Form targetForm) {
-    this.targetForm = targetForm;
+  public void setTargetForm(FormSpecification targetFormSpecification) {
+    this.targetFormSpecification = targetFormSpecification;
   }
 
-  public List<Form.FormType> getSourceFormTypes() {
-    return sourceFormTypes;
+  public List<Requirement.TargetState> getSourceFormStates() {
+    return sourceFormStates;
   }
 
-  public void setSourceFormTypes(List<Form.FormType> sourceFormTypes) {
-    this.sourceFormTypes = sourceFormTypes;
+  public void setSourceFormStates(List<Requirement.TargetState> sourceFormStates) {
+    this.sourceFormStates = sourceFormStates;
   }
 
-  public List<Form.FormType> getTargetFormTypes() {
-    return targetFormTypes;
+  public Requirement.TargetState getTargetFormState() {
+    return targetFormState;
   }
 
-  public void setTargetFormTypes(List<Form.FormType> targetFormTypes) {
-    this.targetFormTypes = targetFormTypes;
+  public void setTargetFormState(Requirement.TargetState targetFormState) {
+    this.targetFormState = targetFormState;
   }
 
   public TransitionType getType() {

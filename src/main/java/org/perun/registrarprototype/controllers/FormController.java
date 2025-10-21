@@ -5,7 +5,7 @@ import org.perun.registrarprototype.controllers.dto.PrincipalInfoDTO;
 import org.perun.registrarprototype.exceptions.FormItemRegexNotValid;
 import org.perun.registrarprototype.exceptions.InsufficientRightsException;
 import org.perun.registrarprototype.models.AssignedFormModule;
-import org.perun.registrarprototype.models.Form;
+import org.perun.registrarprototype.models.FormSpecification;
 import org.perun.registrarprototype.models.FormItem;
 import org.perun.registrarprototype.security.CurrentUser;
 import org.perun.registrarprototype.security.RegistrarAuthenticationToken;
@@ -34,7 +34,7 @@ public class FormController {
   }
 
   @PostMapping("/create")
-  public ResponseEntity<Form> createForm(@RequestParam int groupId, @RequestBody List<FormItem> items) {
+  public ResponseEntity<FormSpecification> createForm(@RequestParam int groupId, @RequestBody List<FormItem> items) {
       try {
         formService.createForm(groupId, items);
       } catch (FormItemRegexNotValid e) {
@@ -59,7 +59,7 @@ public class FormController {
   }
 
   @GetMapping
-  public ResponseEntity<List<Form>> getForms() {
+  public ResponseEntity<List<FormSpecification>> getForms() {
     return ResponseEntity.ok(formService.getAllFormsWithItems());
   }
 

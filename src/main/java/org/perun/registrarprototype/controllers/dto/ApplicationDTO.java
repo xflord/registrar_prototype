@@ -1,19 +1,19 @@
 package org.perun.registrarprototype.controllers.dto;
 
 import org.perun.registrarprototype.models.ApplicationState;
-import org.perun.registrarprototype.models.Form;
+import org.perun.registrarprototype.models.FormSpecification;
 
 public class ApplicationDTO {
   private int id;
-  private Form form;
+  private FormSpecification formSpecification;
   private ApplicationState state;
   private String submitterName;
   private Integer submissionId;
-  private Form.FormType type;
+  private FormSpecification.FormType type;
 
-  public ApplicationDTO(int id, Form form, ApplicationState state, String submitterName, Integer submissionId, Form.FormType type) {
+  public ApplicationDTO(int id, FormSpecification formSpecification, ApplicationState state, String submitterName, Integer submissionId, FormSpecification.FormType type) {
     this.id = id;
-    this.form = form;
+    this.formSpecification = formSpecification;
     this.state = state;
     this.submitterName = submitterName;
     this.submissionId = submissionId;
@@ -24,8 +24,8 @@ public class ApplicationDTO {
     return id;
   }
 
-  public Form getForm() {
-    return form;
+  public FormSpecification getForm() {
+    return formSpecification;
   }
 
   public ApplicationState getState() {
@@ -40,7 +40,7 @@ public class ApplicationDTO {
     return submissionId;
   }
 
-  public Form.FormType getType() {
+  public FormSpecification.FormType getType() {
     return type;
   }
 }

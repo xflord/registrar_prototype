@@ -15,12 +15,13 @@ import org.perun.registrarprototype.exceptions.DataInconsistencyException;
 import org.perun.registrarprototype.exceptions.FormItemRegexNotValid;
 import org.perun.registrarprototype.exceptions.FormModuleNotExistsException;
 import org.perun.registrarprototype.exceptions.InsufficientRightsException;
-import org.perun.registrarprototype.models.ApplicationState;
 import org.perun.registrarprototype.models.AssignedFormModule;
-import org.perun.registrarprototype.models.Form;
+import org.perun.registrarprototype.models.FormSpecification;
 import org.perun.registrarprototype.models.FormItem;
 import org.perun.registrarprototype.models.FormTransition;
+import org.perun.registrarprototype.models.Requirement;
 import org.perun.registrarprototype.repositories.FormItemRepository;
+import org.perun.registrarprototype.repositories.ApplicationRepository;
 import org.perun.registrarprototype.repositories.FormModuleRepository;
 import org.perun.registrarprototype.repositories.FormRepository;
 import org.perun.registrarprototype.repositories.FormTransitionRepository;
@@ -39,51 +40,51 @@ public class FormServiceImpl implements FormService {
   private final FormItemRepository formItemRepository;
   private final FormTransitionRepository formTransitionRepository;
   private final ApplicationContext context;
-  private final ApplicationService applicationService;
+  private final ApplicationRepository applicationRepository;
   private final SessionProvider sessionProvider;
 
   public FormServiceImpl(FormRepository formRepository, AuthorizationService authorizationService,
                          FormModuleRepository formModuleRepository, ApplicationContext context,
                          FormItemRepository formItemRepository, FormTransitionRepository formTransitionRepository,
-                         ApplicationService applicationService, SessionProvider sessionProvider) {
+                         ApplicationRepository applicationRepository, SessionProvider sessionProvider) {
     this.formRepository = formRepository;
     this.authorizationService = authorizationService;
     this.formModuleRepository = formModuleRepository;
     this.context = context;
     this.formItemRepository = formItemRepository;
     this.formTransitionRepository = formTransitionRepository;
-    this.applicationService = applicationService;
+    this.applicationRepository = applicationRepository;
     this.sessionProvider = sessionProvider;
   }
 
   @Override
-  public Form createForm(int groupId)
+  public FormSpecification createForm(int groupId)
       throws FormItemRegexNotValid, InsufficientRightsException {
 
-    return formRepository.save(new Form(-1, groupId, new ArrayList<>()));
+    return formRepository.save(new FormSpecification(-1, groupId, new ArrayList<>()));
   }
 
   @Override
-  public Form createForm(Form form, List<AssignedFormModule> modules) throws InsufficientRightsException {
-    form.setId(-1);
-    form = formRepository.save(form);
-    setModules(sessionProvider.getCurrentSession(), form.getId(), modules);
-    return form;
+  public FormSpecification createForm(FormSpecification formSpecification, List<AssignedFormModule> modules) throws InsufficientRightsException {
+    formSpecification.setId(-1);
+    formSpecification = formRepository.save(formSpecification);
+    setModules(sessionProvider.getCurrentSession(), formSpecification.getId(), modules);
+    return formSpecification;
   }
 
   @Override
-  public Form createForm(int groupId, List<FormItem> items)
+  public FormSpecification createForm(int groupId, List<FormItem> items)
       throws FormItemRegexNotValid, InsufficientRightsException {
-    Form form = createForm(groupId);
+    FormSpecification formSpecification = createForm(groupId);
 
-    setFormItems(form.getId(), items);
+    setFormItems(formSpecification.getId(), items);
 
-    return form;
+    return formSpecification;
   }
 
   @Override
   public FormItem setFormItem(int formId, FormItem formItem) throws FormItemRegexNotValid {
-    Form form = formRepository.findById(formId).orElseThrow(() -> new IllegalArgumentException("Form with ID " + formId + " not found"));
+    FormSpecification formSpecification = formRepository.findById(formId).orElseThrow(() -> new IllegalArgumentException("Form with ID " + formId + " not found"));
 
     if (formItem.getConstraint() != null && !formItem.getConstraint().isEmpty()) {
         try {
@@ -96,17 +97,17 @@ public class FormServiceImpl implements FormService {
     formItem.setFormId(formId);
     formItemRepository.save(formItem);
 
-    List<FormItem> items = form.getItems();
+    List<FormItem> items = formSpecification.getItems();
     items.add(formItem);
-    form.setItems(items);
+    formSpecification.setItems(items);
 
-    formRepository.update(form);
+    formRepository.update(formSpecification);
     return formItem;
   }
 
   @Override
   public void setFormItems(int formId, List<FormItem> items) throws FormItemRegexNotValid {
-    Form form = formRepository.findById(formId).orElseThrow(() -> new IllegalArgumentException("Form with ID " + formId + " not found"));
+    FormSpecification formSpecification = formRepository.findById(formId).orElseThrow(() -> new IllegalArgumentException("Form with ID " + formId + " not found"));
 
     for (FormItem item : items) {
       if (item.getConstraint() != null && !item.getConstraint().isEmpty()) {
@@ -119,26 +120,26 @@ public class FormServiceImpl implements FormService {
     }
 
     items.forEach(item -> {
-                      item.setFormId(form.getId());
+                      item.setFormId(formSpecification.getId());
                       formItemRepository.update(item);
         }
     );
 
-    form.setItems(items);
-    formRepository.update(form);
+    formSpecification.setItems(items);
+    formRepository.update(formSpecification);
 
   }
 
   @Override
-  public List<AssignedFormModule> getAssignedFormModules(Form form) {
-    List<AssignedFormModule> modules = formModuleRepository.findAllByFormId(form.getId());
+  public List<AssignedFormModule> getAssignedFormModules(FormSpecification formSpecification) {
+    List<AssignedFormModule> modules = formModuleRepository.findAllByFormId(formSpecification.getId());
 
     for (AssignedFormModule module : modules) {
       try {
         setModule(module);
       } catch (FormModuleNotExistsException e) {
         throw new DataInconsistencyException("Already assigned module class " + module.getModuleName() + " not found" +
-                                                 " when retrieving modules for form " + form.getId());
+                                                 " when retrieving modules for form " + formSpecification.getId());
       }
     }
 
@@ -148,9 +149,9 @@ public class FormServiceImpl implements FormService {
   @Override
   public List<AssignedFormModule> setModules(RegistrarAuthenticationToken sess, int formId, List<AssignedFormModule> modulesToAssign)
       throws InsufficientRightsException {
-    Form form = formRepository.findById(formId).orElseThrow(() -> new IllegalArgumentException("Form with ID " + formId + " not found"));
+    FormSpecification formSpecification = formRepository.findById(formId).orElseThrow(() -> new IllegalArgumentException("Form with ID " + formId + " not found"));
 
-    if (!authorizationService.canManage(sess, form.getGroupId())) {
+    if (!authorizationService.canManage(sess, formSpecification.getGroupId())) {
       // 403
       throw new InsufficientRightsException("You are not authorized to create a form for this group");
     }
@@ -170,7 +171,7 @@ public class FormServiceImpl implements FormService {
             }
           }
         }
-        moduleWithComponent.setFormId(form.getId());
+        moduleWithComponent.setFormId(formSpecification.getId());
         modules.add(moduleWithComponent);
       } catch (FormModuleNotExistsException e) {
         throw new IllegalArgumentException("Module " + module.getModuleName() + " not found");
@@ -182,52 +183,52 @@ public class FormServiceImpl implements FormService {
   }
 
   @Override
-  public List<Form> getAllFormsWithItems() {
-    List<Form> forms = formRepository.findAll();
-    forms.forEach(form -> form.setItems(formItemRepository.getFormItemsByFormId(form.getId())));
-    return forms;
+  public List<FormSpecification> getAllFormsWithItems() {
+    List<FormSpecification> formSpecifications = formRepository.findAll();
+    formSpecifications.forEach(form -> form.setItems(formItemRepository.getFormItemsByFormId(form.getId())));
+    return formSpecifications;
   }
 
   @Override
-  public Form getFormById(int formId) {
+  public FormSpecification getFormById(int formId) {
     return formRepository.findById(formId).orElseThrow(() -> new DataInconsistencyException("Form with ID " + formId + " not found. "));
   }
 
 
   //TODO what about PRE forms that also have prerequisites? Recursively check all prerequisites or do not allow?
   @Override
-  public List<FormTransition> getPrerequisiteTransitions(Form form, Form.FormType type) {
-    List<FormTransition> transitions = formTransitionRepository.getAllBySourceFormAndType(form, FormTransition.TransitionType.PREREQUISITE);
+  public List<FormTransition> getPrerequisiteTransitions(FormSpecification formSpecification, Requirement.TargetState targetState) {
+    List<FormTransition> transitions = formTransitionRepository.getAllBySourceFormAndType(formSpecification, FormTransition.TransitionType.PREREQUISITE);
     // TODO add some logic to determine the order of PRE forms? More so if we want recursive prerequisites.
     //  for now recursive form retrieval not necessary
     return transitions.stream()
-               .filter(transition -> transition.getSourceFormTypes().contains(type))
+               .filter(transition -> transition.getSourceFormStates().contains(targetState))
                .toList();
   }
 
   //TODO again what to do with autosubmit forms with autosubmit forms?
   @Override
-  public List<Form> getAutosubmitForms(Form form, Form.FormType type) {
-    List<FormTransition> transitions = formTransitionRepository.getAllBySourceFormAndType(form, FormTransition.TransitionType.AUTO_SUBMIT);
+  public List<FormSpecification> getAutosubmitForms(FormSpecification formSpecification, Requirement.TargetState targetState) {
+    List<FormTransition> transitions = formTransitionRepository.getAllBySourceFormAndType(formSpecification, FormTransition.TransitionType.AUTO_SUBMIT);
     return transitions.stream()
-               .filter(transition -> transition.getSourceFormTypes().contains(type))
+               .filter(transition -> transition.getSourceFormStates().contains(targetState))
                .map(FormTransition::getTargetForm)
                .toList();
   }
 
   // TODO do we allow multiple forms? Probably yes, build composite form with them in GUI
   @Override
-  public List<Form> getRedirectForms(Form form, Form.FormType type) {
-    List<FormTransition> transitions = formTransitionRepository.getAllBySourceFormAndType(form, FormTransition.TransitionType.REDIRECT);
+  public List<FormSpecification> getRedirectForms(FormSpecification formSpecification, Requirement.TargetState targetState) {
+    List<FormTransition> transitions = formTransitionRepository.getAllBySourceFormAndType(formSpecification, FormTransition.TransitionType.REDIRECT);
     return transitions.stream()
-               .filter(transition -> transition.getSourceFormTypes().contains(type))
+               .filter(transition -> transition.getSourceFormStates().contains(targetState))
                .map(FormTransition::getTargetForm)
                .toList();
   }
 
   @Override
-  public List<FormItem> getFormItems(Form form, Form.FormType type) {
-    return formItemRepository.getFormItemsByFormId(form.getId()).stream().filter(formItem -> formItem.getFormTypes().contains(type)).toList();
+  public List<FormItem> getFormItems(FormSpecification formSpecification, FormSpecification.FormType type) {
+    return formItemRepository.getFormItemsByFormId(formSpecification.getId()).stream().filter(formItem -> formItem.getFormTypes().contains(type)).toList();
   }
 
   @Override
@@ -275,8 +276,8 @@ public class FormServiceImpl implements FormService {
         // check that updated items do not change destination, if so then warn/throw exception
         String oldDestination = existingById.get(actualId).getDestinationIdmAttribute();
         String newDestination = newItem.getDestinationIdmAttribute();
-        boolean hasOpenApplications = !applicationService.getApplicationsForForm(formId,
-            List.of(ApplicationState.PENDING, ApplicationState.CHANGES_REQUESTED)).isEmpty();
+        boolean hasOpenApplications = applicationRepository.findByFormId(formId).stream()
+            .anyMatch(app -> app.getState().isOpenState());
         if (!oldDestination.equals(newDestination) && hasOpenApplications) {
           // TODO throw an exception, or display some sort of warning in this case?
           throw new IllegalArgumentException("Cannot change destination of item with id " + actualId +

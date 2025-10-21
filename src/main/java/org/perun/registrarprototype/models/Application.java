@@ -8,17 +8,17 @@ import org.perun.registrarprototype.exceptions.InvalidApplicationStateTransition
 public class Application {
   private int id;
   private Integer idmUserId;
-  private Form form;
+  private FormSpecification formSpecification;
   private final List<FormItemData> formItemData;
   private ApplicationState state = ApplicationState.PENDING;
   private String redirectUrl;
-  private Form.FormType type;
+  private FormSpecification.FormType type;
   private Submission submission = new Submission();
 
-  public Application(int id, Integer idmUserId, Form form, List<FormItemData> formItemData, String redirectUrl, Form.FormType type) {
+  public Application(int id, Integer idmUserId, FormSpecification formSpecification, List<FormItemData> formItemData, String redirectUrl, FormSpecification.FormType type) {
     this.id = id;
     this.idmUserId = idmUserId;
-    this.form = form;
+    this.formSpecification = formSpecification;
     this.formItemData = formItemData;
     this.redirectUrl = redirectUrl;
     this.type = type;
@@ -46,24 +46,24 @@ public class Application {
     return state;
   }
 
-  public Form getForm() {
-    return form;
+  public FormSpecification getForm() {
+    return formSpecification;
   }
 
-  public void setForm(Form form) {
-    this.form = form;
+  public void setForm(FormSpecification formSpecification) {
+    this.formSpecification = formSpecification;
   }
 
   public String getRedirectUrl() {
     return redirectUrl;
   }
 
-  public void submit(Form form) throws InvalidApplicationDataException, InvalidApplicationStateTransitionException {
+  public void submit(FormSpecification formSpecification) throws InvalidApplicationDataException, InvalidApplicationStateTransitionException {
     if (state != ApplicationState.PENDING) {
       throw new InvalidApplicationStateTransitionException("Only new applications can be submitted", this);
     }
     // TODO this is probably unnecessary, consider removing `submit` `approve` and `reject` methods
-    ValidationResult result = form.validateItemData(formItemData);
+    ValidationResult result = formSpecification.validateItemData(formItemData);
     if (!result.isValid()) {
         throw new InvalidApplicationDataException("Some of the form items were incorrectly filled in",
             result.errors(), this);
@@ -107,11 +107,11 @@ public class Application {
     this.submission = submission;
   }
 
-  public Form.FormType getType() {
+  public FormSpecification.FormType getType() {
     return type;
   }
 
-  public void setType(Form.FormType type) {
+  public void setType(FormSpecification.FormType type) {
     this.type = type;
   }
 

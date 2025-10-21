@@ -3,25 +3,25 @@ package org.perun.registrarprototype.repositories.tempImpl;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
-import org.perun.registrarprototype.models.Form;
+import org.perun.registrarprototype.models.FormSpecification;
 import org.perun.registrarprototype.repositories.FormRepository;
 import org.springframework.stereotype.Component;
 
 // in-memory dummy implementation of persistent storage
 @Component
 public class FormRepositoryDummy implements FormRepository {
-  private static List<Form> forms = new ArrayList<>();
+  private static List<FormSpecification> formSpecifications = new ArrayList<>();
   private static int currId = 1;
 
 
   @Override
-  public Optional<Form> findById(int formId) {
-    return forms.stream().filter(form -> form.getId() == formId).findFirst();
+  public Optional<FormSpecification> findById(int formId) {
+    return formSpecifications.stream().filter(form -> form.getId() == formId).findFirst();
   }
 
   @Override
-  public Optional<Form> findByGroupId(int groupId) {
-    return forms.stream().filter(form -> form.getGroupId() == groupId).findFirst();
+  public Optional<FormSpecification> findByGroupId(int groupId) {
+    return formSpecifications.stream().filter(form -> form.getGroupId() == groupId).findFirst();
   }
 
   @Override
@@ -30,45 +30,46 @@ public class FormRepositoryDummy implements FormRepository {
   }
 
   @Override
-  public Form save(Form form) {
+  public FormSpecification save(FormSpecification formSpecification) {
     // Check if form already exists (has an ID > 0 and is in the list)
-    if (form.getId() > 0) {
+    if (formSpecification.getId() > 0) {
       // Remove existing form with the same ID
-      boolean removed = forms.removeIf(f -> f.getId() == form.getId());
-      forms.add(form);
+      boolean removed = formSpecifications.removeIf(f -> f.getId() == formSpecification.getId());
+      formSpecifications.add(formSpecification);
       if (removed) {
-        System.out.println("Updated form " + form.getId());
+        System.out.println("Updated form " + formSpecification.getId());
       } else {
-        System.out.println("Created form " + form.getId() + " (with existing ID)");
+        System.out.println("Created form " + formSpecification.getId() + " (with existing ID)");
       }
-      return form;
+      return formSpecification;
     }
     
     // Create new form
-    form.setId(currId++);
-    forms.add(form);
-    System.out.println("Created form " + form.getId());
-    return form;
+    formSpecification.setId(currId++);
+    formSpecifications.add(formSpecification);
+    System.out.println("Created form " + formSpecification.getId());
+    return formSpecification;
   }
 
   @Override
-  public Form update(Form form) {
-    Form existingForm = forms.stream().filter(dbForm -> dbForm.getId() == form.getId()).findFirst().orElse(null);
-    if (existingForm == null) {
-      return form;
+  public FormSpecification update(FormSpecification formSpecification) {
+    FormSpecification
+        existingFormSpecification = formSpecifications.stream().filter(dbForm -> dbForm.getId() == formSpecification.getId()).findFirst().orElse(null);
+    if (existingFormSpecification == null) {
+      return formSpecification;
     }
-    existingForm.setItems(form.getItems());
-    return existingForm;
+    existingFormSpecification.setItems(formSpecification.getItems());
+    return existingFormSpecification;
   }
 
   @Override
-  public List<Form> findAll() {
-    return List.copyOf(forms);
+  public List<FormSpecification> findAll() {
+    return List.copyOf(formSpecifications);
   }
 
   // for testing purposes
   public void reset()  {
-    forms.clear();
+    formSpecifications.clear();
     currId = 0;
   }
 }

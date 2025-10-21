@@ -5,10 +5,10 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.perun.registrarprototype.exceptions.InvalidApplicationDataException;
-import org.perun.registrarprototype.models.Form;
+import org.perun.registrarprototype.models.FormSpecification;
 import org.perun.registrarprototype.models.FormItem;
 import org.perun.registrarprototype.models.FormItemData;
-import org.perun.registrarprototype.models.ApplicationContext;
+import org.perun.registrarprototype.models.ApplicationForm;
 import org.springframework.boot.test.context.SpringBootTest;
 
 @SpringBootTest
@@ -18,18 +18,19 @@ public class ApplicationServiceFailTests extends GenericRegistrarServiceTests {
   @Test
   void applyMissingRequiredItems() throws Exception {
     int groupId = getGroupId();
-    Form form = formService.createForm(groupId);
+    FormSpecification formSpecification = formService.createForm(groupId);
 
 
     FormItem item1 = new FormItem(1, FormItem.Type.VALIDATED_EMAIL, "email", true, "");
-    item1 = formService.setFormItem(form.getId(), item1);
+    item1 = formService.setFormItem(formSpecification.getId(), item1);
     FormItem item2 = new FormItem(2, FormItem.Type.TEXTFIELD);
-    item2 = formService.setFormItem(form.getId(), item2);
+    item2 = formService.setFormItem(formSpecification.getId(), item2);
 
     FormItemData formItemData1 = new FormItemData(item2, "test2");
 
     InvalidApplicationDataException
-        ex = assertThrows(InvalidApplicationDataException.class, () -> applicationService.applyForMembership(new ApplicationContext(form, List.of(formItemData1), Form.FormType.INITIAL), submission, ""));
+        ex = assertThrows(InvalidApplicationDataException.class, () -> applicationService.applyForMembership(new ApplicationForm(
+        formSpecification, List.of(formItemData1), FormSpecification.FormType.INITIAL), submission, ""));
     assert ex.getErrors().getFirst().itemId() == item1.getId();
     assert ex.getErrors().getFirst().message().equals("Field " + item1.getLabel() + " is required");
   }
@@ -38,17 +39,18 @@ public class ApplicationServiceFailTests extends GenericRegistrarServiceTests {
   void applyMissingRequiredItemsIncorrectConstraints() throws Exception {
     int groupId = getGroupId();
 
-    Form form = formService.createForm(groupId);
+    FormSpecification formSpecification = formService.createForm(groupId);
 
 
     FormItem item1 = new FormItem(1, FormItem.Type.VALIDATED_EMAIL, "email", true, "");
-    item1 = formService.setFormItem(form.getId(), item1);
+    item1 = formService.setFormItem(formSpecification.getId(), item1);
     FormItem item2 = new FormItem(2, FormItem.Type.VALIDATED_EMAIL, "email", false, "^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$");
-    item2 = formService.setFormItem(form.getId(), item2);
+    item2 = formService.setFormItem(formSpecification.getId(), item2);
 
     FormItemData formItemData = new FormItemData(item2, "incorrectTestgmail.com");
 
-    InvalidApplicationDataException ex = assertThrows(InvalidApplicationDataException.class, () -> applicationService.applyForMembership(new ApplicationContext(form, List.of(formItemData), Form.FormType.INITIAL), submission, ""));
+    InvalidApplicationDataException ex = assertThrows(InvalidApplicationDataException.class, () -> applicationService.applyForMembership(new ApplicationForm(
+        formSpecification, List.of(formItemData), FormSpecification.FormType.INITIAL), submission, ""));
     assert ex.getErrors().getFirst().itemId() == item1.getId();
     assert ex.getErrors().getFirst().message().equals("Field " + item1.getLabel() + " is required");
     assert ex.getErrors().get(1).itemId() == item2.getId();
@@ -59,15 +61,16 @@ public class ApplicationServiceFailTests extends GenericRegistrarServiceTests {
   void applyWithIncorrectItemConstraints() throws Exception {
     int groupId = getGroupId();
 
-    Form form = formService.createForm(groupId);
+    FormSpecification formSpecification = formService.createForm(groupId);
 
 
     FormItem item1 = new FormItem(1, FormItem.Type.VALIDATED_EMAIL, "email", false, "^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$");
-    item1 = formService.setFormItem(form.getId(), item1);
+    item1 = formService.setFormItem(formSpecification.getId(), item1);
 
     FormItemData formItemData1 = new FormItemData(item1, "incorrectTestgmail.com");
 
-    InvalidApplicationDataException ex = assertThrows(InvalidApplicationDataException.class, () -> applicationService.applyForMembership(new ApplicationContext(form, List.of(formItemData1), Form.FormType.INITIAL), submission, ""));
+    InvalidApplicationDataException ex = assertThrows(InvalidApplicationDataException.class, () -> applicationService.applyForMembership(new ApplicationForm(
+        formSpecification, List.of(formItemData1), FormSpecification.FormType.INITIAL), submission, ""));
     assert ex.getErrors().getFirst().itemId() == item1.getId();
     assert ex.getErrors().getFirst().message().equals("Item " + item1.getLabel() + " must match constraint " + item1.getConstraint());
   }

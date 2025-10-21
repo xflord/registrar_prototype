@@ -3,7 +3,7 @@ package org.perun.registrarprototype.models;
 import java.util.ArrayList;
 import java.util.List;
 
-public class Form {
+public class FormSpecification {
   private int id;
   private int voId;
   private int groupId;
@@ -11,16 +11,16 @@ public class Form {
   private boolean autoApprove = false;
   private boolean autoApproveExtension = false;
 
-  public Form() {
+  public FormSpecification() {
   }
 
-  public Form(int id, int groupId, List<FormItem> items) {
+  public FormSpecification(int id, int groupId, List<FormItem> items) {
     this.id = id;
     this.groupId = groupId;
     this.items = items;
   }
 
-  public Form(int id, int voId, int groupId, List<FormItem> items, boolean autoApprove, boolean autoApproveExtension) {
+  public FormSpecification(int id, int voId, int groupId, List<FormItem> items, boolean autoApprove, boolean autoApproveExtension) {
     this.id = id;
     this.voId = voId;
     this.groupId = groupId;

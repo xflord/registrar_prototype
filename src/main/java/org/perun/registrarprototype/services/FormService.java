@@ -4,9 +4,10 @@ import java.util.List;
 import org.perun.registrarprototype.exceptions.FormItemRegexNotValid;
 import org.perun.registrarprototype.exceptions.InsufficientRightsException;
 import org.perun.registrarprototype.models.AssignedFormModule;
-import org.perun.registrarprototype.models.Form;
+import org.perun.registrarprototype.models.FormSpecification;
 import org.perun.registrarprototype.models.FormItem;
 import org.perun.registrarprototype.models.FormTransition;
+import org.perun.registrarprototype.models.Requirement;
 import org.perun.registrarprototype.security.RegistrarAuthenticationToken;
 
 /**
@@ -22,15 +23,15 @@ public interface FormService {
    * @throws FormItemRegexNotValid if any form item regex is invalid
    * @throws InsufficientRightsException if the user is not authorized to create a form
    */
-  Form createForm(int groupId) throws FormItemRegexNotValid, InsufficientRightsException;
+  FormSpecification createForm(int groupId) throws FormItemRegexNotValid, InsufficientRightsException;
 
   /**
    * Creates a new form for the group and other properties specified in the form object and assigns the specified modules.
-   * @param form form object with group id, name, description, etc., id will be assigned
+   * @param formSpecification form object with group id, name, description, etc., id will be assigned
    * @param moduleNames module objects with the name and options set, form id will be overwritten
    * @return created form
    */
-  Form createForm(Form form, List<AssignedFormModule> moduleNames) throws InsufficientRightsException;
+  FormSpecification createForm(FormSpecification formSpecification, List<AssignedFormModule> moduleNames) throws InsufficientRightsException;
 
   /**
    * Creates a new form for the specified group with the provided list of items.
@@ -41,7 +42,7 @@ public interface FormService {
    * @throws FormItemRegexNotValid if any form item regex is invalid
    * @throws InsufficientRightsException if the user is not authorized to create a form
    */
-  Form createForm(int groupId, List<FormItem> items) throws FormItemRegexNotValid, InsufficientRightsException;
+  FormSpecification createForm(int groupId, List<FormItem> items) throws FormItemRegexNotValid, InsufficientRightsException;
 
   /**
    * Adds or updates a form item for the specified form. Validates the item's regex constraint if present.
@@ -65,10 +66,10 @@ public interface FormService {
   /**
    * Retrieves all assigned form modules for a form, including their module components.
    *
-   * @param form the form to retrieve modules for
+   * @param formSpecification the form to retrieve modules for
    * @return list of assigned form modules with components set
    */
-  List<AssignedFormModule> getAssignedFormModules(Form form);
+  List<AssignedFormModule> getAssignedFormModules(FormSpecification formSpecification);
 
   /**
    * Sets modules for the form. Checks whether the module actually exists and whether all the required options are set.
@@ -87,7 +88,7 @@ public interface FormService {
    *
    * @return list of all forms with items
    */
-  List<Form> getAllFormsWithItems();
+  List<FormSpecification> getAllFormsWithItems();
 
   /**
    * Retrieves a form by its ID.
@@ -95,43 +96,43 @@ public interface FormService {
    * @param formId ID of the form to retrieve
    * @return the form
    */
-  Form getFormById(int formId);
+  FormSpecification getFormById(int formId);
 
   /**
    * Retrieves all forms that are required to be filled before applying for membership via the supplied form.
    *
-   * @param form the source form
-   * @param type the form type to filter by
+   * @param formSpecification the source form
+   * @param targetState the form target state to filter by
    * @return list of prerequisite form transitions
    */
-  List<FormTransition> getPrerequisiteTransitions(Form form, Form.FormType type);
+  List<FormTransition> getPrerequisiteTransitions(FormSpecification formSpecification, Requirement.TargetState targetState);
 
   /**
    * Retrieves all forms that are automatically submitted after the supplied form is submitted (AKA embedded).
    *
-   * @param form the source form
-   * @param type the form type to filter by
+   * @param formSpecification the source form
+   * @param targetState the form target state to filter by
    * @return list of forms to auto-submit
    */
-  List<Form> getAutosubmitForms(Form form, Form.FormType type);
+  List<FormSpecification> getAutosubmitForms(FormSpecification formSpecification, Requirement.TargetState targetState);
 
   /**
    * Retrieves all forms that user is redirected to after submitting the supplied form.
    *
-   * @param form the source form
-   * @param type the form type to filter by
+   * @param formSpecification the source form
+   * @param targetState the form target state to filter by
    * @return list of forms to redirect to
    */
-  List<Form> getRedirectForms(Form form, Form.FormType type);
+  List<FormSpecification> getRedirectForms(FormSpecification formSpecification, Requirement.TargetState targetState);
 
   /**
    * Retrieves form items for a specific form and form type.
    *
-   * @param form the form to retrieve items for
+   * @param formSpecification the form to retrieve items for
    * @param type the form type to filter items by
    * @return list of form items for the specified type
    */
-  List<FormItem> getFormItems(Form form, Form.FormType type);
+  List<FormItem> getFormItems(FormSpecification formSpecification, FormSpecification.FormType type);
 
   /**
    * Retrieves a form item by its ID.

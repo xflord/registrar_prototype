@@ -3,7 +3,7 @@ package org.perun.registrarprototype.services.modules;
 import java.util.List;
 import java.util.Map;
 import org.perun.registrarprototype.models.Application;
-import org.perun.registrarprototype.models.Form;
+import org.perun.registrarprototype.models.FormSpecification;
 import org.perun.registrarprototype.models.FormItemData;
 import org.perun.registrarprototype.security.CurrentUser;
 
@@ -18,9 +18,9 @@ public interface FormModule {
    * @param sess
    * @param options sample options map, not sure whether this will end up being used
    */
-  void canBeSubmitted(CurrentUser sess, Form.FormType type, Map<String, String> options);
+  void canBeSubmitted(CurrentUser sess, FormSpecification.FormType type, Map<String, String> options);
 
-  void afterFormItemsPrefilled(CurrentUser sess, Form.FormType type, List<FormItemData> prefilledFormItems);
+  void afterFormItemsPrefilled(CurrentUser sess, FormSpecification.FormType type, List<FormItemData> prefilledFormItems);
 
   /**
    * Called after an application is submitted.

@@ -2,7 +2,7 @@ package org.perun.registrarprototype.repositories.tempImpl;
 
 import java.util.ArrayList;
 import java.util.List;
-import org.perun.registrarprototype.models.Form;
+import org.perun.registrarprototype.models.FormSpecification;
 import org.perun.registrarprototype.models.FormTransition;
 import org.perun.registrarprototype.repositories.FormTransitionRepository;
 import org.springframework.stereotype.Component;
@@ -13,9 +13,9 @@ public class FormTransitionRepositoryDummy implements FormTransitionRepository {
   private static int currId = 1;
 
   @Override
-  public List<FormTransition> getAllBySourceFormAndType(Form form, FormTransition.TransitionType type) {
+  public List<FormTransition> getAllBySourceFormAndType(FormSpecification formSpecification, FormTransition.TransitionType type) {
     return formTransitions.stream()
-               .filter((transition) -> transition.getSourceForm().getId() == form.getId() &&
+               .filter((transition) -> transition.getSourceForm().getId() == formSpecification.getId() &&
                           transition.getType().equals(type)).toList();
   }
 }

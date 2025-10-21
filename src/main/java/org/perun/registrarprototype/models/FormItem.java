@@ -27,10 +27,12 @@ import java.util.Set;
 public class FormItem {
   private int id;
   private int formId; // TODO this probably does not belong to the domain
+  private String shortName;
   private Integer parentId; // null for root, ID of parent element in the form, allows for hierarchical tree structure
   private int ordNum;
   private Type type;
   private Map<Locale, ItemTexts> texts = new HashMap<>();
+  private boolean updatable;
   private boolean required;
   private String constraint; // regex or similar
   private String sourceIdentityAttribute;
@@ -38,7 +40,7 @@ public class FormItem {
   private String destinationIdmAttribute;
   private boolean preferIdentityAttribute; // use IdM value if false, oauth claim value if true (and available)
   private String defaultValue;
-  private List<Form.FormType> formTypes = List.of(Form.FormType.INITIAL, Form.FormType.EXTENSION);
+  private List<FormSpecification.FormType> formTypes = List.of(FormSpecification.FormType.INITIAL, FormSpecification.FormType.EXTENSION);
   private Condition hidden;
   private Condition disabled;
   private Integer hiddenDependencyItemId;
@@ -69,7 +71,7 @@ public class FormItem {
 
   public FormItem(int id, int formId, Type type, Map<Locale, ItemTexts> texts, boolean required, String constraint,
                   String sourceIdentityAttribute, String sourceIdmAttribute, String destinationIdmAttribute,
-                  boolean preferIdentityAttribute, String defaultValue, List<Form.FormType> formTypes, Condition hidden,
+                  boolean preferIdentityAttribute, String defaultValue, List<FormSpecification.FormType> formTypes, Condition hidden,
                   Condition disabled, Integer hiddenDependencyItemId, Integer disabledDependencyItemId) {
     this.id = id;
     this.formId = formId;
@@ -87,6 +89,49 @@ public class FormItem {
     this.disabled = disabled;
     this.hiddenDependencyItemId = hiddenDependencyItemId;
     this.disabledDependencyItemId = disabledDependencyItemId;
+  }
+
+  public FormItem(int id, int formId, String shortName, Integer parentId, int ordNum, Type type,
+                  Map<Locale, ItemTexts> texts, boolean updatable, boolean required, String constraint,
+                  String sourceIdentityAttribute, String sourceIdmAttribute, String destinationIdmAttribute,
+                  boolean preferIdentityAttribute, String defaultValue, List<FormSpecification.FormType> formTypes, Condition hidden,
+                  Condition disabled, Integer hiddenDependencyItemId, Integer disabledDependencyItemId) {
+    this.id = id;
+    this.formId = formId;
+    this.shortName = shortName;
+    this.parentId = parentId;
+    this.ordNum = ordNum;
+    this.type = type;
+    this.texts = texts;
+    this.updatable = updatable;
+    this.required = required;
+    this.constraint = constraint;
+    this.sourceIdentityAttribute = sourceIdentityAttribute;
+    this.sourceIdmAttribute = sourceIdmAttribute;
+    this.destinationIdmAttribute = destinationIdmAttribute;
+    this.preferIdentityAttribute = preferIdentityAttribute;
+    this.defaultValue = defaultValue;
+    this.formTypes = formTypes;
+    this.hidden = hidden;
+    this.disabled = disabled;
+    this.hiddenDependencyItemId = hiddenDependencyItemId;
+    this.disabledDependencyItemId = disabledDependencyItemId;
+  }
+
+  public boolean isUpdatable() {
+    return updatable;
+  }
+
+  public void setUpdatable(boolean updatable) {
+    this.updatable = updatable;
+  }
+
+  public String getShortName() {
+    return shortName;
+  }
+
+  public void setShortName(String shortName) {
+    this.shortName = shortName;
   }
 
   public int getId() {
@@ -173,7 +218,7 @@ public class FormItem {
     this.formId = formId;
   }
 
-  public List<Form.FormType> getFormTypes() {
+  public List<FormSpecification.FormType> getFormTypes() {
     return formTypes;
   }
 
@@ -213,7 +258,7 @@ public class FormItem {
     this.hiddenDependencyItemId = hiddenDependencyItemId;
   }
 
-  public void setFormTypes(List<Form.FormType> formTypes) {
+  public void setFormTypes(List<FormSpecification.FormType> formTypes) {
     this.formTypes = formTypes;
   }
 

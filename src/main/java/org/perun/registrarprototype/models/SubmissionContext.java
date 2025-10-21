@@ -4,9 +4,9 @@ import java.util.List;
 
 public class SubmissionContext {
   private String redirectUrl;
-  private List<ApplicationContext> prefilledData; // TODO maybe make this a map (but then how de we know the key is a VO/Group?)
+  private List<ApplicationForm> prefilledData; // TODO maybe make this a map (but then how de we know the key is a VO/Group?)
   
-  public SubmissionContext(String redirectUrl, List<ApplicationContext> prefilledData) {
+  public SubmissionContext(String redirectUrl, List<ApplicationForm> prefilledData) {
     this.redirectUrl = redirectUrl;
     this.prefilledData = prefilledData;
   }
@@ -15,7 +15,7 @@ public class SubmissionContext {
     return redirectUrl;
   }
 
-  public List<ApplicationContext> getPrefilledData() {
+  public List<ApplicationForm> getPrefilledData() {
     return prefilledData;
   }
 }

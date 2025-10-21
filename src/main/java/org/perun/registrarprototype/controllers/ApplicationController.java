@@ -4,6 +4,7 @@ import org.perun.registrarprototype.exceptions.InsufficientRightsException;
 import org.perun.registrarprototype.models.Application;
 import org.perun.registrarprototype.models.FormItemData;
 import org.perun.registrarprototype.models.Identity;
+import org.perun.registrarprototype.models.Requirement;
 import org.perun.registrarprototype.models.SubmissionContext;
 import org.perun.registrarprototype.models.SubmissionResult;
 import org.perun.registrarprototype.security.SessionProvider;
@@ -82,7 +83,7 @@ public class ApplicationController {
 
   @GetMapping("/loadForms")
   public ResponseEntity<SubmissionContext> getSubmissionContext(@RequestParam int groupId) {
-    return ResponseEntity.ok(applicationService.loadForms(List.of(groupId), "", false));
+    return ResponseEntity.ok(applicationService.loadForms(List.of(new Requirement(groupId, Requirement.TargetState.MEMBER)), "", false));
   }
 
   @PostMapping("/applyForMembership")

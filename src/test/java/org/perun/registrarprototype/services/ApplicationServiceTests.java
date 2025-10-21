@@ -6,10 +6,10 @@ import org.junit.jupiter.api.Test;
 import org.perun.registrarprototype.models.Application;
 import org.perun.registrarprototype.models.ApplicationState;
 import org.perun.registrarprototype.models.AssignedFormModule;
-import org.perun.registrarprototype.models.Form;
+import org.perun.registrarprototype.models.FormSpecification;
 import org.perun.registrarprototype.models.FormItem;
 import org.perun.registrarprototype.models.FormItemData;
-import org.perun.registrarprototype.models.ApplicationContext;
+import org.perun.registrarprototype.models.ApplicationForm;
 import org.springframework.boot.test.context.SpringBootTest;
 
 @SpringBootTest
@@ -40,15 +40,15 @@ class ApplicationServiceTests extends GenericRegistrarServiceTests {
   @Test
   void applyWithCorrectItemConstraints() throws Exception {
     int groupId = getGroupId();
-    Form form = formService.createForm(groupId);
+    FormSpecification formSpecification = formService.createForm(groupId);
 
     FormItem item1 = new FormItem(1, FormItem.Type.VALIDATED_EMAIL, "email", false, "^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$");
-    item1 = formService.setFormItem(form.getId(), item1);
+    item1 = formService.setFormItem(formSpecification.getId(), item1);
 
 
     FormItemData formItemData1 = new FormItemData(item1, "test@gmail.com");
 
-    Application app = applicationService.applyForMembership(new ApplicationContext(form, List.of(formItemData1), Form.FormType.INITIAL), submission, "");
+    Application app = applicationService.applyForMembership(new ApplicationForm(formSpecification, List.of(formItemData1), FormSpecification.FormType.INITIAL), submission, "");
 
     Application createdApp = applicationRepository.findById(app.getId()).orElse(null);
 
@@ -60,14 +60,14 @@ class ApplicationServiceTests extends GenericRegistrarServiceTests {
   void approveApplication() throws Exception {
     int groupId = getGroupId();
 
-    Form form = formService.createForm(groupId);
+    FormSpecification formSpecification = formService.createForm(groupId);
 
     FormItem item1 = new FormItem(1, FormItem.Type.VALIDATED_EMAIL, "email", false, "^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$");
-    item1 = formService.setFormItem(form.getId(), item1);
+    item1 = formService.setFormItem(formSpecification.getId(), item1);
 
     FormItemData formItemData1 = new FormItemData(item1, "test@gmail.com");
 
-    Application app = applicationService.applyForMembership(new ApplicationContext(form, List.of(formItemData1), Form.FormType.INITIAL), submission, "");
+    Application app = applicationService.applyForMembership(new ApplicationForm(formSpecification, List.of(formItemData1), FormSpecification.FormType.INITIAL), submission, "");
 
     Application createdApp = applicationRepository.findById(app.getId()).orElse(null);
 
@@ -85,12 +85,12 @@ class ApplicationServiceTests extends GenericRegistrarServiceTests {
   void loadForm() throws Exception {
     int groupId = getGroupId();
 
-    Form form = formService.createForm(groupId);
+    FormSpecification formSpecification = formService.createForm(groupId);
 
     FormItem item1 = new FormItem(1, FormItem.Type.VALIDATED_EMAIL, "email", false, "^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$");
-    item1 = formService.setFormItem(form.getId(), item1);
+    item1 = formService.setFormItem(formSpecification.getId(), item1);
 
-    List<FormItemData> data = applicationService.loadForm(sessionProvider.getCurrentSession(), form, Form.FormType.INITIAL);
+    List<FormItemData> data = applicationService.loadForm(sessionProvider.getCurrentSession(), formSpecification, FormSpecification.FormType.INITIAL);
 
     assert data != null;
     assert data.size() == 1;
@@ -101,16 +101,16 @@ class ApplicationServiceTests extends GenericRegistrarServiceTests {
   void loadFormCallsAfterFormItemsPrefilledHook() throws Exception {
     int groupId = getGroupId();
 
-    Form form = formService.createForm(groupId);
+    FormSpecification formSpecification = formService.createForm(groupId);
 
     FormItem item1 = new FormItem(1, FormItem.Type.TEXTFIELD);
-    item1 = formService.setFormItem(form.getId(), item1);
+    item1 = formService.setFormItem(formSpecification.getId(), item1);
 
     AssignedFormModule module = new AssignedFormModule("testModuleBeforeSubmission", new HashMap<>());
 
-    formService.setModules(null, form.getId(), List.of(module));
+    formService.setModules(null, formSpecification.getId(), List.of(module));
 
-    List<FormItemData> data = applicationService.loadForm(sessionProvider.getCurrentSession(), form, Form.FormType.INITIAL);
+    List<FormItemData> data = applicationService.loadForm(sessionProvider.getCurrentSession(), formSpecification, FormSpecification.FormType.INITIAL);
 
     assert data != null;
     assert data.size() == 1;
@@ -121,14 +121,14 @@ class ApplicationServiceTests extends GenericRegistrarServiceTests {
   @Test
   void loadFormPrefillsValues() throws Exception {
     int groupId = getGroupId();
-    Form form = formService.createForm(groupId);
+    FormSpecification formSpecification = formService.createForm(groupId);
 
 
     FormItem item1 = new FormItem(1, FormItem.Type.TEXTFIELD);
     item1.setSourceIdentityAttribute("testAttribute");
-    item1 = formService.setFormItem(form.getId(), item1);
+    item1 = formService.setFormItem(formSpecification.getId(), item1);
 
-    List<FormItemData> data = applicationService.loadForm(sessionProvider.getCurrentSession(), form, Form.FormType.INITIAL);
+    List<FormItemData> data = applicationService.loadForm(sessionProvider.getCurrentSession(), formSpecification, FormSpecification.FormType.INITIAL);
 
     assert data != null;
     assert data.size() == 1;

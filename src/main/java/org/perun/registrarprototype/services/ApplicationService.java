@@ -3,12 +3,14 @@ package org.perun.registrarprototype.services;
 import java.util.List;
 import org.perun.registrarprototype.exceptions.InsufficientRightsException;
 import org.perun.registrarprototype.models.Application;
-import org.perun.registrarprototype.models.ApplicationContext;
+import org.perun.registrarprototype.models.ApplicationForm;
 import org.perun.registrarprototype.models.ApplicationState;
 import org.perun.registrarprototype.models.Decision;
-import org.perun.registrarprototype.models.Form;
+import org.perun.registrarprototype.models.FormSpecification;
 import org.perun.registrarprototype.models.FormItemData;
+import org.perun.registrarprototype.models.FormTransition;
 import org.perun.registrarprototype.models.Identity;
+import org.perun.registrarprototype.models.Requirement;
 import org.perun.registrarprototype.models.Submission;
 import org.perun.registrarprototype.models.SubmissionContext;
 import org.perun.registrarprototype.models.SubmissionResult;
@@ -69,12 +71,12 @@ public interface ApplicationService {
   /**
    * Validates the input data for the form, marks assured prefilled items, and submits an application.
    *
-   * @param applicationContext context containing the form, group ID, prefilled items, and application type
+   * @param applicationForm context containing the form, group ID, prefilled items, and application type
    * @param submission the submission object to associate with the application
    * @param redirectUrl URL to redirect to after submission
    * @return the created application
    */
-  Application applyForMembership(ApplicationContext applicationContext, Submission submission, String redirectUrl);
+  Application applyForMembership(ApplicationForm applicationForm, Submission submission, String redirectUrl);
 
   /**
    * Retrieves all applications from the repository.
@@ -111,10 +113,10 @@ public interface ApplicationService {
    * Performs auto-submission of a form marked for auto submit. Uses data from principal and the previous submission to
    * fill out form item data.
    *
-   * @param form the form to auto-submit
+   * @param autoSubmitTransition the form to auto-submit
    * @param submissionData submission context from the triggering submission
    */
-  void autoSubmitForm(Form form, SubmissionContext submissionData);
+  void autoSubmitForm(FormTransition autoSubmitTransition, SubmissionContext submissionData);
 
   /**
    * Entry point from GUI. For a given group, determines which forms to display to the user, prefills form items,
@@ -125,18 +127,18 @@ public interface ApplicationService {
    * @param checkSimilarUsers if true, checks for similar identities and throws exception if found; set to false after user decides on consolidation
    * @return prefilled submission context with redirect URL and individual prefilled form data
    */
-  SubmissionContext loadForms(List<Integer> groupIds, String redirectUrl, boolean checkSimilarUsers);
+  SubmissionContext loadForms(List<Requirement> requirements, String redirectUrl, boolean checkSimilarUsers);
 
   /**
    * Generates prefilled form item data for the form and its type, calls module hooks, and ensures the validity of form
    * item visibility.
    *
    * @param sess authenticated session token
-   * @param form the form to load
+   * @param formSpecification the form to load
    * @param type the form type (INITIAL, EXTENSION, etc.)
    * @return list of prefilled form item data
    */
-  List<FormItemData> loadForm(RegistrarAuthenticationToken sess, Form form, Form.FormType type);
+  List<FormItemData> loadForm(RegistrarAuthenticationToken sess, FormSpecification formSpecification, FormSpecification.FormType type);
 
   /**
    * To be called from GUI in case the user modifies items that could provide information to connect identities
