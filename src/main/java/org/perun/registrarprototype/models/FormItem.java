@@ -35,6 +35,8 @@ public class FormItem {
   private boolean updatable;
   private boolean required;
   private String constraint; // regex or similar
+  private List<PrefillStrategyKey> prefillStrategyKeys;
+  private Map<PrefillStrategyKey, Object> prefillStrategyOptions;
   private String sourceIdentityAttribute;
   private String sourceIdmAttribute;
   private String destinationIdmAttribute;
@@ -148,6 +150,14 @@ public class FormItem {
 
   public void setType(Type type) {
     this.type = type;
+  }
+
+  public List<PrefillStrategyKey> getPrefillStrategyKeys() {
+    return prefillStrategyKeys;
+  }
+
+  public Map<PrefillStrategyKey, Object> getPrefillStrategyOptions() {
+    return prefillStrategyOptions;
   }
 
   public ValidationError validate(FormItemData response) {
@@ -350,5 +360,9 @@ public class FormItem {
 
   public enum Condition {
     NEVER, ALWAYS, IF_PREFILLED, IF_EMPTY
+  }
+
+  public enum PrefillStrategyKey {
+    IDENTITY_ATTRIBUTE, IDM_ATTRIBUTE, LOGIN_ATTRIBUTE, APPLICATION
   }
 }
