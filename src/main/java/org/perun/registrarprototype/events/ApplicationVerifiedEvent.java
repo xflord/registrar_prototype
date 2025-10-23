@@ -2,9 +2,9 @@ package org.perun.registrarprototype.events;
 
 import org.perun.registrarprototype.models.Application;
 
-public class ChangesRequestedToApplicationEvent extends ApplicationEvent {
+public class ApplicationVerifiedEvent extends ApplicationEvent {
 
-  public ChangesRequestedToApplicationEvent(Application application) {
+  public ApplicationVerifiedEvent(Application application) {
     super(application);
   }
 

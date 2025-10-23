@@ -37,7 +37,7 @@ public class FormSpecificationServiceTests extends GenericRegistrarServiceTests 
 
     FormSpecification formSpecification = formService.createForm(groupId);
 
-    FormItem item1 = new FormItem(1, FormItem.Type.VALIDATED_EMAIL, "email", false, "^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$");
+    FormItem item1 = new FormItem(1, FormItem.Type.VERIFIED_EMAIL, "email", false, "^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$");
     item1 = formService.setFormItem(formSpecification.getId(), item1);
 
     FormSpecification createdFormSpecification = formRepository.findById(formSpecification.getId()).orElse(null);

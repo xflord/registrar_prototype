@@ -1,26 +1,15 @@
 package org.perun.registrarprototype.events;
 
+import org.perun.registrarprototype.models.Application;
+
 public abstract class ApplicationEvent extends Event {
-  protected int applicationId;
-  protected Integer userId;
-  protected int groupId;
+  protected Application application;
 
-  protected ApplicationEvent(int applicationId, Integer userId, int groupId) {
-    this.applicationId = applicationId;
-    this.userId = userId;
-    this.groupId = groupId;
+  protected ApplicationEvent(Application application) {
+    this.application = application;
   }
 
-  public int getApplicationId() {
-    return applicationId;
+  public Application getApplication() {
+    return application;
   }
-
-  public int getUserId() {
-    return userId;
-  }
-
-  public int getGroupId() {
-    return groupId;
-  }
-
 }

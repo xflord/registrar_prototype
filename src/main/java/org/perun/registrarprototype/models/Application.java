@@ -5,23 +5,19 @@ import java.util.Objects;
 import org.perun.registrarprototype.exceptions.InvalidApplicationDataException;
 import org.perun.registrarprototype.exceptions.InvalidApplicationStateTransitionException;
 
-public class Application {
+public class Application extends ApplicationForm {
   private int id;
   private Integer idmUserId;
-  private FormSpecification formSpecification;
-  private final List<FormItemData> formItemData;
   private ApplicationState state = ApplicationState.PENDING;
   private String redirectUrl;
   private FormSpecification.FormType type;
   private Submission submission = new Submission();
 
   public Application(int id, Integer idmUserId, FormSpecification formSpecification, List<FormItemData> formItemData, String redirectUrl, FormSpecification.FormType type) {
+    super(formSpecification, formItemData, type);
     this.id = id;
     this.idmUserId = idmUserId;
-    this.formSpecification = formSpecification;
-    this.formItemData = formItemData;
     this.redirectUrl = redirectUrl;
-    this.type = type;
   }
 
   public int getId() {
@@ -38,20 +34,9 @@ public class Application {
     this.idmUserId = idmUserId;
   }
 
-  public List<FormItemData> getFormItemData() {
-    return List.copyOf(formItemData);
-  }
 
   public ApplicationState getState() {
     return state;
-  }
-
-  public FormSpecification getForm() {
-    return formSpecification;
-  }
-
-  public void setForm(FormSpecification formSpecification) {
-    this.formSpecification = formSpecification;
   }
 
   public String getRedirectUrl() {
@@ -63,7 +48,7 @@ public class Application {
       throw new InvalidApplicationStateTransitionException("Only new applications can be submitted", this);
     }
     // TODO this is probably unnecessary, consider removing `submit` `approve` and `reject` methods
-    ValidationResult result = formSpecification.validateItemData(formItemData);
+    ValidationResult result = formSpecification.validateItemData(this.getFormItemData());
     if (!result.isValid()) {
         throw new InvalidApplicationDataException("Some of the form items were incorrectly filled in",
             result.errors(), this);
@@ -113,6 +98,10 @@ public class Application {
 
   public void setType(FormSpecification.FormType type) {
     this.type = type;
+  }
+
+  public void setState(ApplicationState state) {
+    this.state = state;
   }
 
   @Override

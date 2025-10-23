@@ -1,9 +1,11 @@
 package org.perun.registrarprototype.events;
 
+import org.perun.registrarprototype.models.Application;
+
 public class ApplicationSubmittedEvent extends ApplicationEvent {
 
-  public ApplicationSubmittedEvent(int applicationId, Integer userId, int groupId) {
-    super(applicationId, userId, groupId);
+  public ApplicationSubmittedEvent(Application application) {
+    super(application);
   }
 
   @Override

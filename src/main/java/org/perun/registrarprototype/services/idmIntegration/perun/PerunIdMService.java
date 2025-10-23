@@ -11,7 +11,6 @@ import cz.metacentrum.perun.openapi.model.ExtSource;
 import cz.metacentrum.perun.openapi.model.Group;
 import cz.metacentrum.perun.openapi.model.InputCreateMemberForCandidate;
 import cz.metacentrum.perun.openapi.model.InputCreateMemberForUser;
-import cz.metacentrum.perun.openapi.model.InputSetMemberAttributes;
 import cz.metacentrum.perun.openapi.model.InputSetMemberGroupWithUserAttributes;
 import cz.metacentrum.perun.openapi.model.InputSetMemberWithUserAttributes;
 import cz.metacentrum.perun.openapi.model.Member;
@@ -37,7 +36,6 @@ import org.perun.registrarprototype.models.Identity;
 import org.perun.registrarprototype.models.Role;
 import org.perun.registrarprototype.models.Submission;
 import org.perun.registrarprototype.services.EventService;
-import org.perun.registrarprototype.services.EventServiceImpl;
 import org.perun.registrarprototype.services.idmIntegration.IdMService;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.client.HttpComponentsClientHttpRequestFactory;
@@ -485,13 +483,13 @@ public class PerunIdMService implements IdMService {
 
     itemData.stream()
         .filter(item -> item.getFormItem().getDestinationIdmAttribute() != null ||
-                            item.getFormItem().getType().equals(FormItem.Type.VALIDATED_EMAIL))
+                            item.getFormItem().getType().equals(FormItem.Type.VERIFIED_EMAIL))
         .map(item -> {
           ApplicationFormItemData perunAppData = new ApplicationFormItemData();
           perunAppData.setValue(item.getValue());
           ApplicationFormItem perunAppItem = new ApplicationFormItem();
           perunAppItem.setPerunDestinationAttribute(item.getFormItem().getDestinationIdmAttribute());
-          if (item.getFormItem().getType().equals(FormItem.Type.VALIDATED_EMAIL)) {
+          if (item.getFormItem().getType().equals(FormItem.Type.VERIFIED_EMAIL)) {
             perunAppItem.setType(Type.VALIDATED_EMAIL);
           }
           perunAppData.setFormItem(perunAppItem);

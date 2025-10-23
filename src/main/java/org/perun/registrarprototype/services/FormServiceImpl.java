@@ -1,5 +1,6 @@
 package org.perun.registrarprototype.services;
 
+import io.micrometer.common.util.StringUtils;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -80,6 +81,13 @@ public class FormServiceImpl implements FormService {
     setFormItems(formSpecification.getId(), items);
 
     return formSpecification;
+  }
+
+  @Override
+  public void deleteForm(int formId) {
+    FormSpecification formSpecification = formRepository.findById(formId).orElseThrow(() -> new IllegalArgumentException("Form with ID " + formId + " not found"));
+
+    formRepository.delete(formSpecification);
   }
 
   @Override
@@ -192,6 +200,33 @@ public class FormServiceImpl implements FormService {
   @Override
   public FormSpecification getFormById(int formId) {
     return formRepository.findById(formId).orElseThrow(() -> new DataInconsistencyException("Form with ID " + formId + " not found. "));
+  }
+
+  @Override
+  public FormTransition addPrerequisiteToForm(FormSpecification sourceForm, FormSpecification prerequisiteForm,
+                                              List<Requirement.TargetState> sourceFormStates,
+                                              Requirement.TargetState targetState) {
+    if (detectTransitionCycle(sourceForm, prerequisiteForm, targetState, FormTransition.TransitionType.PREREQUISITE)) {
+      throw new IllegalArgumentException("Transition cycle detected");
+    }
+    return formTransitionRepository.save(new FormTransition(sourceForm, prerequisiteForm, sourceFormStates, targetState,
+        FormTransition.TransitionType.PREREQUISITE));
+  }
+
+  /**
+   * Detects whether the transition between the source and target forms has a cycle. (e.g. target prerequisite form already has a transition to the source form)
+   * @param sourceForm
+   * @param targetForm
+   * @param targetFormState
+   * @param transitionType
+   * @return
+   */
+  private boolean detectTransitionCycle(FormSpecification sourceForm, FormSpecification targetForm,
+                                        Requirement.TargetState targetFormState, FormTransition.TransitionType transitionType) {
+    List<FormTransition> transitions = formTransitionRepository.getAllBySourceFormAndType(targetForm, transitionType);
+    return transitions.stream()
+               .filter(transition -> transition.getSourceFormStates().contains(targetFormState))
+               .anyMatch(transition -> transition.getTargetForm().equals(sourceForm));
   }
 
 
@@ -324,6 +359,72 @@ public class FormServiceImpl implements FormService {
     List<FormItem> finalItems = formItemRepository.getFormItemsByFormId(formId);
 
     validateFormStructureAndDeps(finalItems);
+
+    checkFormItemVisibility(finalItems);
+  }
+
+  /**
+   * Make sure it is possible to fill out all the items required for submission (e.g. no hidden/disabled required items)
+   * @param items
+   * @return
+   */
+  private void checkFormItemVisibility(List<FormItem> items) {
+    Map<Integer, FormItem> formItemMap = items.stream()
+                                             .collect(Collectors.toMap(FormItem::getId, item -> item));
+    List<FormItem> invalidItems = new ArrayList<>();
+
+    items.forEach(item -> {
+      Set<Integer> seenItems = new HashSet<>();
+      if (item.isRequired() && willItemAlwaysBeEmpty(item, formItemMap, seenItems)) {
+        invalidItems.add(item);
+      }
+    });
+    if (!invalidItems.isEmpty()) {
+      throw new IllegalArgumentException("The following items are required but cannot be filled out: " + invalidItems);
+    }
+  }
+
+  private boolean willItemAlwaysBeEmpty(FormItem item, Map<Integer, FormItem> formItemMap, Set<Integer> seenItems) {
+    if (!seenItems.add(item.getId())) {
+      // Circular dependencies on their own aren't a problem, as long as they don't cause the items to be unfillable (as is the case here)
+      throw new IllegalArgumentException("Circular dependency detected starting with item: " + item);
+    }
+    return isItemPrefillEmpty(item) &&
+               (isEmptyItemHidden(item, formItemMap, seenItems) || isEmptyItemDisabled(item, formItemMap, seenItems));
+
+  }
+
+  private boolean isItemPrefillEmpty(FormItem item) {
+    return StringUtils.isEmpty(item.getDefaultValue()) && StringUtils.isEmpty(item.getSourceIdentityAttribute()) &&
+               StringUtils.isEmpty(item.getSourceIdmAttribute());
+  }
+
+  private boolean isEmptyItemHidden(FormItem item, Map<Integer, FormItem> formItemMap, Set<Integer> seenItems) {
+    return isEmptyItemConditionApplied(item.getHidden(), item, formItemMap, seenItems);
+  }
+
+  private boolean isEmptyItemDisabled(FormItem item, Map<Integer, FormItem> formItemMap, Set<Integer> seenItems) {
+    return isEmptyItemConditionApplied(item.getDisabled(), item, formItemMap, seenItems);
+  }
+
+  private boolean isEmptyItemConditionApplied(FormItem.Condition condition, FormItem item,
+                                              Map<Integer, FormItem> formItemMap, Set<Integer> seenItems) {
+    FormItem dependencyItem = formItemMap.get(item.getHiddenDependencyItemId());
+    if (dependencyItem != null) {
+      return switch (condition) {
+        case ALWAYS -> true;
+        case NEVER -> false;
+        case IF_EMPTY -> willItemAlwaysBeEmpty(dependencyItem, formItemMap, seenItems);
+        // TODO how do we want to behave if the dependency item is prefilled, but changed by the user afterwards (e.g. the item itself
+        //  is not disabled/hidden if_prefilled). This is mostly a GUI question, but still relates to this check.
+        case IF_PREFILLED -> !isItemPrefillEmpty(dependencyItem); // not problematic if it doesn't actually get prefilled, still should not allow TODO verify this
+      };
+    }
+
+    return switch (condition) {
+      case ALWAYS, IF_EMPTY -> true; // since prefill is empty this will NOT be fine
+      case NEVER, IF_PREFILLED -> false; // since prefill is empty this will be fine
+    };
   }
 
   /**

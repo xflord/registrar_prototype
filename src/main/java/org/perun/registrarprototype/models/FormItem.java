@@ -327,14 +327,24 @@ public class FormItem {
     DATE_PICKER,
     LOGIN,
     PASSWORD,
-    VALIDATED_EMAIL,
+    VERIFIED_EMAIL,
     HTML_COMMENT,
     TEXTFIELD;
 
     public static final Set<Type> HTML_ITEMS = Set.of(HTML_COMMENT);
+    public static final Set<Type> UPDATABLE_ITEMS = Set.of(TEXTFIELD, DATE_PICKER);
+    public static final Set<Type> VERIFIED_ITEMS = Set.of(VERIFIED_EMAIL);
+
+    public boolean isUpdatable() {
+      return UPDATABLE_ITEMS.contains(this);
+    }
 
     public boolean isHtmlItem() {
       return HTML_ITEMS.contains(this);
+    }
+
+    public boolean isVerifiedItem() {
+      return VERIFIED_ITEMS.contains(this);
     }
   }
 

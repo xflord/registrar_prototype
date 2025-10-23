@@ -44,6 +44,8 @@ public interface FormService {
    */
   FormSpecification createForm(int groupId, List<FormItem> items) throws FormItemRegexNotValid, InsufficientRightsException;
 
+  void deleteForm(int formId);
+
   /**
    * Adds or updates a form item for the specified form. Validates the item's regex constraint if present.
    *
@@ -97,6 +99,9 @@ public interface FormService {
    * @return the form
    */
   FormSpecification getFormById(int formId);
+
+  FormTransition addPrerequisiteToForm(FormSpecification sourceForm, FormSpecification prerequisiteForm,
+                                       List<Requirement.TargetState> sourceFormStates, Requirement.TargetState targetState);
 
   /**
    * Retrieves all forms that are required to be filled before applying for membership via the supplied form.

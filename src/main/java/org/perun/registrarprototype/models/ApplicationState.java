@@ -5,6 +5,7 @@ import java.util.Set;
 public enum ApplicationState {
   PENDING,
   SUBMITTED,
+  VERIFIED,
   APPROVED,
   REJECTED,
   CHANGES_REQUESTED; // e.g. when some form is not up to standard, admin can request changes

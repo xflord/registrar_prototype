@@ -21,7 +21,7 @@ public class ApplicationServiceFailTests extends GenericRegistrarServiceTests {
     FormSpecification formSpecification = formService.createForm(groupId);
 
 
-    FormItem item1 = new FormItem(1, FormItem.Type.VALIDATED_EMAIL, "email", true, "");
+    FormItem item1 = new FormItem(1, FormItem.Type.VERIFIED_EMAIL, "email", true, "");
     item1 = formService.setFormItem(formSpecification.getId(), item1);
     FormItem item2 = new FormItem(2, FormItem.Type.TEXTFIELD);
     item2 = formService.setFormItem(formSpecification.getId(), item2);
@@ -42,9 +42,9 @@ public class ApplicationServiceFailTests extends GenericRegistrarServiceTests {
     FormSpecification formSpecification = formService.createForm(groupId);
 
 
-    FormItem item1 = new FormItem(1, FormItem.Type.VALIDATED_EMAIL, "email", true, "");
+    FormItem item1 = new FormItem(1, FormItem.Type.VERIFIED_EMAIL, "email", true, "");
     item1 = formService.setFormItem(formSpecification.getId(), item1);
-    FormItem item2 = new FormItem(2, FormItem.Type.VALIDATED_EMAIL, "email", false, "^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$");
+    FormItem item2 = new FormItem(2, FormItem.Type.VERIFIED_EMAIL, "email", false, "^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$");
     item2 = formService.setFormItem(formSpecification.getId(), item2);
 
     FormItemData formItemData = new FormItemData(item2, "incorrectTestgmail.com");
@@ -64,7 +64,7 @@ public class ApplicationServiceFailTests extends GenericRegistrarServiceTests {
     FormSpecification formSpecification = formService.createForm(groupId);
 
 
-    FormItem item1 = new FormItem(1, FormItem.Type.VALIDATED_EMAIL, "email", false, "^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$");
+    FormItem item1 = new FormItem(1, FormItem.Type.VERIFIED_EMAIL, "email", false, "^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$");
     item1 = formService.setFormItem(formSpecification.getId(), item1);
 
     FormItemData formItemData1 = new FormItemData(item1, "incorrectTestgmail.com");

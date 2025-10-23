@@ -3,6 +3,7 @@ package org.perun.registrarprototype.models;
 import java.util.List;
 
 public class FormTransition {
+  private int id = 0;
   private FormSpecification sourceFormSpecification;
   private FormSpecification targetFormSpecification;
 //  private List<FormSpecification.FormType> sourceFormTypes = List.of(FormSpecification.FormType.INITIAL, FormSpecification.FormType.EXTENSION);
@@ -62,6 +63,14 @@ public class FormTransition {
 
   public void setType(TransitionType type) {
     this.type = type;
+  }
+
+  public int getId() {
+    return id;
+  }
+
+  public void setId(int id) {
+    this.id = id;
   }
 
   public enum TransitionType {

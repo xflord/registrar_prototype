@@ -119,6 +119,13 @@ public interface ApplicationService {
   void autoSubmitForm(FormTransition autoSubmitTransition, SubmissionContext submissionData);
 
   /**
+   * Updates application data.
+   * @param applicationId
+   * @param itemData
+   */
+  void updateApplicationData(int applicationId, List<FormItemData> itemData);
+
+  /**
    * Entry point from GUI. For a given group, determines which forms to display to the user, prefills form items,
    * and returns the submission context to the GUI.
    *

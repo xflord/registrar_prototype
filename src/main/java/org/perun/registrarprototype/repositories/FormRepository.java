@@ -14,5 +14,6 @@ public interface FormRepository {
   FormSpecification save(FormSpecification formSpecification);
 
   FormSpecification update(FormSpecification formSpecification);
+  void delete(FormSpecification formSpecification);
   List<FormSpecification> findAll();
 }

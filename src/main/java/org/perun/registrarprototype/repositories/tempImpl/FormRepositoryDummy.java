@@ -63,6 +63,11 @@ public class FormRepositoryDummy implements FormRepository {
   }
 
   @Override
+  public void delete(FormSpecification formSpecification) {
+    formSpecifications.removeIf(f -> f.getId() == formSpecification.getId());
+  }
+
+  @Override
   public List<FormSpecification> findAll() {
     return List.copyOf(formSpecifications);
   }

@@ -12,8 +12,10 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 import org.perun.registrarprototype.events.ApplicationApprovedEvent;
+import org.perun.registrarprototype.events.ApplicationItemVerificationRequiredEvent;
 import org.perun.registrarprototype.events.ApplicationRejectedEvent;
 import org.perun.registrarprototype.events.ApplicationSubmittedEvent;
+import org.perun.registrarprototype.events.ApplicationVerifiedEvent;
 import org.perun.registrarprototype.events.ChangesRequestedToApplicationEvent;
 import org.perun.registrarprototype.exceptions.DataInconsistencyException;
 import org.perun.registrarprototype.exceptions.InsufficientRightsException;
@@ -114,7 +116,7 @@ public class ApplicationServiceImpl implements ApplicationService {
       module.getFormModule().onApproval(app);
     }
 
-    eventService.emitEvent(new ApplicationApprovedEvent(app.getId(), app.getIdmUserId(), app.getForm().getGroupId()));
+    eventService.emitEvent(new ApplicationApprovedEvent(app));
     return app;
   }
 
@@ -178,7 +180,7 @@ public class ApplicationServiceImpl implements ApplicationService {
     }
 
     app = applicationRepository.save(app);
-    eventService.emitEvent(new ApplicationRejectedEvent(app.getId(), app.getIdmUserId(), app.getForm().getGroupId()));
+    eventService.emitEvent(new ApplicationRejectedEvent(app));
 
     return app;
   }
@@ -201,8 +203,7 @@ public class ApplicationServiceImpl implements ApplicationService {
     }
 
     app = applicationRepository.save(app);
-    eventService.emitEvent(new ChangesRequestedToApplicationEvent(app.getId(), app.getIdmUserId(),
-        app.getForm().getGroupId()));
+    eventService.emitEvent(new ChangesRequestedToApplicationEvent(app));
 
     return app;
   }
@@ -327,8 +328,9 @@ public class ApplicationServiceImpl implements ApplicationService {
     reserveLogins(applicationForm.getPrefilledItems());
 
     // TODO if we emit events asynchronously this might be problematic (not sure rollback would work here)
-    eventService.emitEvent(new ApplicationSubmittedEvent(app.getId(), sess.getPrincipal().id(), applicationForm.getForm()
-                                                                                                    .getGroupId()));
+    eventService.emitEvent(new ApplicationSubmittedEvent(app));
+
+    attemptApplicationVerification(app);
 
     return app;
   }
@@ -399,7 +401,7 @@ public class ApplicationServiceImpl implements ApplicationService {
   }
 
   /**
-   * Checks that form data is validated against form item constraints, checks that prefilled data is still valid (e.g.
+   * Checks that prefilled data is still valid (e.g.
    * the submitted value matches prefilled value from source attributes), if so set a flag to indicate that the form item
    * data has been validated (LOA or just a flag).
    * TODO do we want the option to require item value to be validated? This can optionally be done using `beforeApproval` module hook
@@ -426,6 +428,7 @@ public class ApplicationServiceImpl implements ApplicationService {
 
     // TODO this is where we in the future want to handle attribute freshness/provenance logic
 
+    // TODO do we always trust idp values?
     String identityValue = getIdentityAttributeValue(sess.getPrincipal(), itemData.getFormItem());
     itemData.setIdentityAttributeValue(identityValue);
     String idmValue = getIdmAttributeValue(sess.getPrincipal(), itemData.getFormItem());
@@ -456,6 +459,54 @@ public class ApplicationServiceImpl implements ApplicationService {
     }
   }
 
+  @Override
+  //@Transactional
+  public void updateApplicationData(int applicationId, List<FormItemData> itemData) {
+    Application application = applicationRepository.findById(applicationId).orElseThrow(() -> new IllegalArgumentException("Application not found"));
+
+    List<FormItemData> existingData = application.getFormItemData();
+    // todo this will likely change with data persistence
+    Map<FormItem, FormItemData> existingItemToDataMap = existingData.stream()
+                                                             .collect(Collectors.toMap(FormItemData::getFormItem, item -> item));
+
+    if (!application.getState().isOpenState()) {
+      throw new IllegalArgumentException("Only open applications can be updated");
+    }
+
+    if (itemData == null || itemData.isEmpty()) {
+      return;
+    }
+
+    itemData.forEach(item -> {
+      if (!existingItemToDataMap.containsKey(item.getFormItem())) {
+        throw new IllegalArgumentException("Item " + item.getFormItem().getId() + " does not belong to application " + applicationId);
+      }
+      if (!item.getFormItem().getType().isUpdatable()) {
+        throw new IllegalArgumentException("Item " + item.getFormItem().getId() + " cannot be updated");
+      }
+
+      FormItemData existingItem = existingItemToDataMap.get(item.getFormItem());
+
+      existingItem.setValue(item.getValue());
+
+      if (item.getFormItem().getType().isVerifiedItem()) {
+        checkPrefilledValueConsistency(sessionProvider.getCurrentSession(), existingItem,
+            null);
+      }
+    });
+
+    validateFilledFormData(application);
+
+    // set to submitted (if from changes requested for example)
+    application.setState(ApplicationState.SUBMITTED);
+
+    attemptApplicationVerification(application);
+
+    applicationRepository.save(application);
+  }
+
+
+
   /**
    * Auto-fill items of an automatically submitted application using the data of the set of submitted applications
    * that triggered the auto-submission.
@@ -469,6 +520,34 @@ public class ApplicationServiceImpl implements ApplicationService {
    */
   private ApplicationForm prefillAutosubmitFormItems(CurrentUser sess, FormSpecification formSpecification, List<FormItemData> prefilledItems) {
     return null;
+  }
+
+  /**
+   * Check whether all items of which values need to be assured, are assured
+   * @param application
+   * @return
+   */
+  private void attemptApplicationVerification(Application application) {
+    List<FormItemData> unassuredItems = application.getFormItemData().stream()
+        .filter(itemData -> itemData.getFormItem().getType().isVerifiedItem())
+        .filter(itemData -> !itemData.isValueAssured()).toList();
+
+    if (unassuredItems.isEmpty()) {
+      application.setState(ApplicationState.VERIFIED);
+      eventService.emitEvent(new ApplicationVerifiedEvent(application));
+      // TODO technically auto-approval could be a part of the event handler, which would have its own principal?
+      attemptAutoApproval(application);
+    } else {
+      eventService.emitEvent(new ApplicationItemVerificationRequiredEvent(application, unassuredItems));
+    }
+  }
+
+  /**
+   *
+   * @param application
+   */
+  private void attemptAutoApproval(Application application) {
+    // TODO implement auto approval logic (prolly some better way than just using a fake/engine principal)
   }
 
   /**
@@ -642,6 +721,7 @@ public class ApplicationServiceImpl implements ApplicationService {
     //  => only if explicitly defined as source + that's where a key of source item is defied
   }
 
+
   /**
    * Ensures that all items that are required and do not allow user input are prefilled.
    * TODO move this logic to setting up form => ensure that admin cannot create a form that would result in a situation like this
@@ -778,6 +858,7 @@ public class ApplicationServiceImpl implements ApplicationService {
 
   /**
    * Retrieves value of item's source IdM attribute.
+   * TODO handle attribute values returned as lists (or `;` seperated values),e.g. preferred mails
    * @param principal
    * @param item
    * @return
