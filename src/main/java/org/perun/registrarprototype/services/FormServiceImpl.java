@@ -395,8 +395,8 @@ public class FormServiceImpl implements FormService {
   }
 
   private boolean isItemPrefillEmpty(FormItem item) {
-    return StringUtils.isEmpty(item.getDefaultValue()) && StringUtils.isEmpty(item.getSourceIdentityAttribute()) &&
-               StringUtils.isEmpty(item.getSourceIdmAttribute());
+    return StringUtils.isEmpty(item.getDefaultValue()) &&
+               (item.getPrefillStrategyTypes() == null || item.getPrefillStrategyTypes().isEmpty());
   }
 
   private boolean isEmptyItemHidden(FormItem item, Map<Integer, FormItem> formItemMap, Set<Integer> seenItems) {

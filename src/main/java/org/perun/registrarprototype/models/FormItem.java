@@ -1,5 +1,6 @@
 package org.perun.registrarprototype.models;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
@@ -35,12 +36,9 @@ public class FormItem {
   private boolean updatable;
   private boolean required;
   private String constraint; // regex or similar
-  private List<PrefillStrategyKey> prefillStrategyKeys;
-  private Map<PrefillStrategyKey, Object> prefillStrategyOptions;
-  private String sourceIdentityAttribute;
-  private String sourceIdmAttribute;
+  private List<PrefillStrategyType> prefillStrategyTypes;
+  private Map<String, String> prefillStrategyOptions; // options for prefill strategies (keys are prefixed with the strategy type)
   private String destinationIdmAttribute;
-  private boolean preferIdentityAttribute; // use IdM value if false, oauth claim value if true (and available)
   private String defaultValue;
   private List<FormSpecification.FormType> formTypes = List.of(FormSpecification.FormType.INITIAL, FormSpecification.FormType.EXTENSION);
   private Condition hidden;
@@ -72,19 +70,15 @@ public class FormItem {
   }
 
   public FormItem(int id, int formId, Type type, Map<Locale, ItemTexts> texts, boolean required, String constraint,
-                  String sourceIdentityAttribute, String sourceIdmAttribute, String destinationIdmAttribute,
-                  boolean preferIdentityAttribute, String defaultValue, List<FormSpecification.FormType> formTypes, Condition hidden,
-                  Condition disabled, Integer hiddenDependencyItemId, Integer disabledDependencyItemId) {
+                  String destinationIdmAttribute, String defaultValue, List<FormSpecification.FormType> formTypes,
+                  Condition hidden, Condition disabled, Integer hiddenDependencyItemId, Integer disabledDependencyItemId) {
     this.id = id;
     this.formId = formId;
     this.type = type;
     this.texts = texts;
     this.required = required;
     this.constraint = constraint;
-    this.sourceIdentityAttribute = sourceIdentityAttribute;
-    this.sourceIdmAttribute = sourceIdmAttribute;
     this.destinationIdmAttribute = destinationIdmAttribute;
-    this.preferIdentityAttribute = preferIdentityAttribute;
     this.defaultValue = defaultValue;
     this.formTypes = formTypes;
     this.hidden = hidden;
@@ -95,9 +89,9 @@ public class FormItem {
 
   public FormItem(int id, int formId, String shortName, Integer parentId, int ordNum, Type type,
                   Map<Locale, ItemTexts> texts, boolean updatable, boolean required, String constraint,
-                  String sourceIdentityAttribute, String sourceIdmAttribute, String destinationIdmAttribute,
-                  boolean preferIdentityAttribute, String defaultValue, List<FormSpecification.FormType> formTypes, Condition hidden,
-                  Condition disabled, Integer hiddenDependencyItemId, Integer disabledDependencyItemId) {
+                  String destinationIdmAttribute, String defaultValue, List<FormSpecification.FormType> formTypes,
+                  Condition hidden, Condition disabled, Integer hiddenDependencyItemId,
+                  Integer disabledDependencyItemId) {
     this.id = id;
     this.formId = formId;
     this.shortName = shortName;
@@ -108,10 +102,7 @@ public class FormItem {
     this.updatable = updatable;
     this.required = required;
     this.constraint = constraint;
-    this.sourceIdentityAttribute = sourceIdentityAttribute;
-    this.sourceIdmAttribute = sourceIdmAttribute;
     this.destinationIdmAttribute = destinationIdmAttribute;
-    this.preferIdentityAttribute = preferIdentityAttribute;
     this.defaultValue = defaultValue;
     this.formTypes = formTypes;
     this.hidden = hidden;
@@ -152,12 +143,21 @@ public class FormItem {
     this.type = type;
   }
 
-  public List<PrefillStrategyKey> getPrefillStrategyKeys() {
-    return prefillStrategyKeys;
+  public List<PrefillStrategyType> getPrefillStrategyTypes() {
+    return prefillStrategyTypes;
   }
 
-  public Map<PrefillStrategyKey, Object> getPrefillStrategyOptions() {
+  public Map<String, String> getPrefillStrategyOptions() {
     return prefillStrategyOptions;
+  }
+
+  public void setPrefillStrategyOptions(Map<String, String> prefillStrategyOptions) {
+    this.prefillStrategyOptions = prefillStrategyOptions;
+  }
+
+  public void setPrefillStrategyTypes(
+      List<PrefillStrategyType> prefillStrategyTypes) {
+    this.prefillStrategyTypes = prefillStrategyTypes;
   }
 
   public ValidationError validate(FormItemData response) {
@@ -187,37 +187,12 @@ public class FormItem {
     return "defalt";
 //    return texts.get(Locale.ENGLISH).getLabel();
   }
-
-  public boolean isPreferIdentityAttribute() {
-    return preferIdentityAttribute;
-  }
-
-  public void setPreferIdentityAttribute(boolean preferIdentityAttribute) {
-    this.preferIdentityAttribute = preferIdentityAttribute;
-  }
-
   public String getDestinationIdmAttribute() {
     return destinationIdmAttribute;
   }
 
   public void setDestinationIdmAttribute(String destinationIdmAttribute) {
     this.destinationIdmAttribute = destinationIdmAttribute;
-  }
-
-  public String getSourceIdmAttribute() {
-    return sourceIdmAttribute;
-  }
-
-  public void setSourceIdmAttribute(String sourceIdmAttribute) {
-    this.sourceIdmAttribute = sourceIdmAttribute;
-  }
-
-  public String getSourceIdentityAttribute() {
-    return sourceIdentityAttribute;
-  }
-
-  public void setSourceIdentityAttribute(String sourceIdentityAttribute) {
-    this.sourceIdentityAttribute = sourceIdentityAttribute;
   }
 
   public int getFormId() {
@@ -317,10 +292,7 @@ public class FormItem {
                ", texts=" + texts +
                ", required=" + required +
                ", constraint='" + constraint + '\'' +
-               ", sourceIdentityAttribute='" + sourceIdentityAttribute + '\'' +
-               ", sourceIdmAttribute='" + sourceIdmAttribute + '\'' +
                ", destinationIdmAttribute='" + destinationIdmAttribute + '\'' +
-               ", preferIdentityAttribute=" + preferIdentityAttribute +
                ", defaultValue='" + defaultValue + '\'' +
                ", formTypes=" + formTypes +
                ", hidden=" + hidden +
@@ -362,7 +334,7 @@ public class FormItem {
     NEVER, ALWAYS, IF_PREFILLED, IF_EMPTY
   }
 
-  public enum PrefillStrategyKey {
+  public enum PrefillStrategyType {
     IDENTITY_ATTRIBUTE, IDM_ATTRIBUTE, LOGIN_ATTRIBUTE, APPLICATION
   }
 }

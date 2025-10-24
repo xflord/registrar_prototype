@@ -10,7 +10,6 @@ public class Application extends ApplicationForm {
   private Integer idmUserId;
   private ApplicationState state = ApplicationState.PENDING;
   private String redirectUrl;
-  private FormSpecification.FormType type;
   private Submission submission = new Submission();
 
   public Application(int id, Integer idmUserId, FormSpecification formSpecification, List<FormItemData> formItemData, String redirectUrl, FormSpecification.FormType type) {
@@ -90,14 +89,6 @@ public class Application extends ApplicationForm {
 
   public void setSubmission(Submission submission) {
     this.submission = submission;
-  }
-
-  public FormSpecification.FormType getType() {
-    return type;
-  }
-
-  public void setType(FormSpecification.FormType type) {
-    this.type = type;
   }
 
   public void setState(ApplicationState state) {

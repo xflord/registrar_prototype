@@ -1,5 +1,6 @@
 package org.perun.registrarprototype.controllers;
 
+import java.util.ArrayList;
 import org.perun.registrarprototype.exceptions.InsufficientRightsException;
 import org.perun.registrarprototype.models.Application;
 import org.perun.registrarprototype.models.FormItemData;
@@ -83,7 +84,7 @@ public class ApplicationController {
 
   @GetMapping("/loadForms")
   public ResponseEntity<SubmissionContext> getSubmissionContext(@RequestParam int groupId) {
-    return ResponseEntity.ok(applicationService.loadForms(List.of(new Requirement(groupId, Requirement.TargetState.MEMBER)), "", false));
+    return ResponseEntity.ok(applicationService.loadForms(new ArrayList<>(List.of(new Requirement(groupId, Requirement.TargetState.MEMBER))), "", false));
   }
 
   @PostMapping("/applyForMembership")

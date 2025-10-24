@@ -46,6 +46,8 @@ import org.perun.registrarprototype.security.CurrentUser;
 import org.perun.registrarprototype.security.RegistrarAuthenticationToken;
 import org.perun.registrarprototype.security.SessionProvider;
 import org.perun.registrarprototype.services.idmIntegration.IdMService;
+import org.perun.registrarprototype.services.prefillStrategy.PrefillStrategy;
+import org.perun.registrarprototype.services.prefillStrategy.impl.PrefillStrategyResolver;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -61,12 +63,14 @@ public class ApplicationServiceImpl implements ApplicationService {
   private final FormService formService;
   private final IdMService idmService;
   private final SessionProvider sessionProvider;
+  private final PrefillStrategyResolver prefillStrategyResolver;
 
   public ApplicationServiceImpl(ApplicationRepository applicationRepository, FormRepository formRepository,
                                 SubmissionRepository submissionRepository, DecisionRepository decisionRepository,
                                 EventService eventService,
                                 AuthorizationService authorizationService, FormService formService,
-                                IdMService idmService, SessionProvider sessionProvider) {
+                                IdMService idmService, SessionProvider sessionProvider,
+                                PrefillStrategyResolver prefillStrategyResolver) {
     this.applicationRepository = applicationRepository;
     this.formRepository = formRepository;
     this.submissionRepository = submissionRepository;
@@ -76,6 +80,7 @@ public class ApplicationServiceImpl implements ApplicationService {
     this.formService = formService;
     this.idmService = idmService;
     this.sessionProvider = sessionProvider;
+    this.prefillStrategyResolver = prefillStrategyResolver;
   }
 
   @Override
@@ -306,11 +311,10 @@ public class ApplicationServiceImpl implements ApplicationService {
                                                                                                  .getGroupId());
     }
 
-    Map<String, String> reservedPrincipalLogins = getReservedLoginsForPrincipal(sess.getPrincipal()); // call here to avoid unnecessary idm calls
 
     validateFilledFormData(applicationForm);
     normalizeFilledFormData(applicationForm);
-    applicationForm.getPrefilledItems().forEach(item -> checkPrefilledValueConsistency(sess, item, reservedPrincipalLogins));
+    applicationForm.getPrefilledItems().forEach(item -> checkPrefilledValueConsistency(sess, item));
 
     Application app = new Application(0, sess.getPrincipal().id(), formSpecification,
         applicationForm.getPrefilledItems(), null, applicationForm.getType());
@@ -408,7 +412,7 @@ public class ApplicationServiceImpl implements ApplicationService {
    * @param sess
    * @param itemData
    */
-  private void checkPrefilledValueConsistency(RegistrarAuthenticationToken sess, FormItemData itemData, Map<String, String> reservedLogins) {
+  private void checkPrefilledValueConsistency(RegistrarAuthenticationToken sess, FormItemData itemData) {
     itemData.setValueAssured(false);
     if (StringUtils.isEmpty(itemData.getValue())) {
       return;
@@ -418,23 +422,15 @@ public class ApplicationServiceImpl implements ApplicationService {
       return;
     }
 
-    if (itemData.getFormItem().getType().equals(FormItem.Type.LOGIN)) {
-      String loginValue = tryToFillLoginItem(itemData.getFormItem(), reservedLogins);
-      if (!StringUtils.isEmpty(loginValue) && loginValue.equals(itemData.getValue())) {
-        itemData.setValueAssured(true);
-        return;
-      }
+    PrefillStrategy itemPrefillStrategy = prefillStrategyResolver.resolveFor(itemData.getFormItem());
+    itemPrefillStrategy.validateOptions(itemData.getFormItem().getPrefillStrategyOptions());
+    Optional<String> prefilledValue = itemPrefillStrategy.prefill(itemData.getFormItem(),
+        itemData.getFormItem().getPrefillStrategyOptions());
+    if (prefilledValue.isEmpty()) {
+      return;
     }
 
-    // TODO this is where we in the future want to handle attribute freshness/provenance logic
-
-    // TODO do we always trust idp values?
-    String identityValue = getIdentityAttributeValue(sess.getPrincipal(), itemData.getFormItem());
-    itemData.setIdentityAttributeValue(identityValue);
-    String idmValue = getIdmAttributeValue(sess.getPrincipal(), itemData.getFormItem());
-    itemData.setIdmAttributeValue(idmValue);
-
-    if (Objects.equals(idmValue, itemData.getValue()) || Objects.equals(identityValue, itemData.getValue())) {
+    if (prefilledValue.get().equals(itemData.getValue())) {
       itemData.setValueAssured(true);
     }
   }
@@ -490,8 +486,7 @@ public class ApplicationServiceImpl implements ApplicationService {
       existingItem.setValue(item.getValue());
 
       if (item.getFormItem().getType().isVerifiedItem()) {
-        checkPrefilledValueConsistency(sessionProvider.getCurrentSession(), existingItem,
-            null);
+        checkPrefilledValueConsistency(sessionProvider.getCurrentSession(), existingItem);
       }
     });
 
@@ -711,11 +706,10 @@ public class ApplicationServiceImpl implements ApplicationService {
    * @return
    */
   private List<FormItemData> prefillForm(RegistrarAuthenticationToken sess, FormSpecification formSpecification) {
-    Map<String, String> reservedPrincipalLogins = getReservedLoginsForPrincipal(sess.getPrincipal()); // call here to avoid unnecessary idm calls
 
     return formSpecification.getItems().stream()
         .map((item) -> new FormItemData(item, null,
-            calculatePrefilledValue(sess, item, reservedPrincipalLogins)))
+            calculatePrefilledValue(sess, item)))
         .toList();
     // TODO consider prefilling from submitted prerequisite forms (from submitted matching destination attribute to source/destination?)
     //  => only if explicitly defined as source + that's where a key of source item is defied
@@ -733,8 +727,8 @@ public class ApplicationServiceImpl implements ApplicationService {
     List<FormItemData> itemsWithMissingData = new ArrayList<>();
     prefilledItems.stream()
         .filter(item -> hasItemIncorrectVisibility(item, prefilledItems)).forEach(item -> {
-          if (StringUtils.isEmpty(item.getFormItem().getSourceIdentityAttribute()) &&
-              StringUtils.isEmpty(item.getFormItem().getSourceIdmAttribute())) {
+          if (item.getFormItem().getPrefillStrategyTypes() == null ||
+              item.getFormItem().getPrefillStrategyTypes().isEmpty()) {
             unmodifiableRequiredButEmpty.add(item);
           } else {
             itemsWithMissingData.add(item);
@@ -819,84 +813,19 @@ public class ApplicationServiceImpl implements ApplicationService {
    * @param item
    * @return
    */
-  private String calculatePrefilledValue(RegistrarAuthenticationToken sess, FormItem item, Map<String, String> reservedLogins) { // again decide whether to pass principal as argument or retrieve it from the current session
+  private String calculatePrefilledValue(RegistrarAuthenticationToken sess, FormItem item) { // again decide whether to pass principal as argument or retrieve it from the current session
 
     if (!sess.isAuthenticated()) {
+      // TODO potentially move this to the strategy logic? Could there be a strategy that returns value for unauthenticated users?
       return item.getDefaultValue();
     }
 
-    if (item.getType().equals(FormItem.Type.LOGIN)) {
-     String login = tryToFillLoginItem(item, reservedLogins);
-     if (!StringUtils.isEmpty(login)) {
-       return login;
-     }
-   }
+    PrefillStrategy itemPrefillStrategy = prefillStrategyResolver.resolveFor(item);
+    itemPrefillStrategy.validateOptions(item.getPrefillStrategyOptions());
+    Optional<String> prefilledValue = itemPrefillStrategy.prefill(item, item.getPrefillStrategyOptions());
 
-    String identityValue = getIdentityAttributeValue(sess.getPrincipal(), item);
-    if (item.isPreferIdentityAttribute() && identityValue != null) {
-      return identityValue;
-    }
-    String idmValue = getIdmAttributeValue(sess.getPrincipal(), item);
-    if (idmValue != null) {
-      return idmValue;
-    } else if (identityValue != null) {
-      return identityValue;
-    }
-    return item.getDefaultValue();
-  }
+    return prefilledValue.orElseGet(item::getDefaultValue);
 
-  /**
-   * Retrieves value of item's source identity attribute
-   * @param principal
-   * @param item
-   * @return
-   */
-  private String getIdentityAttributeValue(CurrentUser principal, FormItem item) {
-    String sourceAttr = item.getSourceIdentityAttribute();
-    return sourceAttr == null ? null : principal.attribute(sourceAttr);
-  }
-
-  /**
-   * Retrieves value of item's source IdM attribute.
-   * TODO handle attribute values returned as lists (or `;` seperated values),e.g. preferred mails
-   * @param principal
-   * @param item
-   * @return
-   */
-  private String getIdmAttributeValue(CurrentUser principal, FormItem item) {
-    FormSpecification formSpecification = formRepository.findById(item.getFormId()).orElseThrow(() -> new DataInconsistencyException("Form with ID " + item.getFormId() + " not found for form item " + item.getId()));
-
-    String sourceAttr = item.getSourceIdmAttribute();
-    if (sourceAttr == null) {
-      return null;
-    }
-    if (sourceAttr.startsWith(idmService.getUserAttributeUrn())) {
-      return idmService.getUserAttribute(principal.id(), sourceAttr);
-    } else if (sourceAttr.startsWith(idmService.getVoAttributeUrn())) {
-      return idmService.getVoAttribute(sourceAttr, formSpecification.getVoId());
-    } else if (sourceAttr.startsWith(idmService.getMemberAttributeUrn()) && formSpecification.getGroupId() > 0) { // TODO can get member attr just from voId
-      return idmService.getMemberAttribute(principal.id(), sourceAttr, formSpecification.getGroupId());
-    } else if (sourceAttr.startsWith(idmService.getGroupAttributeUrn()) && formSpecification.getGroupId() > 0) { // TODO better check if group is present
-      return idmService.getGroupAttribute(sourceAttr, formSpecification.getGroupId());
-    } else {
-      throw new IllegalArgumentException("Unsupported attribute source: " + sourceAttr);
-    }
-  }
-
-  /**
-   * Tries to fill items with the destination attribute matching the LOGIN urn
-   * @param item
-   * @param reservedLogins
-   * @return
-   */
-  private String tryToFillLoginItem( FormItem item, Map<String, String> reservedLogins) {
-    for (String namespace : reservedLogins.keySet()) {
-      String loginAttributeDefinition = idmService.getLoginAttributeUrn() + namespace;
-      if (item.getDestinationIdmAttribute().equals(loginAttributeDefinition)) {
-        return reservedLogins.get(namespace);
-      }
-    }
-    return null;
   }
 
   /**
@@ -929,19 +858,6 @@ public class ApplicationServiceImpl implements ApplicationService {
       }
     }
   }
-
-  /**
-   * Returns all logins reserved by the authenticated principal
-   * @param principal
-   * @return a map of reserved logins, the keys being namespaces of the logins
-   */
-  private Map<String, String> getReservedLoginsForPrincipal(CurrentUser principal) {
-    if (principal == null) {
-      return new HashMap<>();
-    }
-    return new HashMap<>();
-  }
-
 
   /**
    * Check whether user already has open application in the given group/VO (for the given form). If so, use this information

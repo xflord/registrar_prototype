@@ -6,7 +6,7 @@ import java.util.List;
 public class FormSpecification {
   private int id;
   private int voId;
-  private int groupId;
+  private Integer groupId;
   private List<FormItem> items;
   private boolean autoApprove = false;
   private boolean autoApproveExtension = false;
@@ -14,13 +14,13 @@ public class FormSpecification {
   public FormSpecification() {
   }
 
-  public FormSpecification(int id, int groupId, List<FormItem> items) {
+  public FormSpecification(int id, Integer groupId, List<FormItem> items) {
     this.id = id;
     this.groupId = groupId;
     this.items = items;
   }
 
-  public FormSpecification(int id, int voId, int groupId, List<FormItem> items, boolean autoApprove, boolean autoApproveExtension) {
+  public FormSpecification(int id, int voId, Integer groupId, List<FormItem> items, boolean autoApprove, boolean autoApproveExtension) {
     this.id = id;
     this.voId = voId;
     this.groupId = groupId;
@@ -56,7 +56,7 @@ public class FormSpecification {
     return voId;
   }
 
-  public int getGroupId() {
+  public Integer getGroupId() {
     return groupId;
   }
 
@@ -79,7 +79,7 @@ public class FormSpecification {
     this.voId = voId;
   }
 
-  public void setGroupId(int groupId) {
+  public void setGroupId(Integer groupId) {
     this.groupId = groupId;
   }
 

@@ -17,6 +17,10 @@ public class ApplicationForm {
     return formSpecification;
   }
 
+  public void setForm(FormSpecification formSpecification) {
+    this.formSpecification = formSpecification;
+  }
+
   public List<FormItemData> getPrefilledItems() {
     return formItemData;
   }

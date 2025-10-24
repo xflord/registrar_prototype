@@ -2,6 +2,7 @@ package org.perun.registrarprototype.services;
 
 import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import org.junit.jupiter.api.Test;
 import org.perun.registrarprototype.models.Application;
 import org.perun.registrarprototype.models.ApplicationState;
@@ -125,7 +126,10 @@ class ApplicationServiceTests extends GenericRegistrarServiceTests {
 
 
     FormItem item1 = new FormItem(1, FormItem.Type.TEXTFIELD);
-    item1.setSourceIdentityAttribute("testAttribute");
+    Map<String, String> prefillStrategyOptions = new HashMap<>();
+    prefillStrategyOptions.put(FormItem.PrefillStrategyType.IDENTITY_ATTRIBUTE + ".sourceAttribute", "testAttribute");
+    item1.setPrefillStrategyTypes(List.of(FormItem.PrefillStrategyType.IDENTITY_ATTRIBUTE));
+    item1.setPrefillStrategyOptions(prefillStrategyOptions);
     item1 = formService.setFormItem(formSpecification.getId(), item1);
 
     List<FormItemData> data = applicationService.loadForm(sessionProvider.getCurrentSession(), formSpecification, FormSpecification.FormType.INITIAL);
