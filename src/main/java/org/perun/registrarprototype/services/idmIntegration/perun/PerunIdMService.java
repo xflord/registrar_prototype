@@ -9,6 +9,7 @@ import cz.metacentrum.perun.openapi.model.Candidate;
 import cz.metacentrum.perun.openapi.model.EnrichedIdentity;
 import cz.metacentrum.perun.openapi.model.ExtSource;
 import cz.metacentrum.perun.openapi.model.Group;
+import cz.metacentrum.perun.openapi.model.InputCheckForSimilarUsersWithData;
 import cz.metacentrum.perun.openapi.model.InputCreateMemberForCandidate;
 import cz.metacentrum.perun.openapi.model.InputCreateMemberForUser;
 import cz.metacentrum.perun.openapi.model.InputSetMemberGroupWithUserAttributes;
@@ -467,7 +468,7 @@ public class PerunIdMService implements IdMService {
 
     List<EnrichedIdentity> perunIdentities = tempRpc.getRegistrarManager().checkForSimilarRichIdentities();
 
-    return convertToDomainIdentities(perunIdentities);
+    return convertRichToDomainIdentities(perunIdentities);
   }
 
   @Override
@@ -496,18 +497,30 @@ public class PerunIdMService implements IdMService {
           return perunAppData;
         }).forEach(perunFormItems::add);
 
-    List<EnrichedIdentity> perunIdentities = new ArrayList<>();
     // TODO add the method to openapi, it already exists
-    // List<EnrichedIdentity> perunIdentities = tempRpc.getRegistrarManager().checkForSimilarUsers(perunFormItems);
+    InputCheckForSimilarUsersWithData input = new InputCheckForSimilarUsersWithData();
+    input.setFormItems(perunFormItems);
+    List<cz.metacentrum.perun.openapi.model.Identity> perunIdentities = tempRpc.getRegistrarManager().checkForSimilarUsersWithFormItemData(input);
     return convertToDomainIdentities(perunIdentities);
   }
 
-  private List<Identity> convertToDomainIdentities(List<EnrichedIdentity> perunIdentities) {
+  private List<Identity> convertRichToDomainIdentities(List<EnrichedIdentity> perunIdentities) {
     List<Identity> domainIdentities = new ArrayList<>();
     perunIdentities.forEach(identity -> {
       identity.getIdentities().forEach(extSource -> {
         domainIdentities.add(new Identity(identity.getName(), identity.getOrganization(),
             identity.getEmail(), extSource.getExtSource().getType(), extSource.getAttributes()));
+      });
+    });
+    return domainIdentities;
+  }
+
+  private List<Identity> convertToDomainIdentities(List<cz.metacentrum.perun.openapi.model.Identity> perunIdentities) {
+    List<Identity> domainIdentities = new ArrayList<>();
+    perunIdentities.forEach(identity -> {
+      identity.getIdentities().forEach(extSource -> {
+        domainIdentities.add(new Identity(identity.getName(), identity.getOrganization(),
+            identity.getEmail(), extSource.getType(), new HashMap<>()));
       });
     });
     return domainIdentities;
