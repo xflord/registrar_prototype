@@ -44,7 +44,6 @@ public interface IdMService {
 
   Map<Role, Set<Integer>> getRolesByUserId(Integer userId);
 
-  // TODO add custom exception for IdM errors? an ErrorHandler would be nice to have
   String getUserAttribute(Integer userId, String attributeName);
 
   String getMemberAttribute(Integer userId, String attributeName, int groupId);
@@ -62,6 +61,18 @@ public interface IdMService {
   boolean isLoginAvailable(String namespace, String login);
 
   void reserveLogin(String namespace, String login);
+  void releaseLogin(String namespace, String login);
+
+  // TODO is this necessary, or can we omit this as we assume `LOGIN` items and their values of application represent
+  //  the reserved logins? `reserveLogin`
+  Map<String, String> getReservedLoginsForApplication(Application application);
+
+  // TODO is this necessary? If we have the login attribute urn, we can simply use `getUserAttribute`
+  boolean doesUserHaveExistingLoginSet(Integer userId, String namespace);
+
+  void reservePassword(String login, String namespace, String password);
+  void validatePassword(Integer userId, String namespace);
+  void deletePassword(String login, String namespace);
 
   String getLoginAttributeUrn();
 

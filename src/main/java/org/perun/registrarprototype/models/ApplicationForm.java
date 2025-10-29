@@ -21,10 +21,6 @@ public class ApplicationForm {
     this.formSpecification = formSpecification;
   }
 
-  public List<FormItemData> getPrefilledItems() {
-    return formItemData;
-  }
-
   public void setFormItemData(List<FormItemData> formItemData) {
     this.formItemData = formItemData;
   }

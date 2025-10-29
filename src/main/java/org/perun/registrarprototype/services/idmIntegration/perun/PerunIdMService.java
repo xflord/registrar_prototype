@@ -320,7 +320,7 @@ public class PerunIdMService implements IdMService {
       return rpc.getUsersManager().isLoginAvailable(namespace, login) == 1;
     } catch (PerunRuntimeException ex) {
       if (ex.getName().equals("InvalidLoginException")) {
-        // TODO throw custom exception?
+        // TODO throw custom exception? Exception includes reason why login couldn't be reserved -> invalid format or not allowed
         throw ex;
       } else {
         throw ex;
@@ -331,6 +331,36 @@ public class PerunIdMService implements IdMService {
   @Override
   public void reserveLogin(String namespace, String login) {
     // not implemented
+  }
+
+  @Override
+  public void releaseLogin(String namespace, String login) {
+    // not implemented
+  }
+
+  @Override
+  public Map<String, String> getReservedLoginsForApplication(Application application) {
+    return Map.of();
+  }
+
+  @Override
+  public boolean doesUserHaveExistingLoginSet(Integer userId, String namespace) {
+    return false;
+  }
+
+  @Override
+  public void reservePassword(String login, String namespace, String password) {
+
+  }
+
+  @Override
+  public void validatePassword(Integer userId, String namespace) {
+
+  }
+
+  @Override
+  public void deletePassword(String login, String namespace) {
+
   }
 
   @Override

@@ -132,6 +132,9 @@ public class ApplicationServiceImpl implements ApplicationService {
    */
   private Integer propagateApprovalToIdm(Application application) {
     // TODO unreserve logins
+    application.getFormItemData().stream()
+        .filter(data -> data.getFormItem().getType().equals(FormItem.Type.LOGIN))
+        .filter(loginItem -> idmService.releaseLogin())
 
     if (application.getType().equals(FormSpecification.FormType.INITIAL)) {
       if (application.getIdmUserId() == null) {
@@ -314,10 +317,10 @@ public class ApplicationServiceImpl implements ApplicationService {
 
     validateFilledFormData(applicationForm);
     normalizeFilledFormData(applicationForm);
-    applicationForm.getPrefilledItems().forEach(item -> checkPrefilledValueConsistency(sess, item));
+    applicationForm.getFormItemData().forEach(item -> checkPrefilledValueConsistency(sess, item));
 
     Application app = new Application(0, sess.getPrincipal().id(), formSpecification,
-        applicationForm.getPrefilledItems(), null, applicationForm.getType());
+        applicationForm.getFormItemData(), null, applicationForm.getType());
     app.setRedirectUrl(redirectUrl);
     app.setSubmission(submission);
     try {
@@ -329,7 +332,7 @@ public class ApplicationServiceImpl implements ApplicationService {
 
     app = applicationRepository.save(app);
 
-    reserveLogins(applicationForm.getPrefilledItems());
+    reserveLogins(applicationForm.getFormItemData());
 
     // TODO if we emit events asynchronously this might be problematic (not sure rollback would work here)
     eventService.emitEvent(new ApplicationSubmittedEvent(app));
@@ -376,7 +379,7 @@ public class ApplicationServiceImpl implements ApplicationService {
     List<FormItem> items = formService.getFormItems(data.getForm(), data.getType());
 
     Set<Integer> itemIds = items.stream().map(FormItem::getId).collect(Collectors.toSet());
-    List<FormItemData> foreignItems = data.getPrefilledItems().stream()
+    List<FormItemData> foreignItems = data.getFormItemData().stream()
                                           .filter((itemData) -> !itemIds.contains(itemData.getFormItem().getId()))
                                           .toList();
     if (!foreignItems.isEmpty()) {
@@ -386,7 +389,7 @@ public class ApplicationServiceImpl implements ApplicationService {
 
     List<ValidationError> result = items.stream()
                                        .map(item -> item.validate(
-        data.getPrefilledItems().stream()
+        data.getFormItemData().stream()
             .filter(itemData -> itemData.getFormItem().getId() == item.getId())
             .findFirst().orElse(null))
         )
@@ -829,6 +832,11 @@ public class ApplicationServiceImpl implements ApplicationService {
 
   }
 
+
+  private void releaseLogins(List<FormItemData> itemData) {
+    // TODO filter login items, retrieve their namespace (create a private method to do this instead of calling IdM), release them
+  }
+
   /**
    * Reserves the login in the set namespace
    * TODO this has to be implemented using IdM calls -> how do we ensure that IdM does not create a user with the reserved
@@ -843,17 +851,22 @@ public class ApplicationServiceImpl implements ApplicationService {
                 formItemData.isValueAssured()) { // login with prefilled value => value alr reserved
           continue;
         }
-        // could be a lot of calls
+        // could be a lot of calls, at the same time this checks that the attribute actually exists
         AttributeDefinition attrDef = idmService.getAttributeDefinition(formItemData.getFormItem().getDestinationIdmAttribute());
         if (attrDef == null) {
           // TODO probably throw an error here
           continue;
         }
         String namespace =  attrDef.getNamespace();
-        if (idmService.isLoginAvailable(namespace, formItemData.getValue())) {
-          // these two calls can probably be joined
-          idmService.reserveLogin(namespace, formItemData.getValue());
+        String login =  formItemData.getValue();
+        if (idmService.isLoginAvailable(namespace, login)) {
+          idmService.reserveLogin(namespace, login);
+          itemData.stream()
+              .filter(passwordItem -> passwordItem.getFormItem().getType().equals(FormItem.Type.PASSWORD))
+              .forEach(passwordItem -> idmService.reservePassword(login, namespace, passwordItem.getValue()));
+
         } else {
+          // TODO unified ApplicationNotCreated event once we have custom checked exceptions and can collect them to notify administrators
           throw new RuntimeException("Login " + formItemData.getValue() + " is blocked");
         }
       }
