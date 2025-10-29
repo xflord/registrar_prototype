@@ -372,6 +372,7 @@ public class ApplicationServiceImpl implements ApplicationService {
    * @param data
    */
   private void validateFilledFormData(ApplicationForm data) {
+    // TODO consider checking whether DISABLED/HIDDEN items were not filled (or simply skip them)
     List<FormItem> items = formService.getFormItems(data.getForm(), data.getType());
 
     Set<Integer> itemIds = items.stream().map(FormItem::getId).collect(Collectors.toSet());
@@ -477,7 +478,7 @@ public class ApplicationServiceImpl implements ApplicationService {
       if (!existingItemToDataMap.containsKey(item.getFormItem())) {
         throw new IllegalArgumentException("Item " + item.getFormItem().getId() + " does not belong to application " + applicationId);
       }
-      if (!item.getFormItem().getType().isUpdatable()) {
+      if (!item.getFormItem().isUpdatable()) {
         throw new IllegalArgumentException("Item " + item.getFormItem().getId() + " cannot be updated");
       }
 

@@ -326,16 +326,7 @@ public class FormServiceImpl implements FormService {
                    .orElseThrow(() -> new DataInconsistencyException("Form item with id " + newItem.getId() + " should exist"));
       }
 
-      if (item.getType().equals(FormItem.Type.PASSWORD)) {
-        // TODO a form of enforcing certain rules (label format, allowed destination attributes, etc.) via yaml config?
-        if (item.getDestinationIdmAttribute() == null) {
-          throw new IllegalArgumentException("Password item must have a destination IDM attribute");
-        }
-      }
-
-      if (item.getType().isHtmlItem()) {
-        // TODO validate/sanitize HTML content
-      }
+      performTypeSpecificChecks(item);
 
       item.setParentId(resolveReferenceItemId(item.getParentId(), newIdMap));
       item.setHiddenDependencyItemId(resolveReferenceItemId(item.getHiddenDependencyItemId(), newIdMap));
@@ -363,6 +354,39 @@ public class FormServiceImpl implements FormService {
     checkFormItemVisibility(finalItems);
   }
 
+  private void performTypeSpecificChecks(FormItem item) {
+    if (item.isUpdatable() && !item.getType().isUpdatable()) {
+      throw new IllegalArgumentException("Form item " + item + " of non-updatable type cannot be updatable");
+    }
+
+    if (item.getType().isLayoutItem()) {
+      if (item.isRequired()) {
+        throw new IllegalArgumentException("Layout form item " + item + " cannot be required");
+      }
+      if (item.getDefaultValue() != null) {
+        throw new IllegalArgumentException("Layout form item " + item + " cannot have a default value");
+      }
+      if (item.getDestinationIdmAttribute() != null) {
+        throw new IllegalArgumentException("Layout form item " + item + " cannot have a destination attribute");
+      }
+      if (item.getPrefillStrategyTypes() != null || !item.getPrefillStrategyTypes().isEmpty()) {
+        throw new IllegalArgumentException("Layout form item " + item + " cannot have a prefill strategy");
+      }
+    }
+
+
+    if (item.getType().equals(FormItem.Type.PASSWORD)) {
+      // TODO a form of enforcing certain rules (label format, allowed destination attributes, etc.) via yaml config?
+      if (item.getDestinationIdmAttribute() == null) {
+        throw new IllegalArgumentException("Password item must have a destination IDM attribute");
+      }
+    }
+
+    if (item.getType().isHtmlItem()) {
+      // TODO validate/sanitize HTML content
+    }
+  }
+
   /**
    * Make sure it is possible to fill out all the items required for submission (e.g. no hidden/disabled required items)
    * @param items
@@ -384,9 +408,19 @@ public class FormServiceImpl implements FormService {
     }
   }
 
+  /**
+   * Returns true if the item value cannot ever be filled, e.g. there is no prefill strategy, no default value and the
+   * item is hidden/disabled. To determine whether the item will be hidden or disabled, this also recursively checks
+   * IF_EMPTY dependency items.
+   * TODO this could cause poor performance as it handles items listed as IF_EMPTY dependencies multiple times
+   * @param item
+   * @param formItemMap
+   * @param seenItems
+   * @return
+   */
   private boolean willItemAlwaysBeEmpty(FormItem item, Map<Integer, FormItem> formItemMap, Set<Integer> seenItems) {
     if (!seenItems.add(item.getId())) {
-      // Circular dependencies on their own aren't a problem, as long as they don't cause the items to be unfillable (as is the case here)
+      // Circular dependencies on their own aren't a problem(?), as long as they don't cause the items to be unfillable (as is the case here)
       throw new IllegalArgumentException("Circular dependency detected starting with item: " + item);
     }
     return isItemPrefillEmpty(item) &&
@@ -422,8 +456,8 @@ public class FormServiceImpl implements FormService {
     }
 
     return switch (condition) {
-      case ALWAYS, IF_EMPTY -> true; // since prefill is empty this will NOT be fine
-      case NEVER, IF_PREFILLED -> false; // since prefill is empty this will be fine
+      case ALWAYS, IF_EMPTY -> true; // since prefill is empty the condition will be applied
+      case NEVER, IF_PREFILLED -> false; // since prefill is empty the condition will NOT be applied
     };
   }
 
@@ -446,7 +480,6 @@ public class FormServiceImpl implements FormService {
     return true;
   }
 
-
   /**
    * Checks whether the item depends on a newly added item, if so return that item's newly assigned ID
    * @param referenceItemId
@@ -463,21 +496,46 @@ public class FormServiceImpl implements FormService {
     return referenceItemId;
   }
 
+  /**
+   * Validates item dependencies (e.g. the dependency items exist, item does not depend on itself, hidden/disabled
+   * dependencies are not on layout items) and checks that there are no structure cycles.
+   * @param items
+   */
   private void validateFormStructureAndDeps(List<FormItem> items) {
     Map<Integer, FormItem> existingById = items.stream()
         .collect(Collectors.toMap(FormItem::getId, Function.identity()));
 
     // parent integrity
     items.forEach(item -> {
-      Integer parentId = item.getParentId();
-      checkItemDependency(item.getId(), parentId, existingById, "Parent");
+      checkItemDependency(item.getId(), item.getParentId(), existingById, "Parent");
       checkItemDependency(item.getId(), item.getHiddenDependencyItemId(), existingById, "Hidden");
       checkItemDependency(item.getId(), item.getDisabledDependencyItemId(), existingById, "Disabled");
     });
 
+    // is submittable
+    checkSubmissibility(items);
+
     detectParentItemCycles(items);
 
     // TODO detect disabled/hidden dependency cycles as well (using DFS)? Or is it a real use case to have 2 items depend on each other? (we expect both to be prefilled -> hidden/disabled or something of that sort)
+  }
+
+  /**
+   * Checks whether the form contains fillable items. If so, it requires a submit item, check that it contains at least
+   * one.
+   * TODO technically visibility check using `willItemAlwaysBeEmpty` could be done
+   * @param items
+   */
+  private void checkSubmissibility(List<FormItem> items) {
+    boolean containsValueItems = items.stream()
+            .anyMatch(item -> !item.getType().isLayoutItem());
+    if (containsValueItems &&
+            items.stream()
+                .noneMatch(item -> item.getType().isSubmitItem() &&
+                                       !(item.getHidden().equals(FormItem.Condition.ALWAYS) ||
+                                           item.getHidden().equals(FormItem.Condition.IF_EMPTY)))) {
+      throw new IllegalArgumentException("Submit item required but not present or visible.");
+    }
   }
 
   private void checkItemDependency(Integer itemId, Integer dependencyId, Map<Integer, FormItem> existingById,
@@ -489,6 +547,10 @@ public class FormServiceImpl implements FormService {
       }
       if (Objects.equals(dependencyId, itemId)) {
         throw new IllegalArgumentException(dependencyType + " dependency item" + dependencyId + " cannot be the same as the item itself");
+      }
+
+      if (!dependencyType.equals("Parent") && existingById.get(dependencyId).getType().isLayoutItem()) {
+        throw new IllegalArgumentException("Cannot depend on layout item as it does not have a value");
       }
     }
   }

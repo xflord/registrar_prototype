@@ -1,6 +1,5 @@
 package org.perun.registrarprototype.models;
 
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
@@ -163,6 +162,14 @@ public class FormItem {
   public ValidationError validate(FormItemData response) {
     // TODO ideally replace hardcoded strings with enums/inheritance and let GUI translate them
 
+    if (type.isLayoutItem() && required) {
+      throw new IllegalStateException("Layout item required: " + this);
+    }
+
+    if (type.isLayoutItem() && !response.isEmpty()) {
+      return new ValidationError(id, "Layout item " + getLabel() + " cannot hold value");
+    }
+
     if (required && (response == null || response.isEmpty())) {
         return new ValidationError(id, "Field " + getLabel() + " is required");
     }
@@ -184,7 +191,7 @@ public class FormItem {
   }
 
   public String getLabel() {
-    return "defalt";
+    return "default";
 //    return texts.get(Locale.ENGLISH).getLabel();
   }
   public String getDestinationIdmAttribute() {
@@ -314,8 +321,10 @@ public class FormItem {
     TEXTFIELD;
 
     public static final Set<Type> HTML_ITEMS = Set.of(HTML_COMMENT);
-    public static final Set<Type> UPDATABLE_ITEMS = Set.of(TEXTFIELD, DATE_PICKER);
+    public static final Set<Type> UPDATABLE_ITEMS = Set.of(TEXTFIELD, DATE_PICKER, VERIFIED_EMAIL);
     public static final Set<Type> VERIFIED_ITEMS = Set.of(VERIFIED_EMAIL);
+    public static final Set<Type> LAYOUT_ITEMS = Set.of(ROW, SECTION, SUBMIT_BUTTON, HTML_COMMENT);
+    public static final Set<Type> SUBMIT_ITEMS = Set.of(SUBMIT_BUTTON);
 
     public boolean isUpdatable() {
       return UPDATABLE_ITEMS.contains(this);
@@ -327,6 +336,14 @@ public class FormItem {
 
     public boolean isVerifiedItem() {
       return VERIFIED_ITEMS.contains(this);
+    }
+
+    public boolean isLayoutItem() {
+      return LAYOUT_ITEMS.contains(this);
+    }
+
+    public boolean isSubmitItem() {
+      return SUBMIT_ITEMS.contains(this);
     }
   }
 
