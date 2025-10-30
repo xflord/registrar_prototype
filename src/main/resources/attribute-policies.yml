@@ -1,0 +1,18 @@
+urn:perun:user:attribute-def:def:login-namespace:einfra:
+  displayName: E-infra login
+  allowAsDestination: true
+  allowAsSource: true
+  allowedItemTypes: [LOGIN]
+  allowedPrefillStrategies: [LOGIN_ATTRIBUTE]
+  enforcedUpdatable: false
+  enforcedRequired: true
+  enforceLabels: true
+  enforcedTexts:
+    en:
+      label: "E-INFRA Login"
+      help: "Enter your E-infra login username"
+      error: "Invalid login format"
+    cs:
+      label: "E-INFRA přihlašovací jméno"
+      help: "Zadejte své E-infra přihlašovací jméno"
+      error: "Neplatný formát přihlašovacího jména"

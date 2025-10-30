@@ -14,7 +14,6 @@ import org.springframework.stereotype.Component;
 
 /**
  * Retrieves value of item's source IdM attribute.
- * TODO handle attribute values returned as lists (or `;` seperated values),e.g. preferred mails
  */
 @Component
 public class IdmAttributePrefillStrategy implements PrefillStrategy {
