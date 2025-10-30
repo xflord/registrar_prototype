@@ -30,6 +30,7 @@ import java.util.stream.Collectors;
 import org.perun.registrarprototype.events.IdMUserCreatedEvent;
 import org.perun.registrarprototype.events.MemberCreatedEvent;
 import org.perun.registrarprototype.exceptions.DataInconsistencyException;
+import org.perun.registrarprototype.exceptions.IdmAttributeNotExistsException;
 import org.perun.registrarprototype.models.Application;
 import org.perun.registrarprototype.models.FormItem;
 import org.perun.registrarprototype.models.FormItemData;
@@ -163,7 +164,7 @@ public class PerunIdMService implements IdMService {
   }
 
   @Override
-  public String getUserAttribute(Integer userId, String attributeName) {
+  public String getUserAttribute(Integer userId, String attributeName) throws IdmAttributeNotExistsException {
     System.out.println("Calling getRegistrarRolesByUserId with parameter " + userId + " and attribute " + attributeName);
 
     if (userId == null) {
@@ -176,7 +177,7 @@ public class PerunIdMService implements IdMService {
     } catch (PerunRuntimeException ex) {
       if (ex.getName().equals("AttributeNotExistsException")) {
         // TODO log these (missing source attributes) as misconfigured forms
-        return null;
+        throw new IdmAttributeNotExistsException(ex.getMessage(), attributeName);
       } else {
         throw ex;
       }
@@ -184,7 +185,8 @@ public class PerunIdMService implements IdMService {
   }
 
   @Override
-  public String getMemberAttribute(Integer userId, String attributeName, int groupId) {
+  public String getMemberAttribute(Integer userId, String attributeName, int groupId)
+      throws IdmAttributeNotExistsException {
     System.out.println("Calling getRegistrarRolesByUserId with parameter " + userId + " and attribute " + attributeName);
 
     if (userId == null) {
@@ -207,7 +209,7 @@ public class PerunIdMService implements IdMService {
     } catch (PerunRuntimeException ex) {
       if (ex.getName().equals("AttributeNotExistsException")) {
         // TODO log these (missing source attributes) as misconfigured forms
-        return null;
+        throw new IdmAttributeNotExistsException(ex.getMessage(), attributeName);
       } else {
         throw ex;
       }
@@ -215,7 +217,8 @@ public class PerunIdMService implements IdMService {
   }
 
   @Override
-  public String getMemberGroupAttribute(Integer userId, String attributeName, int groupId) {
+  public String getMemberGroupAttribute(Integer userId, String attributeName, int groupId)
+      throws IdmAttributeNotExistsException {
     if (userId == null) {
       return null;
     }
@@ -236,7 +239,7 @@ public class PerunIdMService implements IdMService {
     } catch (PerunRuntimeException ex) {
       if (ex.getName().equals("AttributeNotExistsException")) {
         // TODO log these (missing source attributes) as misconfigured forms
-        return null;
+        throw new IdmAttributeNotExistsException(ex.getMessage(), attributeName);
       } else {
         throw ex;
       }
@@ -273,13 +276,13 @@ public class PerunIdMService implements IdMService {
   }
 
   @Override
-  public String getVoAttribute(String attributeName, int voId) {
+  public String getVoAttribute(String attributeName, int voId) throws IdmAttributeNotExistsException {
     try {
       Attribute attr = rpc.getAttributesManager().getVoAttributeByName(voId, attributeName);
       return attr.getValue() == null ? null : attr.getValue().toString();
     } catch (PerunRuntimeException ex) {
       if (ex.getName().equals("AttributeNotExistsException")) {
-        return null;
+        throw new IdmAttributeNotExistsException(ex.getMessage(), attributeName);
       } else {
         throw ex;
       }
@@ -287,14 +290,14 @@ public class PerunIdMService implements IdMService {
   }
 
   @Override
-  public String getGroupAttribute(String attributeName, int groupId) {
+  public String getGroupAttribute(String attributeName, int groupId) throws IdmAttributeNotExistsException {
     try {
       Attribute attr = rpc.getAttributesManager().getGroupAttributeByName(groupId, attributeName);
       return attr.getValue() == null ? null : attr.getValue().toString();
     } catch (PerunRuntimeException ex) {
       if (ex.getName().equals("AttributeNotExistsException")) {
         // TODO log these (missing source attributes) as misconfigured forms
-        return null;
+        throw new IdmAttributeNotExistsException(ex.getMessage(), attributeName);
       } else {
         throw ex;
       }
@@ -349,7 +352,7 @@ public class PerunIdMService implements IdMService {
   }
 
   @Override
-  public void reservePassword(String login, String namespace, String password) {
+  public void reservePassword(String namespace, String login, String password) {
 
   }
 
@@ -359,7 +362,7 @@ public class PerunIdMService implements IdMService {
   }
 
   @Override
-  public void deletePassword(String login, String namespace) {
+  public void deletePassword(String namespace, String login) {
 
   }
 

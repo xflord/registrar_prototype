@@ -1,6 +1,5 @@
 package org.perun.registrarprototype.services;
 
-import cz.metacentrum.perun.openapi.model.AttributeDefinition;
 import io.micrometer.common.util.StringUtils;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -18,6 +17,7 @@ import org.perun.registrarprototype.events.ApplicationSubmittedEvent;
 import org.perun.registrarprototype.events.ApplicationVerifiedEvent;
 import org.perun.registrarprototype.events.ChangesRequestedToApplicationEvent;
 import org.perun.registrarprototype.exceptions.DataInconsistencyException;
+import org.perun.registrarprototype.exceptions.IdmAttributeNotExistsException;
 import org.perun.registrarprototype.exceptions.InsufficientRightsException;
 import org.perun.registrarprototype.exceptions.InvalidApplicationDataException;
 import org.perun.registrarprototype.exceptions.InvalidApplicationStateTransitionException;
@@ -107,6 +107,8 @@ public class ApplicationServiceImpl implements ApplicationService {
 
     // user could have consolidated identities in perun in time between submission and approval
     if (app.getIdmUserId() == null) {
+      // TODO use ISSUER here to retrieve user instead of a hardcoded ext source name. Also find out how the naming in perun
+      //  works, e.g. iss `https://login.e-infra.cz/oidc/` maps to `https://login.e-infra.cz/idp/`
       Integer perunUserId = idmService.getUserIdByIdentifier(app.getSubmission().getIdentityIdentifier());
       app.setIdmUserId(perunUserId);
     }
@@ -131,21 +133,21 @@ public class ApplicationServiceImpl implements ApplicationService {
    * @return
    */
   private Integer propagateApprovalToIdm(Application application) {
-    // TODO unreserve logins
-    application.getFormItemData().stream()
-        .filter(data -> data.getFormItem().getType().equals(FormItem.Type.LOGIN))
-        .filter(loginItem -> idmService.releaseLogin())
+    releaseLogins(application.getFormItemData());
+    dropExistingLogins(application);
+
+    Integer perunUserId = null;
 
     if (application.getType().equals(FormSpecification.FormType.INITIAL)) {
       if (application.getIdmUserId() == null) {
-        return idmService.createMemberForCandidate(application);
+        perunUserId = idmService.createMemberForCandidate(application);
+      } else {
+        perunUserId = idmService.createMemberForUser(application);
       }
-      return idmService.createMemberForUser(application);
     } else if (application.getType().equals(FormSpecification.FormType.EXTENSION)) {
-      return idmService.extendMembership(application);
+      perunUserId = idmService.extendMembership(application);
     }
-    // TODO prolly should not happen
-    return null;
+    return perunUserId;
   }
 
   /**
@@ -318,6 +320,7 @@ public class ApplicationServiceImpl implements ApplicationService {
     validateFilledFormData(applicationForm);
     normalizeFilledFormData(applicationForm);
     applicationForm.getFormItemData().forEach(item -> checkPrefilledValueConsistency(sess, item));
+    reserveLogins(applicationForm.getFormItemData()); // TODO handle reserved logins if creating app object fails
 
     Application app = new Application(0, sess.getPrincipal().id(), formSpecification,
         applicationForm.getFormItemData(), null, applicationForm.getType());
@@ -332,7 +335,6 @@ public class ApplicationServiceImpl implements ApplicationService {
 
     app = applicationRepository.save(app);
 
-    reserveLogins(applicationForm.getFormItemData());
 
     // TODO if we emit events asynchronously this might be problematic (not sure rollback would work here)
     eventService.emitEvent(new ApplicationSubmittedEvent(app));
@@ -832,9 +834,56 @@ public class ApplicationServiceImpl implements ApplicationService {
 
   }
 
+  /**
+   * Checks user attributes for existing login values, unreserve password if they do exist. Set login attributes if not.
+   * TODO the reason for a separate assignment of login attribute values is to not overwrite existing ones. This can be
+   *  solved by checking existing logins before assigning all attributes, filtering those items out (while unreserving passwords),
+   *  and bulk assigning all items at once. This is easily done when we know user exists in perun (createMemberForUser/extendMembership calls)
+   *  A potentially problematic case is `createMemberForCandidate` (at least that's what old registrar says), because it
+   *  can join identities during the call. But all the method does is search using `getUserByExtSourceNameAndExtLogin`,
+   *  which is what we do in `approveApplication` earlier - e.g. we should be able to tell (almost) for sure whether logins
+   *  exist or not
+   * @param application
+   */
+  private void dropExistingLogins(Application application) {
+    List<FormItemData> loginItemsToLeaveOut = new ArrayList<>();
+    if (application.getIdmUserId() != null) {
+      application.getFormItemData().stream()
+          .filter(item -> item.getFormItem().getType().equals(FormItem.Type.LOGIN))
+          .forEach(loginItem -> {
+            String perunLogin;
+            try {
+              perunLogin =
+                  idmService.getUserAttribute(application.getIdmUserId(), loginItem.getFormItem().getDestinationIdmAttribute());
+            } catch (IdmAttributeNotExistsException e) {
+              // TODO login attribute definition was removed in IdM between submission and approval, alert admins?
+              throw new IllegalStateException("Login item attribute has been deleted in the underlying IdM system, " +
+                                                 e.getMessage());
+            }
+            String itemLogin = loginItem.getValue();
+            String namespace = extractNamespaceFromLoginAttrName(loginItem.getFormItem().getDestinationIdmAttribute());
+            if (!StringUtils.isEmpty(perunLogin)) {
+              loginItemsToLeaveOut.add(loginItem);
+              idmService.deletePassword(namespace, itemLogin);
+              System.out.println("Unreserving new login " + itemLogin + " in namespace " + namespace + " since user already " +
+                                     "has a login " + perunLogin + "in the same namespace.");
+            }
+          });
+      application.getFormItemData().removeAll(loginItemsToLeaveOut);
+    }
+  }
 
   private void releaseLogins(List<FormItemData> itemData) {
-    // TODO filter login items, retrieve their namespace (create a private method to do this instead of calling IdM), release them
+    itemData.stream()
+        .filter(item -> item.getFormItem().getType().equals(FormItem.Type.LOGIN))
+        .forEach(loginItem -> {
+          String namespace = extractNamespaceFromLoginAttrName(loginItem.getFormItem().getDestinationIdmAttribute());
+          if (namespace == null) {
+            throw new IllegalStateException("Destination attribute of " + loginItem + " is not a login-namespace attribute.");
+          }
+          String login =  loginItem.getValue();
+          idmService.releaseLogin(namespace, login);
+        });
   }
 
   /**
@@ -852,18 +901,17 @@ public class ApplicationServiceImpl implements ApplicationService {
           continue;
         }
         // could be a lot of calls, at the same time this checks that the attribute actually exists
-        AttributeDefinition attrDef = idmService.getAttributeDefinition(formItemData.getFormItem().getDestinationIdmAttribute());
-        if (attrDef == null) {
-          // TODO probably throw an error here
-          continue;
+        // AttributeDefinition attrDef = idmService.getAttributeDefinition(formItemData.getFormItem().getDestinationIdmAttribute());
+        String namespace = extractNamespaceFromLoginAttrName(formItemData.getFormItem().getDestinationIdmAttribute());
+        if (namespace == null) {
+          throw new IllegalStateException("Destination attribute of " + formItemData + " is not a login-namespace attribute.");
         }
-        String namespace =  attrDef.getNamespace();
         String login =  formItemData.getValue();
         if (idmService.isLoginAvailable(namespace, login)) {
           idmService.reserveLogin(namespace, login);
           itemData.stream()
               .filter(passwordItem -> passwordItem.getFormItem().getType().equals(FormItem.Type.PASSWORD))
-              .forEach(passwordItem -> idmService.reservePassword(login, namespace, passwordItem.getValue()));
+              .forEach(passwordItem -> idmService.reservePassword(namespace, login, passwordItem.getValue()));
 
         } else {
           // TODO unified ApplicationNotCreated event once we have custom checked exceptions and can collect them to notify administrators
@@ -871,6 +919,22 @@ public class ApplicationServiceImpl implements ApplicationService {
         }
       }
     }
+  }
+
+  private String extractNamespaceFromLoginAttrName(String loginAttrName) {
+    if (loginAttrName == null || !loginAttrName.contains("login-namespace")) {
+      return null; // Not a login-namespace attribute
+    }
+
+    String[] parts = loginAttrName.split("login-namespace:");
+
+    // If there is a namespace part after "login-namespace:"
+    if (parts.length > 1 && !parts[1].isEmpty()) {
+      return parts[1]; // return e.g. "admin-meta"
+    }
+
+    // If there’s nothing after "login-namespace:", it has no namespace
+    return null;
   }
 
   /**

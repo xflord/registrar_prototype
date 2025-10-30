@@ -4,6 +4,7 @@ import cz.metacentrum.perun.openapi.model.AttributeDefinition;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import org.perun.registrarprototype.exceptions.IdmAttributeNotExistsException;
 import org.perun.registrarprototype.models.Application;
 import org.perun.registrarprototype.models.FormItemData;
 import org.perun.registrarprototype.models.Identity;
@@ -44,17 +45,17 @@ public interface IdMService {
 
   Map<Role, Set<Integer>> getRolesByUserId(Integer userId);
 
-  String getUserAttribute(Integer userId, String attributeName);
+  String getUserAttribute(Integer userId, String attributeName) throws IdmAttributeNotExistsException;
 
-  String getMemberAttribute(Integer userId, String attributeName, int groupId);
+  String getMemberAttribute(Integer userId, String attributeName, int groupId) throws IdmAttributeNotExistsException;
 
-  String getMemberGroupAttribute(Integer userId, String attributeName, int groupId);
+  String getMemberGroupAttribute(Integer userId, String attributeName, int groupId) throws IdmAttributeNotExistsException;
 
   boolean canExtendMembership(Integer userId, int groupId);
 
-  String getVoAttribute(String attributeName, int voId);
+  String getVoAttribute(String attributeName, int voId) throws IdmAttributeNotExistsException;
 
-  String getGroupAttribute(String attributeName, int groupId);
+  String getGroupAttribute(String attributeName, int groupId) throws IdmAttributeNotExistsException;
 
   AttributeDefinition getAttributeDefinition(String attributeName);
 
@@ -70,9 +71,9 @@ public interface IdMService {
   // TODO is this necessary? If we have the login attribute urn, we can simply use `getUserAttribute`
   boolean doesUserHaveExistingLoginSet(Integer userId, String namespace);
 
-  void reservePassword(String login, String namespace, String password);
+  void reservePassword(String namespace, String login, String password);
   void validatePassword(Integer userId, String namespace);
-  void deletePassword(String login, String namespace);
+  void deletePassword(String namespace, String login);
 
   String getLoginAttributeUrn();
 

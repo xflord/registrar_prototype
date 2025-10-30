@@ -310,6 +310,7 @@ public class FormItem {
   }
 
   public enum Type {
+    // TODO see whether there's an existing library for form design, also consider custom CSS styling for forms (can it break the whole design, injection, etc.)
     ROW,
     SECTION,
     SUBMIT_BUTTON,
