@@ -46,7 +46,7 @@ import org.perun.registrarprototype.security.CurrentUser;
 import org.perun.registrarprototype.security.RegistrarAuthenticationToken;
 import org.perun.registrarprototype.security.SessionProvider;
 import org.perun.registrarprototype.services.idmIntegration.IdMService;
-import org.perun.registrarprototype.services.prefillStrategy.PrefillStrategy;
+import org.perun.registrarprototype.services.prefillStrategy.impl.CompositePrefillStrategy;
 import org.perun.registrarprototype.services.prefillStrategy.impl.PrefillStrategyResolver;
 import org.springframework.stereotype.Service;
 
@@ -428,10 +428,8 @@ public class ApplicationServiceImpl implements ApplicationService {
       return;
     }
 
-    PrefillStrategy itemPrefillStrategy = prefillStrategyResolver.resolveFor(itemData.getFormItem());
-    itemPrefillStrategy.validateOptions(itemData.getFormItem().getPrefillStrategyOptions());
-    Optional<String> prefilledValue = itemPrefillStrategy.prefill(itemData.getFormItem(),
-        itemData.getFormItem().getPrefillStrategyOptions());
+    CompositePrefillStrategy itemPrefillStrategies = prefillStrategyResolver.resolveFor(itemData.getFormItem());
+    Optional<String> prefilledValue = itemPrefillStrategies.prefill(itemData.getFormItem());
     if (prefilledValue.isEmpty()) {
       return;
     }
@@ -733,8 +731,8 @@ public class ApplicationServiceImpl implements ApplicationService {
     List<FormItemData> itemsWithMissingData = new ArrayList<>();
     prefilledItems.stream()
         .filter(item -> hasItemIncorrectVisibility(item, prefilledItems)).forEach(item -> {
-          if (item.getFormItem().getPrefillStrategyTypes() == null ||
-              item.getFormItem().getPrefillStrategyTypes().isEmpty()) {
+          if (item.getFormItem().getPrefillStrategyOptions() == null ||
+              item.getFormItem().getPrefillStrategyOptions().isEmpty()) {
             unmodifiableRequiredButEmpty.add(item);
           } else {
             itemsWithMissingData.add(item);
@@ -826,9 +824,8 @@ public class ApplicationServiceImpl implements ApplicationService {
       return item.getDefaultValue();
     }
 
-    PrefillStrategy itemPrefillStrategy = prefillStrategyResolver.resolveFor(item);
-    itemPrefillStrategy.validateOptions(item.getPrefillStrategyOptions());
-    Optional<String> prefilledValue = itemPrefillStrategy.prefill(item, item.getPrefillStrategyOptions());
+    CompositePrefillStrategy itemPrefillStrategies = prefillStrategyResolver.resolveFor(item);
+    Optional<String> prefilledValue = itemPrefillStrategies.prefill(item);
 
     return prefilledValue.orElseGet(item::getDefaultValue);
 

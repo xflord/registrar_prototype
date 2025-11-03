@@ -12,33 +12,23 @@ import org.perun.registrarprototype.services.prefillStrategy.PrefillStrategy;
  * account for this in gui when setting the strategies).
  * It is expected that strategies are returned within this composite, even when there is only one strategy.
  */
-public class CompositePrefillStrategy implements PrefillStrategy {
+public class CompositePrefillStrategy  {
 
   private final List<PrefillStrategy> strategies;
-  public CompositePrefillStrategy(List<PrefillStrategy> strategies) {
+  private final Map<PrefillStrategy, Map<String, String>> options;
+  public CompositePrefillStrategy(List<PrefillStrategy> strategies, Map<PrefillStrategy, Map<String, String>> options) {
     this.strategies = strategies;
+    this.options = options;
   }
 
-  @Override
-  public Optional<String> prefill(FormItem item, Map<String, String> options) {
+  public Optional<String> prefill(FormItem item) {
     for (PrefillStrategy strategy : strategies) {
-      Optional<String> result = strategy.prefill(item, strategy.getTypeSpecificOptions(options));
+      strategy.validateOptions(options.get(strategy));
+      Optional<String> result = strategy.prefill(item, options.get(strategy));
       if (result.isPresent()) {
         return result;
       }
     }
     return Optional.empty();
-  }
-
-  @Override
-  public void validateOptions(Map<String, String> options) {
-    for (PrefillStrategy strategy : strategies) {
-      strategy.validateOptions(strategy.getTypeSpecificOptions(options));
-    }
-  }
-
-  @Override
-  public FormItem.PrefillStrategyType getType() {
-    return null;
   }
 }

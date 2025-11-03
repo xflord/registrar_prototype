@@ -1,5 +1,6 @@
 package org.perun.registrarprototype.models;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
@@ -35,8 +36,7 @@ public class FormItem {
   private boolean updatable;
   private boolean required;
   private String constraint; // regex or similar
-  private List<PrefillStrategyType> prefillStrategyTypes;
-  private Map<String, String> prefillStrategyOptions; // options for prefill strategies (keys are prefixed with the strategy type)
+  private List<PrefillStrategyEntry> prefillStrategyOptions = new ArrayList<>(); // options for prefill strategies  TODO how to persist? might need separate table
   private String destinationIdmAttribute;
   private String defaultValue;
   private List<FormSpecification.FormType> formTypes = List.of(FormSpecification.FormType.INITIAL, FormSpecification.FormType.EXTENSION);
@@ -142,21 +142,16 @@ public class FormItem {
     this.type = type;
   }
 
-  public List<PrefillStrategyType> getPrefillStrategyTypes() {
-    return prefillStrategyTypes;
-  }
-
-  public Map<String, String> getPrefillStrategyOptions() {
+  public List<PrefillStrategyEntry> getPrefillStrategyOptions() {
     return prefillStrategyOptions;
   }
 
-  public void setPrefillStrategyOptions(Map<String, String> prefillStrategyOptions) {
+  public void setPrefillStrategyOptions(List<PrefillStrategyEntry> prefillStrategyOptions) {
     this.prefillStrategyOptions = prefillStrategyOptions;
   }
 
-  public void setPrefillStrategyTypes(
-      List<PrefillStrategyType> prefillStrategyTypes) {
-    this.prefillStrategyTypes = prefillStrategyTypes;
+  public void addPrefillStrategyEntry(PrefillStrategyEntry prefillStrategyEntry) {
+    this.prefillStrategyOptions.add(prefillStrategyEntry);
   }
 
   public ValidationError validate(FormItemData response) {
@@ -353,6 +348,13 @@ public class FormItem {
   }
 
   public enum PrefillStrategyType {
-    IDENTITY_ATTRIBUTE, IDM_ATTRIBUTE, LOGIN_ATTRIBUTE, APPLICATION
+    IDENTITY_ATTRIBUTE, IDM_ATTRIBUTE, LOGIN_ATTRIBUTE, APPLICATION;
+
+    public List<String> getRequiredOptions() {
+      return switch (this) {
+        case IDENTITY_ATTRIBUTE, IDM_ATTRIBUTE -> List.of("sourceAttribute");
+        default -> new ArrayList<>();
+      };
+    }
   }
 }

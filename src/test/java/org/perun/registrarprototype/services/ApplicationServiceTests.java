@@ -1,5 +1,6 @@
 package org.perun.registrarprototype.services;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -11,6 +12,7 @@ import org.perun.registrarprototype.models.FormSpecification;
 import org.perun.registrarprototype.models.FormItem;
 import org.perun.registrarprototype.models.FormItemData;
 import org.perun.registrarprototype.models.ApplicationForm;
+import org.perun.registrarprototype.models.PrefillStrategyEntry;
 import org.springframework.boot.test.context.SpringBootTest;
 
 @SpringBootTest
@@ -68,7 +70,7 @@ class ApplicationServiceTests extends GenericRegistrarServiceTests {
 
     FormItemData formItemData1 = new FormItemData(item1, "test@gmail.com");
 
-    Application app = applicationService.applyForMembership(new ApplicationForm(formSpecification, List.of(formItemData1), FormSpecification.FormType.INITIAL), submission, "");
+    Application app = applicationService.applyForMembership(new ApplicationForm(formSpecification, new ArrayList<>(List.of(formItemData1)), FormSpecification.FormType.INITIAL), submission, "");
 
     Application createdApp = applicationRepository.findById(app.getId()).orElse(null);
 
@@ -127,9 +129,8 @@ class ApplicationServiceTests extends GenericRegistrarServiceTests {
 
     FormItem item1 = new FormItem(1, FormItem.Type.TEXTFIELD);
     Map<String, String> prefillStrategyOptions = new HashMap<>();
-    prefillStrategyOptions.put(FormItem.PrefillStrategyType.IDENTITY_ATTRIBUTE + ".sourceAttribute", "testAttribute");
-    item1.setPrefillStrategyTypes(List.of(FormItem.PrefillStrategyType.IDENTITY_ATTRIBUTE));
-    item1.setPrefillStrategyOptions(prefillStrategyOptions);
+    prefillStrategyOptions.put("sourceAttribute", "testAttribute");
+    item1.addPrefillStrategyEntry(new PrefillStrategyEntry(FormItem.PrefillStrategyType.IDENTITY_ATTRIBUTE, prefillStrategyOptions));
     item1 = formService.setFormItem(formSpecification.getId(), item1);
 
     List<FormItemData> data = applicationService.loadForm(sessionProvider.getCurrentSession(), formSpecification, FormSpecification.FormType.INITIAL);
@@ -139,5 +140,4 @@ class ApplicationServiceTests extends GenericRegistrarServiceTests {
     assert data.getFirst().getFormItem().getId() == item1.getId();
     assert data.getFirst().getPrefilledValue().equals("testValue");
   }
-
 }

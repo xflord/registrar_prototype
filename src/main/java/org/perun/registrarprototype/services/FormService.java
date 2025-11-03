@@ -155,6 +155,6 @@ public interface FormService {
    */
   FormItem createFormItem(FormItem item);
 
-  void updateFormItems( int formId, List<FormItem> newItems);
+  void updateFormItems( int formId, List<FormItem> updatedItems);
 }
 

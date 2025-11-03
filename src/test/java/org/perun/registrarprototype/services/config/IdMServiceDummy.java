@@ -77,6 +77,36 @@ public class IdMServiceDummy implements IdMService {
   }
 
   @Override
+  public void releaseLogin(String namespace, String login) {
+
+  }
+
+  @Override
+  public Map<String, String> getReservedLoginsForApplication(Application application) {
+    return Map.of();
+  }
+
+  @Override
+  public boolean doesUserHaveExistingLoginSet(Integer userId, String namespace) {
+    return false;
+  }
+
+  @Override
+  public void reservePassword(String namespace, String login, String password) {
+
+  }
+
+  @Override
+  public void validatePassword(Integer userId, String namespace) {
+
+  }
+
+  @Override
+  public void deletePassword(String namespace, String login) {
+
+  }
+
+  @Override
   public String getLoginAttributeUrn() {
     return "";
   }

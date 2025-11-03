@@ -43,11 +43,13 @@ public class FormServiceImpl implements FormService {
   private final ApplicationContext context;
   private final ApplicationRepository applicationRepository;
   private final SessionProvider sessionProvider;
+  private final AttributePolicyService attributePolicyService;
 
   public FormServiceImpl(FormRepository formRepository, AuthorizationService authorizationService,
                          FormModuleRepository formModuleRepository, ApplicationContext context,
                          FormItemRepository formItemRepository, FormTransitionRepository formTransitionRepository,
-                         ApplicationRepository applicationRepository, SessionProvider sessionProvider) {
+                         ApplicationRepository applicationRepository, SessionProvider sessionProvider,
+                         AttributePolicyService attributePolicyService) {
     this.formRepository = formRepository;
     this.authorizationService = authorizationService;
     this.formModuleRepository = formModuleRepository;
@@ -56,6 +58,7 @@ public class FormServiceImpl implements FormService {
     this.formTransitionRepository = formTransitionRepository;
     this.applicationRepository = applicationRepository;
     this.sessionProvider = sessionProvider;
+    this.attributePolicyService = attributePolicyService;
   }
 
   @Override
@@ -278,13 +281,19 @@ public class FormServiceImpl implements FormService {
 
   @Override
   // TODO make transactional?
-  public void updateFormItems(int formId, List<FormItem> newItems) {
+  public void updateFormItems(int formId, List<FormItem> updatedItems) {
     formRepository.findById(formId).orElseThrow(() -> new IllegalArgumentException("Form with ID " + formId + " not found"));
 
-    if (!validateUniqueOrdNums(newItems)) {
+    if (!validateUniqueOrdNums(updatedItems)) {
       // is this the correct placement for the check?
       throw new IllegalArgumentException("Form items should have unique ordNums");
     }
+
+    updatedItems.forEach(formItem -> {
+      attributePolicyService.applyAttributePolicyToItem(formItem);
+      performTypeSpecificChecks(formItem);
+      checkPrefillStrategyOptions(formItem);
+    });
 
     List<FormItem> existingItems = formItemRepository.getFormItemsByFormId(formId);
 
@@ -295,7 +304,7 @@ public class FormServiceImpl implements FormService {
     Map<Integer, Integer> newIdMap = new HashMap<>();
 
     // new items
-    newItems.stream()
+    updatedItems.stream()
         .filter(formItem -> formItem.getId() < 0)
         .forEach(formItem -> {
           FormItem createdItem = formItemRepository.save(formItem);
@@ -303,14 +312,14 @@ public class FormServiceImpl implements FormService {
         });
 
     // updates
-    for (FormItem newItem : newItems) {
-      int actualId = newItem.getId();
+    for (FormItem updatedItem : updatedItems) {
+      int actualId = updatedItem.getId();
       if (actualId < 0) {
-        actualId = newIdMap.get(newItem.getId());
+        actualId = newIdMap.get(updatedItem.getId());
       } else {
         // check that updated items do not change destination, if so then warn/throw exception
         String oldDestination = existingById.get(actualId).getDestinationIdmAttribute();
-        String newDestination = newItem.getDestinationIdmAttribute();
+        String newDestination = updatedItem.getDestinationIdmAttribute();
         boolean hasOpenApplications = applicationRepository.findByFormId(formId).stream()
             .anyMatch(app -> app.getState().isOpenState());
         if (!oldDestination.equals(newDestination) && hasOpenApplications) {
@@ -323,21 +332,19 @@ public class FormServiceImpl implements FormService {
       FormItem item = existingById.get(actualId);
       if (item == null) {
         item = formItemRepository.getFormItemById(actualId)
-                   .orElseThrow(() -> new DataInconsistencyException("Form item with id " + newItem.getId() + " should exist"));
+                   .orElseThrow(() -> new DataInconsistencyException("Form item with id " + updatedItem.getId() + " should exist"));
       }
-
-      performTypeSpecificChecks(item);
 
       item.setParentId(resolveReferenceItemId(item.getParentId(), newIdMap));
       item.setHiddenDependencyItemId(resolveReferenceItemId(item.getHiddenDependencyItemId(), newIdMap));
       item.setDisabledDependencyItemId(resolveReferenceItemId(item.getDisabledDependencyItemId(), newIdMap));
-      // item.setOrdNum(newItem.getOrdNum());
+      // item.setOrdNum(updatedItem.getOrdNum());
 
       formItemRepository.save(item);
     }
 
     // removal
-    Set<Integer> incomingRealIds = newItems.stream()
+    Set<Integer> incomingRealIds = updatedItems.stream()
         .map(formItem -> resolveReferenceItemId(formItem.getId(), newIdMap))
         .collect(Collectors.toSet());
 
@@ -352,6 +359,26 @@ public class FormServiceImpl implements FormService {
     validateFormStructureAndDeps(finalItems);
 
     checkFormItemVisibility(finalItems);
+  }
+
+  /**
+   * If there are prefill strategies defined, checks that the options map contains all the required entries
+   * @param formItem
+   */
+  private void checkPrefillStrategyOptions(FormItem formItem) {
+    if (formItem.getPrefillStrategyOptions() != null) {
+      formItem.getPrefillStrategyOptions().forEach(entry -> {
+        List<String> requiredOptions = entry.getPrefillStrategyType().getRequiredOptions();
+        if (!requiredOptions.isEmpty()) {
+          if (entry.getOptions() == null) {
+            throw new IllegalArgumentException("No prefill options are defined but are required for strategy " + entry);
+          }
+          if (!entry.getOptions().keySet().containsAll(requiredOptions)) {
+            throw new IllegalArgumentException("Missing required options ( " + requiredOptions + " for strategy " + entry);
+          }
+        }
+      });
+    }
   }
 
   private void performTypeSpecificChecks(FormItem item) {
@@ -369,7 +396,7 @@ public class FormServiceImpl implements FormService {
       if (item.getDestinationIdmAttribute() != null) {
         throw new IllegalArgumentException("Layout form item " + item + " cannot have a destination attribute");
       }
-      if (item.getPrefillStrategyTypes() != null || !item.getPrefillStrategyTypes().isEmpty()) {
+      if (item.getPrefillStrategyOptions() != null || !item.getPrefillStrategyOptions().isEmpty()) {
         throw new IllegalArgumentException("Layout form item " + item + " cannot have a prefill strategy");
       }
     }
@@ -430,7 +457,7 @@ public class FormServiceImpl implements FormService {
 
   private boolean isItemPrefillEmpty(FormItem item) {
     return StringUtils.isEmpty(item.getDefaultValue()) &&
-               (item.getPrefillStrategyTypes() == null || item.getPrefillStrategyTypes().isEmpty());
+               (item.getPrefillStrategyOptions() == null || item.getPrefillStrategyOptions().isEmpty());
   }
 
   private boolean isEmptyItemHidden(FormItem item, Map<Integer, FormItem> formItemMap, Set<Integer> seenItems) {

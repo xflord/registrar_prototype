@@ -63,7 +63,7 @@ public class IdmAttributePrefillStrategy implements PrefillStrategy {
   @Override
   public void validateOptions(Map<String, String> options) {
     if (!options.containsKey("sourceAttribute")) {
-          throw new IllegalArgumentException("Missing sourceAttr config");
+          throw new IllegalArgumentException("Missing sourceAttribute config");
         }
   }
 

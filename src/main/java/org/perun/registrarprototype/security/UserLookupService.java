@@ -19,7 +19,7 @@ public class UserLookupService {
   private final WebClient webClient = WebClient.create();
   private final ObjectMapper objectMapper = new ObjectMapper();
   @Value( "${idp.user-info-uri}")
-  private String userInfoEndpoint;
+  private String userInfoEndpoint; // TODO more IDPs will be present to userinfo either has to be emitted or retrieved from the openid config
   private final IdMService idmService;
   private final RoleService roleService;
 
