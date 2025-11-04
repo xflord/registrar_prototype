@@ -4,6 +4,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
 import org.perun.registrarprototype.models.FormItem;
+import org.perun.registrarprototype.models.PrefillStrategyEntry;
 import org.perun.registrarprototype.security.CurrentUser;
 import org.perun.registrarprototype.security.SessionProvider;
 import org.perun.registrarprototype.services.idmIntegration.IdMService;
@@ -26,7 +27,7 @@ public class LoginItemPrefillStrategy implements PrefillStrategy {
 
 
   @Override
-  public Optional<String> prefill(FormItem item, Map<String, String> options) {
+  public Optional<String> prefill(FormItem item, PrefillStrategyEntry entry) {
     if (!item.getType().equals(FormItem.Type.LOGIN)) {
       throw new IllegalStateException("This strategy can only be used for LOGIN items");
     }
@@ -44,7 +45,7 @@ public class LoginItemPrefillStrategy implements PrefillStrategy {
   }
 
   @Override
-  public void validateOptions(Map<String, String> options) {
+  public void validateOptions(PrefillStrategyEntry entry) {
 
   }
 

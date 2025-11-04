@@ -18,6 +18,11 @@ public class FormItemRepositoryDummy implements FormItemRepository {
   }
 
   @Override
+  public List<FormItem> getFormItemsByDestinationAttribute(String urn) {
+    return formItems.stream().filter(item -> item.getDestinationIdmAttribute().equals(urn)).toList();
+  }
+
+  @Override
   public Optional<FormItem> getFormItemById(int formItemId) {
     return formItems.stream().filter(item -> item.getId() == formItemId).findFirst();
   }

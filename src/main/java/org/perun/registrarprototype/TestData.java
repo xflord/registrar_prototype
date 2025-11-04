@@ -31,14 +31,14 @@ public class TestData {
           null, ADDRESS_ATTR_DEF_M, null, List.of(FormSpecification.FormType.INITIAL), FormItem.Condition.NEVER,
           FormItem.Condition.NEVER, null, null);
       item1.addPrefillStrategyEntry(new PrefillStrategyEntry(
-          FormItem.PrefillStrategyType.IDM_ATTRIBUTE, Map.of("sourceAttribute", ADDRESS_ATTR_DEF_U)));
+          FormItem.PrefillStrategyType.IDM_ATTRIBUTE, new HashMap<>(), ADDRESS_ATTR_DEF_U));
       item1 = formService.createFormItem(item1);
 
       ItemTexts itemTexts2 = new ItemTexts("Full name", "Enter your full name", "Name is required");
       FormItem item2 = new FormItem(0, 0, "full name", null, 1, FormItem.Type.TEXTFIELD, new HashMap<>(Map.of(Locale.ENGLISH, itemTexts2)), false, true,
           null, DISPLAY_NAME_ATTR_DEF_U, null, List.of(FormSpecification.FormType.INITIAL), FormItem.Condition.NEVER,
           FormItem.Condition.IF_PREFILLED, null, null);
-      item2.addPrefillStrategyEntry(new PrefillStrategyEntry(FormItem.PrefillStrategyType.IDENTITY_ATTRIBUTE, Map.of("sourceAttribute", "name")));
+      item2.addPrefillStrategyEntry(new PrefillStrategyEntry(FormItem.PrefillStrategyType.IDENTITY_ATTRIBUTE, new HashMap<>(), "name"));
       item2 = formService.createFormItem(item2);
 
       FormSpecification formSpecification = formService.createForm(20644, List.of(item1, item2));

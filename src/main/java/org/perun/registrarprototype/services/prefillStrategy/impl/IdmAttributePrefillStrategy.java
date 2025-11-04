@@ -1,11 +1,13 @@
 package org.perun.registrarprototype.services.prefillStrategy.impl;
 
+import io.micrometer.common.util.StringUtils;
 import java.util.Map;
 import java.util.Optional;
 import org.perun.registrarprototype.exceptions.DataInconsistencyException;
 import org.perun.registrarprototype.exceptions.IdmAttributeNotExistsException;
 import org.perun.registrarprototype.models.FormItem;
 import org.perun.registrarprototype.models.FormSpecification;
+import org.perun.registrarprototype.models.PrefillStrategyEntry;
 import org.perun.registrarprototype.repositories.FormRepository;
 import org.perun.registrarprototype.security.SessionProvider;
 import org.perun.registrarprototype.services.idmIntegration.IdMService;
@@ -28,13 +30,13 @@ public class IdmAttributePrefillStrategy implements PrefillStrategy {
   }
 
   @Override
-  public Optional<String> prefill(FormItem item, Map<String, String> options) {
+  public Optional<String> prefill(FormItem item, PrefillStrategyEntry entry) {
     FormSpecification
         formSpecification = formRepository.findById(item.getFormId())
                                 .orElseThrow(() -> new DataInconsistencyException("Form with ID " + item.getFormId() + " not found for form item " + item.getId()));
 
 
-    String sourceAttr = options.get("sourceAttribute");
+    String sourceAttr = entry.getSourceAttribute();
     // TODO warn if vo/group not present but required for the attribute
     try {
       if (sourceAttr.startsWith(idmService.getUserAttributeUrn())) {
@@ -61,8 +63,8 @@ public class IdmAttributePrefillStrategy implements PrefillStrategy {
   }
 
   @Override
-  public void validateOptions(Map<String, String> options) {
-    if (!options.containsKey("sourceAttribute")) {
+  public void validateOptions(PrefillStrategyEntry entry) {
+    if (StringUtils.isEmpty(entry.getSourceAttribute())) {
           throw new IllegalArgumentException("Missing sourceAttribute config");
         }
   }

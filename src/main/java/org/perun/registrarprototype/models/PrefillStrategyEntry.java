@@ -6,10 +6,12 @@ import java.util.Objects;
 public class PrefillStrategyEntry {
   private FormItem.PrefillStrategyType prefillStrategyType;
   private Map<String, String> options;
+  private String sourceAttribute;
 
-  public PrefillStrategyEntry(FormItem.PrefillStrategyType prefillStrategyType, Map<String, String> options) {
+  public PrefillStrategyEntry(FormItem.PrefillStrategyType prefillStrategyType, Map<String, String> options, String sourceAttribute) {
     this.prefillStrategyType = prefillStrategyType;
     this.options = options;
+    this.sourceAttribute = sourceAttribute;
   }
 
   public FormItem.PrefillStrategyType getPrefillStrategyType() {
@@ -28,6 +30,14 @@ public class PrefillStrategyEntry {
     this.options = options;
   }
 
+  public String getSourceAttribute() {
+    return sourceAttribute;
+  }
+
+  public void setSourceAttribute(String sourceAttribute) {
+    this.sourceAttribute = sourceAttribute;
+  }
+
   @Override
   public boolean equals(Object o) {
     if (o == null || getClass() != o.getClass()) {
@@ -35,11 +45,21 @@ public class PrefillStrategyEntry {
     }
     PrefillStrategyEntry that = (PrefillStrategyEntry) o;
     return getPrefillStrategyType() == that.getPrefillStrategyType() &&
+               getSourceAttribute().equals(that.getSourceAttribute()) &&
                Objects.equals(getOptions(), that.getOptions());
   }
 
   @Override
   public int hashCode() {
-    return Objects.hash(getPrefillStrategyType(), getOptions());
+    return Objects.hash(getPrefillStrategyType(), getOptions(), getSourceAttribute());
+  }
+
+  @Override
+  public String toString() {
+    return "PrefillStrategyEntry{" +
+               "prefillStrategyType=" + prefillStrategyType +
+               ", options=" + options +
+               ", sourceAttribute='" + sourceAttribute + '\'' +
+               '}';
   }
 }

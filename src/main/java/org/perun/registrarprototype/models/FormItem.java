@@ -351,9 +351,13 @@ public class FormItem {
     IDENTITY_ATTRIBUTE, IDM_ATTRIBUTE, LOGIN_ATTRIBUTE, APPLICATION;
 
     public List<String> getRequiredOptions() {
+      return new ArrayList<>();
+    }
+
+    public boolean requiresSource() {
       return switch (this) {
-        case IDENTITY_ATTRIBUTE, IDM_ATTRIBUTE -> List.of("sourceAttribute");
-        default -> new ArrayList<>();
+        case IDENTITY_ATTRIBUTE, IDM_ATTRIBUTE -> true;
+        default -> false;
       };
     }
   }

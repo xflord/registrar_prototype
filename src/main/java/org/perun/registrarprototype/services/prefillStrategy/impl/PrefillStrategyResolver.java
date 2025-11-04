@@ -1,10 +1,7 @@
 package org.perun.registrarprototype.services.prefillStrategy.impl;
 
-import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
-import java.util.stream.Collectors;
+import java.util.Optional;
 import org.perun.registrarprototype.models.FormItem;
 import org.perun.registrarprototype.models.PrefillStrategyEntry;
 import org.perun.registrarprototype.services.prefillStrategy.PrefillStrategy;
@@ -23,27 +20,20 @@ public class PrefillStrategyResolver {
       this.strategies = strategies;
   }
 
-  public CompositePrefillStrategy resolveFor(FormItem item) {
-    List<PrefillStrategy> itemStrategies = new ArrayList<>();
-    Map<PrefillStrategy, Map<String, String>> optionsMap = new HashMap<>();
-
-    if (item.getType().equals(FormItem.Type.LOGIN)) {
-      itemStrategies.add(find(LoginItemPrefillStrategy.class));
-      optionsMap.put(find(LoginItemPrefillStrategy.class), null);
+  public Optional<String> prefill(FormItem item) {
+    for (PrefillStrategyEntry entry : item.getPrefillStrategyOptions()) {
+      PrefillStrategy prefillStrategy = getStrategyForKey(entry.getPrefillStrategyType());
+      prefillStrategy.validateOptions(entry);
+      Optional<String> result = prefillStrategy.prefill(item, entry);
+      if (result.isPresent()) {
+        return result;
+      }
     }
-
-    if (item.getPrefillStrategyOptions() != null && !item.getPrefillStrategyOptions().isEmpty()) {
-      itemStrategies.addAll(item.getPrefillStrategyOptions().stream()
-                                .map(this::getStrategyForKey).toList());
-      item.getPrefillStrategyOptions().forEach(option ->
-                                                  optionsMap.put(getStrategyForKey(option), option.getOptions()));
-    }
-
-    return new CompositePrefillStrategy(itemStrategies, optionsMap);
+    return Optional.empty();
   }
 
-  private PrefillStrategy getStrategyForKey(PrefillStrategyEntry prefillStrategyEntry) {
-    switch (prefillStrategyEntry.getPrefillStrategyType()) {
+  private PrefillStrategy getStrategyForKey(FormItem.PrefillStrategyType type) {
+    switch (type) {
       case IDM_ATTRIBUTE -> {
         return find(IdmAttributePrefillStrategy.class);
       }
@@ -54,7 +44,7 @@ public class PrefillStrategyResolver {
         return find(ExistingApplicationPrefillStrategy.class);
       }
     }
-    return null;
+    throw new IllegalArgumentException("Unsupported prefill strategy type: " + type);
   }
 
   private PrefillStrategy find(Class<? extends PrefillStrategy> type) {

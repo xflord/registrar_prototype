@@ -46,7 +46,6 @@ import org.perun.registrarprototype.security.CurrentUser;
 import org.perun.registrarprototype.security.RegistrarAuthenticationToken;
 import org.perun.registrarprototype.security.SessionProvider;
 import org.perun.registrarprototype.services.idmIntegration.IdMService;
-import org.perun.registrarprototype.services.prefillStrategy.impl.CompositePrefillStrategy;
 import org.perun.registrarprototype.services.prefillStrategy.impl.PrefillStrategyResolver;
 import org.springframework.stereotype.Service;
 
@@ -428,8 +427,7 @@ public class ApplicationServiceImpl implements ApplicationService {
       return;
     }
 
-    CompositePrefillStrategy itemPrefillStrategies = prefillStrategyResolver.resolveFor(itemData.getFormItem());
-    Optional<String> prefilledValue = itemPrefillStrategies.prefill(itemData.getFormItem());
+    Optional<String> prefilledValue = prefillStrategyResolver.prefill(itemData.getFormItem());
     if (prefilledValue.isEmpty()) {
       return;
     }
@@ -824,8 +822,7 @@ public class ApplicationServiceImpl implements ApplicationService {
       return item.getDefaultValue();
     }
 
-    CompositePrefillStrategy itemPrefillStrategies = prefillStrategyResolver.resolveFor(item);
-    Optional<String> prefilledValue = itemPrefillStrategies.prefill(item);
+    Optional<String> prefilledValue = prefillStrategyResolver.prefill(item);
 
     return prefilledValue.orElseGet(item::getDefaultValue);
 

@@ -4,22 +4,23 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
 import org.perun.registrarprototype.models.FormItem;
+import org.perun.registrarprototype.models.PrefillStrategyEntry;
 
 public interface PrefillStrategy {
   /**
    * Calculate the prefill value for the supplied item.
    * @param item
-   * @param options
+   * @param entry
    * @return
    */
-  Optional<String> prefill(FormItem item, Map<String, String> options);
+  Optional<String> prefill(FormItem item, PrefillStrategyEntry entry);
 
   /**
    * Validate that the options passed to the strategy include all the required entries and that they are in the expected
    * format.
-   * @param options
+   * @param entry
    */
-  void validateOptions(Map<String, String> options);
+  void validateOptions(PrefillStrategyEntry entry);
 
   /**
    * Return the type of the prefill strategy.

@@ -129,8 +129,7 @@ class ApplicationServiceTests extends GenericRegistrarServiceTests {
 
     FormItem item1 = new FormItem(1, FormItem.Type.TEXTFIELD);
     Map<String, String> prefillStrategyOptions = new HashMap<>();
-    prefillStrategyOptions.put("sourceAttribute", "testAttribute");
-    item1.addPrefillStrategyEntry(new PrefillStrategyEntry(FormItem.PrefillStrategyType.IDENTITY_ATTRIBUTE, prefillStrategyOptions));
+    item1.addPrefillStrategyEntry(new PrefillStrategyEntry(FormItem.PrefillStrategyType.IDENTITY_ATTRIBUTE, prefillStrategyOptions, "testAttribute"));
     item1 = formService.setFormItem(formSpecification.getId(), item1);
 
     List<FormItemData> data = applicationService.loadForm(sessionProvider.getCurrentSession(), formSpecification, FormSpecification.FormType.INITIAL);

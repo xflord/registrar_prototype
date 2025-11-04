@@ -15,7 +15,6 @@ import org.perun.registrarprototype.models.FormItem;
 import org.perun.registrarprototype.models.ItemTexts;
 import org.perun.registrarprototype.models.PrefillStrategyEntry;
 import org.perun.registrarprototype.services.AttributePolicyServiceImpl;
-import org.springframework.core.io.ClassPathResource;
 import org.springframework.core.io.ResourceLoader;
 import org.springframework.stereotype.Component;
 import org.yaml.snakeyaml.Yaml;
@@ -45,17 +44,23 @@ public class AttributePolicyYamlLoader {
                                                  new HashSet<>((List<String>) policyMap.get("allowedSourceAttributes"));
       attributePolicy.setAllowedSourceAttributes(allowedSourceAttributes);
       attributePolicy.setAllowAsSource(getBool(policyMap, "allowAsSource", false));
+      if (attributePolicy.isAllowAsSource()) {
+        attributePolicy.setSourcePrefillStrategy(policyMap.get("sourcePrefillStrategy") == null ? null :
+                                                     FormItem.PrefillStrategyType.valueOf((String) policyMap.get("sourcePrefillStrategy")));
+      }
 
       attributePolicy.setAllowedItemTypes(parseEnumSet(policyMap.get("allowedItemTypes"), FormItem.Type.class));
-      attributePolicy.setAllowedDestinationPrefillStrategies(parseEnumSet(policyMap.get("allowedPrefillStrategies"),
+      attributePolicy.setAllowedPrefillStrategies(parseEnumSet(policyMap.get("allowedPrefillStrategies"),
           FormItem.PrefillStrategyType.class));
-      Map<String, Map<String,String>> enforcedPrefillOptionsRaw = (Map<String, Map<String, String>>)  policyMap.get("enforcedPrefillOptions");
+      List<Map<String, Object>> enforcedPrefillOptionsRaw = (List<Map<String, Object>>)  policyMap.get("enforcedPrefillOptions");
       if (enforcedPrefillOptionsRaw != null) {
         List<PrefillStrategyEntry> entries = new ArrayList<>();
-        for (String key : enforcedPrefillOptionsRaw.keySet()) {
-          FormItem.PrefillStrategyType prefillStrategyType = FormItem.PrefillStrategyType.valueOf(key);
-          Map<String, String> enforcedPrefillOptions = enforcedPrefillOptionsRaw.get(key);
-          entries.add(new PrefillStrategyEntry(prefillStrategyType, enforcedPrefillOptions));
+        for (Map<String, Object> optionEntry : enforcedPrefillOptionsRaw) {
+          FormItem.PrefillStrategyType prefillStrategyType = FormItem.PrefillStrategyType.valueOf((String) optionEntry.get("prefillStrategyType"));
+          String sourceAttribute = (String) optionEntry.get("sourceAttribute");
+          Map<String, String> options = optionEntry.get("options") == null ? new HashMap<>() :
+                                            (Map<String, String>) optionEntry.get("options");
+          entries.add(new PrefillStrategyEntry(prefillStrategyType, options, sourceAttribute));
         }
         attributePolicy.setEnforcedPrefillOptions(entries);
       }
@@ -88,9 +93,7 @@ public class AttributePolicyYamlLoader {
       }
       attributePolicy.setEnforcedTexts(itemTexts);
 
-      AttributePolicyServiceImpl.validateAttributePolicyTexts(attributePolicy);
-      AttributePolicyServiceImpl.validateAttributePolicyConsistentPrefillOptions(attributePolicy);
-
+      System.out.println("Loaded attribute policy: " + attributePolicy + " from yaml config.");
       attributePolicies.add(attributePolicy);
     }
     return attributePolicies;
@@ -108,7 +111,8 @@ public class AttributePolicyYamlLoader {
 
   private Boolean getBool(Map<String, Object> map, String key, Boolean defaultVal) {
     Object val = map.get(key);
-    return val == null ? defaultVal : Boolean.parseBoolean(val.toString());
+    if (val == null) return defaultVal;
+    return Boolean.parseBoolean(val.toString());
   }
 
   private FormItem.Condition getCondition(Map<String, Object> map, String key) {

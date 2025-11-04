@@ -368,6 +368,9 @@ public class FormServiceImpl implements FormService {
   private void checkPrefillStrategyOptions(FormItem formItem) {
     if (formItem.getPrefillStrategyOptions() != null) {
       formItem.getPrefillStrategyOptions().forEach(entry -> {
+        if (entry.getPrefillStrategyType().requiresSource() && StringUtils.isEmpty(entry.getSourceAttribute())) {
+          throw new IllegalArgumentException("Prefill strategy " + entry.getPrefillStrategyType() + " requires attribute");
+        }
         List<String> requiredOptions = entry.getPrefillStrategyType().getRequiredOptions();
         if (!requiredOptions.isEmpty()) {
           if (entry.getOptions() == null) {

@@ -17,13 +17,13 @@ public class AttributePolicy {
   private String displayName;
 
   // --- ALLOWED USAGE RULES ---
-  private boolean allowAsSource;
-  private Set<FormItem.PrefillStrategyType> allowedSourcePrefillStrategies; // when using as source
+  private boolean allowAsSource; // can be used as arbitrary source
+  private FormItem.PrefillStrategyType sourcePrefillStrategy; // when using as source
 
   private boolean allowAsDestination;
-  private Set<String> allowedSourceAttributes;
+  private Set<String> allowedSourceAttributes; // explicit attributes to use as source ( they do not have to be defined as such)
   private Set<FormItem.Type> allowedItemTypes; // e.g. LOGIN, PASSWORD
-  private Set<FormItem.PrefillStrategyType> allowedDestinationPrefillStrategies;
+  private Set<FormItem.PrefillStrategyType> allowedPrefillStrategies;
   private List<PrefillStrategyEntry> enforcedPrefillOptions;
 
 
@@ -82,13 +82,13 @@ public class AttributePolicy {
     this.allowedItemTypes = allowedItemTypes;
   }
 
-  public Set<FormItem.PrefillStrategyType> getAllowedDestinationPrefillStrategies() {
-    return allowedDestinationPrefillStrategies;
+  public Set<FormItem.PrefillStrategyType> getAllowedPrefillStrategies() {
+    return allowedPrefillStrategies;
   }
 
-  public void setAllowedDestinationPrefillStrategies(
-      Set<FormItem.PrefillStrategyType> allowedDestinationPrefillStrategies) {
-    this.allowedDestinationPrefillStrategies = allowedDestinationPrefillStrategies;
+  public void setAllowedPrefillStrategies(
+      Set<FormItem.PrefillStrategyType> allowedPrefillStrategies) {
+    this.allowedPrefillStrategies = allowedPrefillStrategies;
   }
 
   public List<PrefillStrategyEntry> getEnforcedPrefillOptions() {
@@ -179,12 +179,36 @@ public class AttributePolicy {
     this.allowedSourceAttributes = allowedSourceAttributes;
   }
 
-  public Set<FormItem.PrefillStrategyType> getAllowedSourcePrefillStrategies() {
-    return allowedSourcePrefillStrategies;
+  public FormItem.PrefillStrategyType getSourcePrefillStrategy() {
+    return sourcePrefillStrategy;
   }
 
-  public void setAllowedSourcePrefillStrategies(
-      Set<FormItem.PrefillStrategyType> allowedSourcePrefillStrategies) {
-    this.allowedSourcePrefillStrategies = allowedSourcePrefillStrategies;
+  public void setSourcePrefillStrategy(
+      FormItem.PrefillStrategyType sourcePrefillStrategy) {
+    this.sourcePrefillStrategy = sourcePrefillStrategy;
+  }
+
+  @Override
+  public String toString() {
+    return "AttributePolicy{" +
+               "id=" + id +
+               ", urn='" + urn + '\'' +
+               ", displayName='" + displayName + '\'' +
+               ", allowAsSource=" + allowAsSource +
+               ", allowedSourcePrefillStrategies=" + sourcePrefillStrategy +
+               ", allowAsDestination=" + allowAsDestination +
+               ", allowedSourceAttributes=" + allowedSourceAttributes +
+               ", allowedItemTypes=" + allowedItemTypes +
+               ", allowedDestinationPrefillStrategies=" + allowedPrefillStrategies +
+               ", enforcedPrefillOptions=" + enforcedPrefillOptions +
+               ", enforcedRequired=" + enforcedRequired +
+               ", enforcedUpdatable=" + enforcedUpdatable +
+               ", enforcedHidden=" + enforcedHidden +
+               ", enforcedDisabled=" + enforcedDisabled +
+               ", enforcedTexts=" + enforcedTexts +
+               ", enforceLabels=" + enforceLabels +
+               ", enforceHelp=" + enforceHelp +
+               ", enforceError=" + enforceError +
+               '}';
   }
 }

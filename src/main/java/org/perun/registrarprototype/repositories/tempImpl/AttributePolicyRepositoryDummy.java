@@ -15,7 +15,7 @@ public class AttributePolicyRepositoryDummy implements AttributePolicyRepository
   @Override
   public AttributePolicy save(AttributePolicy attributePolicy) {
     if (attributePolicy.getId() > 0) {
-      boolean removed = attributePolicies.removeIf(app -> app.getId() == attributePolicy.getId());
+      boolean removed = attributePolicies.removeIf(policy -> policy.getId() == attributePolicy.getId());
       attributePolicies.add(attributePolicy);
       if (removed) {
         System.out.println("Updated attribute policy " + attributePolicy.getId());

@@ -7,6 +7,8 @@ import org.perun.registrarprototype.models.FormItem;
 public interface FormItemRepository {
   List<FormItem> getFormItemsByFormId(int formId);
 
+  List<FormItem> getFormItemsByDestinationAttribute(String urn);
+
   Optional<FormItem> getFormItemById(int formItemId);
 
   FormItem save(FormItem formItem);

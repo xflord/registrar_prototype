@@ -14,4 +14,13 @@ public class ItemTexts {
   public String getLabel() { return label; }
   public String getHelp() { return help; }
   public String getError() { return error; }
+
+  @Override
+  public String toString() {
+    return "ItemTexts{" +
+               "label='" + label + '\'' +
+               ", help='" + help + '\'' +
+               ", error='" + error + '\'' +
+               '}';
+  }
 }
