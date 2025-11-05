@@ -35,18 +35,19 @@ public class FormItemRepositoryDummy implements FormItemRepository {
       boolean removed = formItems.removeIf(item -> item.getId() == formItem.getId());
       formItems.add(formItem);
       if (removed) {
-        System.out.println("Updated formItem " + formItem.getId());
+        System.out.println("Updated formItem " + formItem);
       } else {
-        System.out.println("Created formItem " + formItem.getId() + " (with existing ID)");
+        System.out.println("Created formItem " + formItem + " (with existing ID)");
       }
       return formItem;
     }
     
     // Create new formItem
-    formItem.setId(currId++);
-    formItems.add(formItem);
-    System.out.println("Created formItem " + formItem.getId());
-    return formItem;
+    FormItem toCreate = new FormItem(formItem);
+    toCreate.setId(currId++);
+    formItems.add(toCreate);
+    System.out.println("Created formItem " + toCreate);
+    return toCreate;
   }
 
   @Override

@@ -47,15 +47,17 @@ public interface IdMService {
 
   String getUserAttribute(Integer userId, String attributeName) throws IdmAttributeNotExistsException;
 
-  String getMemberAttribute(Integer userId, String attributeName, int groupId) throws IdmAttributeNotExistsException;
+  String getMemberAttribute(Integer userId, String attributeName, Integer groupId) throws IdmAttributeNotExistsException;
 
-  String getMemberGroupAttribute(Integer userId, String attributeName, int groupId) throws IdmAttributeNotExistsException;
+  String getMemberGroupAttribute(Integer userId, String attributeName, Integer groupId) throws IdmAttributeNotExistsException;
 
-  boolean canExtendMembership(Integer userId, int groupId);
+  boolean checkGroupExists(Integer groupId);
+
+  boolean canExtendMembership(Integer userId, Integer groupId);
 
   String getVoAttribute(String attributeName, int voId) throws IdmAttributeNotExistsException;
 
-  String getGroupAttribute(String attributeName, int groupId) throws IdmAttributeNotExistsException;
+  String getGroupAttribute(String attributeName, Integer groupId) throws IdmAttributeNotExistsException;
 
   AttributeDefinition getAttributeDefinition(String attributeName);
 

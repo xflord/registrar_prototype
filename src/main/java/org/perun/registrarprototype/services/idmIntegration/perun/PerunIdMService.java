@@ -36,7 +36,6 @@ import org.perun.registrarprototype.models.FormItem;
 import org.perun.registrarprototype.models.FormItemData;
 import org.perun.registrarprototype.models.Identity;
 import org.perun.registrarprototype.models.Role;
-import org.perun.registrarprototype.models.Submission;
 import org.perun.registrarprototype.services.EventService;
 import org.perun.registrarprototype.services.idmIntegration.IdMService;
 import org.springframework.beans.factory.annotation.Value;
@@ -49,6 +48,7 @@ import org.springframework.web.client.RestTemplate;
 
 @Service
 public class PerunIdMService implements IdMService {
+  private static final String DISPLAY_NAME = "urn:perun:user:attribute-def:core:displayName";
   private final List<String> GROUP_MANAGER_ROLES = List.of("GROUPADMIN", "GROUPMEMBERSHIPMANAGER");
   private final List<String> VO_MANAGER_ROLES = List.of("VOADMIN", "ORGANIZATIONMEMBERSHIPMANAGER");
   @Value( "${perun.einfra.ext-source}")
@@ -185,7 +185,7 @@ public class PerunIdMService implements IdMService {
   }
 
   @Override
-  public String getMemberAttribute(Integer userId, String attributeName, int groupId)
+  public String getMemberAttribute(Integer userId, String attributeName, Integer groupId)
       throws IdmAttributeNotExistsException {
     System.out.println("Calling getRegistrarRolesByUserId with parameter " + userId + " and attribute " + attributeName);
 
@@ -217,7 +217,7 @@ public class PerunIdMService implements IdMService {
   }
 
   @Override
-  public String getMemberGroupAttribute(Integer userId, String attributeName, int groupId)
+  public String getMemberGroupAttribute(Integer userId, String attributeName, Integer groupId)
       throws IdmAttributeNotExistsException {
     if (userId == null) {
       return null;
@@ -246,6 +246,20 @@ public class PerunIdMService implements IdMService {
     }
   }
 
+  @Override
+  public boolean checkGroupExists(Integer groupId) {
+    try {
+      rpc.getGroupsManager().getGroupById(groupId);
+    } catch (PerunRuntimeException ex) {
+      if (ex.getName().equals("GroupNotExistsException")) {
+        return false;
+      } else {
+        throw ex;
+      }
+    }
+    return true;
+  }
+
   private Member retrieveMember(Integer userId, Group group) {
     Member member;
     try {
@@ -261,7 +275,7 @@ public class PerunIdMService implements IdMService {
   }
 
   @Override
-  public boolean canExtendMembership(Integer userId, int groupId) {
+  public boolean canExtendMembership(Integer userId, Integer groupId) {
     if (userId == null) {
       return false;
     }
@@ -290,7 +304,7 @@ public class PerunIdMService implements IdMService {
   }
 
   @Override
-  public String getGroupAttribute(String attributeName, int groupId) throws IdmAttributeNotExistsException {
+  public String getGroupAttribute(String attributeName, Integer groupId) throws IdmAttributeNotExistsException {
     try {
       Attribute attr = rpc.getAttributesManager().getGroupAttributeByName(groupId, attributeName);
       return attr.getValue() == null ? null : attr.getValue().toString();
@@ -401,7 +415,7 @@ public class PerunIdMService implements IdMService {
     InputCreateMemberForCandidate input = new InputCreateMemberForCandidate();
     input.setVo(group.getVoId());
     input.addGroupsItem(group);
-    Candidate candidate = getCandidate(application.getSubmission());
+    Candidate candidate = getCandidate(application);
     Map<String, String> attributes = new HashMap<>();
         application.getFormItemData().stream()
             .filter(item -> StringUtils.isNotEmpty(item.getFormItem().getDestinationIdmAttribute()))
@@ -469,7 +483,6 @@ public class PerunIdMService implements IdMService {
     // Already VO member
     List<Integer> members = new ArrayList<>();
     members.add(member.getId());
-    // TODO this seems to not work (openapi generator or definition issue? list parameter does not reach perun be)
     rpc.getGroupsManager().addMembers(group.getId(), members);
     updateMemberAttributesFromAppData(application, member, group);
 
@@ -530,7 +543,6 @@ public class PerunIdMService implements IdMService {
           return perunAppData;
         }).forEach(perunFormItems::add);
 
-    // TODO add the method to openapi, it already exists
     InputCheckForSimilarUsersWithData input = new InputCheckForSimilarUsersWithData();
     input.setFormItems(perunFormItems);
     List<cz.metacentrum.perun.openapi.model.Identity> perunIdentities = tempRpc.getRegistrarManager().checkForSimilarUsersWithFormItemData(input);
@@ -540,7 +552,15 @@ public class PerunIdMService implements IdMService {
   private List<Identity> convertRichToDomainIdentities(List<EnrichedIdentity> perunIdentities) {
     List<Identity> domainIdentities = new ArrayList<>();
     perunIdentities.forEach(identity -> {
+      if (identity.getIdentities() == null) {
+        // this should never be returned from Perun BE
+        throw new IllegalStateException("Null identity array returned from Perun.");
+      }
       identity.getIdentities().forEach(extSource -> {
+        if (extSource.getExtSource() == null) {
+        // this should never be returned from Perun BE
+        throw new IllegalStateException("Null ExtSource in EnrichedExtSource returned from Perun.");
+      }
         domainIdentities.add(new Identity(identity.getName(), identity.getOrganization(),
             identity.getEmail(), extSource.getExtSource().getType(), extSource.getAttributes()));
       });
@@ -551,6 +571,10 @@ public class PerunIdMService implements IdMService {
   private List<Identity> convertToDomainIdentities(List<cz.metacentrum.perun.openapi.model.Identity> perunIdentities) {
     List<Identity> domainIdentities = new ArrayList<>();
     perunIdentities.forEach(identity -> {
+      if (identity.getIdentities() == null) {
+        // this should never be returned from Perun BE
+        throw new IllegalStateException("Null identity array returned from Perun.");
+      }
       identity.getIdentities().forEach(extSource -> {
         domainIdentities.add(new Identity(identity.getName(), identity.getOrganization(),
             identity.getEmail(), extSource.getType(), new HashMap<>()));
@@ -581,7 +605,6 @@ public class PerunIdMService implements IdMService {
   private List<Attribute> mapFormDataToAttributeObjects(List<FormItemData> itemData) {
     return itemData.stream()
                .filter(item -> item.getFormItem().getDestinationIdmAttribute() != null)
-               // TODO do we need to filter out login attributes here?
                .map(item -> {
                  AttributeDefinition attrDef = rpc.getAttributesManager()
                                                    .getAttributeDefinitionByName(item.getFormItem().getDestinationIdmAttribute());
@@ -596,21 +619,38 @@ public class PerunIdMService implements IdMService {
                .toList();
   }
 
-  private Candidate getCandidate(Submission submission) {
+  private Candidate getCandidate(Application application) {
     Candidate candidate = new Candidate();
     // TODO what to do for unauthenticated users that do not consolidate and do not fill out any information (e.g no display name, given/last name in form)
     //  do not allow such forms, do not allow anonymous users?
     //  Old registrar currently uses `LOCAL` internal ExtSource with `createdBy` (e.g. timestamp) as login in such situations
 
-    candidate.setFirstName(submission.getIdentityAttributes().get("given_name"));
-    candidate.setLastName(submission.getIdentityAttributes().get("family_name"));
-    // TODO try to parse name from submitted data
-    if (submission.getSubmitterName() != null) {
+    candidate.setFirstName(application.getSubmission().getIdentityAttributes().get("given_name"));
+    candidate.setLastName(application.getSubmission().getIdentityAttributes().get("family_name"));
+
+    String nameFromDisplayNameAttr = application.getFormItemData()
+                                                        .stream()
+                                                        .filter(formItemData -> formItemData.getFormItem().getDestinationIdmAttribute().equals(DISPLAY_NAME))
+                                                        .map(FormItemData::getValue)
+                                         .findFirst().orElse(null);
+    NameParser.ParsedName parsedName = NameParser.parseDisplayName(nameFromDisplayNameAttr);
+
+    if (parsedName != null) {
+      // TODO do this even if names from IdP are provided?
+      candidate.setTitleBefore(parsedName.titleBefore());
+      candidate.setFirstName(parsedName.firstName());
+      candidate.setMiddleName(parsedName.middleName());
+      candidate.setLastName(parsedName.lastName());
+      candidate.setTitleAfter(parsedName.titleAfter());
+    }
+
+
+    if (application.getSubmission().getSubmitterName() != null) {
       var ues = new UserExtSource();
       ues.setLoa(1);
-      ues.setLogin(submission.getIdentityIdentifier());
+      ues.setLogin(application.getSubmission().getIdentityIdentifier());
       var es = new ExtSource();
-      es.setName(submission.getIdentityIssuer());
+      es.setName(application.getSubmission().getIdentityIssuer());
       es.setType("cz.metacentrum.perun.core.impl.ExtSourceIdp");
       ues.setExtSource(es);
       candidate.setUserExtSource(ues);

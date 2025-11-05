@@ -1,6 +1,7 @@
 package org.perun.registrarprototype.controllers;
 
 import java.util.ArrayList;
+import org.perun.registrarprototype.exceptions.IdmObjectNotExistsException;
 import org.perun.registrarprototype.exceptions.InsufficientRightsException;
 import org.perun.registrarprototype.models.Application;
 import org.perun.registrarprototype.models.FormItemData;
@@ -83,7 +84,8 @@ public class ApplicationController {
   }
 
   @GetMapping("/loadForms")
-  public ResponseEntity<SubmissionContext> getSubmissionContext(@RequestParam int groupId) {
+  public ResponseEntity<SubmissionContext> getSubmissionContext(@RequestParam int groupId)
+      throws IdmObjectNotExistsException {
     return ResponseEntity.ok(applicationService.loadForms(new ArrayList<>(List.of(new Requirement(groupId, Requirement.TargetState.MEMBER))), "", false));
   }
 

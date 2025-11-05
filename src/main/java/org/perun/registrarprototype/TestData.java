@@ -26,22 +26,26 @@ public class TestData {
   @Bean
   CommandLineRunner initDatabase(FormService formService, ApplicationService applicationService) {
     return args -> {
+      FormSpecification formSpecification = formService.createForm(20644);
+
       ItemTexts itemTexts1 = new ItemTexts("Address", "Enter your address", "Address is required");
-      FormItem item1 = new FormItem(0, 0, "address", null, 1, FormItem.Type.TEXTFIELD, new HashMap<>(Map.of(Locale.ENGLISH, itemTexts1)), true, false,
+      FormItem item1 = new FormItem(-1, formSpecification.getId(), "address", null, 1, FormItem.Type.TEXTFIELD, new HashMap<>(Map.of(Locale.ENGLISH, itemTexts1)), true, false,
           null, ADDRESS_ATTR_DEF_M, null, List.of(FormSpecification.FormType.INITIAL), FormItem.Condition.NEVER,
           FormItem.Condition.NEVER, null, null);
       item1.addPrefillStrategyEntry(new PrefillStrategyEntry(
-          FormItem.PrefillStrategyType.IDM_ATTRIBUTE, new HashMap<>(), ADDRESS_ATTR_DEF_U));
-      item1 = formService.createFormItem(item1);
+          FormItem.PrefillStrategyType.IDM_ATTRIBUTE, new HashMap<>(Map.of("test", "test")), ADDRESS_ATTR_DEF_U));
 
       ItemTexts itemTexts2 = new ItemTexts("Full name", "Enter your full name", "Name is required");
-      FormItem item2 = new FormItem(0, 0, "full name", null, 1, FormItem.Type.TEXTFIELD, new HashMap<>(Map.of(Locale.ENGLISH, itemTexts2)), false, true,
+      FormItem item2 = new FormItem(-2, formSpecification.getId(), "full name", null, 2, FormItem.Type.TEXTFIELD, new HashMap<>(Map.of(Locale.ENGLISH, itemTexts2)), false, true,
           null, DISPLAY_NAME_ATTR_DEF_U, null, List.of(FormSpecification.FormType.INITIAL), FormItem.Condition.NEVER,
           FormItem.Condition.IF_PREFILLED, null, null);
       item2.addPrefillStrategyEntry(new PrefillStrategyEntry(FormItem.PrefillStrategyType.IDENTITY_ATTRIBUTE, new HashMap<>(), "name"));
-      item2 = formService.createFormItem(item2);
 
-      FormSpecification formSpecification = formService.createForm(20644, List.of(item1, item2));
+      FormItem submit = new FormItem(-3, formSpecification.getId(), "submit", null, 3, FormItem.Type.SUBMIT_BUTTON, new HashMap<>(), false, false,
+          null, null, null, List.of(FormSpecification.FormType.INITIAL), FormItem.Condition.NEVER,
+          FormItem.Condition.NEVER, null, null);
+
+      formService.updateFormItems(formSpecification.getId(), List.of(item1, item2, submit));
     };
   }
 }

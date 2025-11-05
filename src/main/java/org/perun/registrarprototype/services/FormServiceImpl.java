@@ -216,6 +216,16 @@ public class FormServiceImpl implements FormService {
         FormTransition.TransitionType.PREREQUISITE));
   }
 
+  @Override
+  public void removePrerequisiteFromForm(FormTransition transition) {
+    formTransitionRepository.remove(transition);
+  }
+
+  @Override
+  public List<FormTransition> getPrerequisiteTransitionsForForm(FormSpecification formSpecification) {
+    return formTransitionRepository.getAllBySourceFormAndType(formSpecification, FormTransition.TransitionType.PREREQUISITE);
+  }
+
   /**
    * Detects whether the transition between the source and target forms has a cycle. (e.g. target prerequisite form already has a transition to the source form)
    * @param sourceForm
@@ -229,7 +239,7 @@ public class FormServiceImpl implements FormService {
     List<FormTransition> transitions = formTransitionRepository.getAllBySourceFormAndType(targetForm, transitionType);
     return transitions.stream()
                .filter(transition -> transition.getSourceFormStates().contains(targetFormState))
-               .anyMatch(transition -> transition.getTargetForm().equals(sourceForm));
+               .anyMatch(transition -> transition.getTargetFormSpecification().equals(sourceForm));
   }
 
 
@@ -250,7 +260,7 @@ public class FormServiceImpl implements FormService {
     List<FormTransition> transitions = formTransitionRepository.getAllBySourceFormAndType(formSpecification, FormTransition.TransitionType.AUTO_SUBMIT);
     return transitions.stream()
                .filter(transition -> transition.getSourceFormStates().contains(targetState))
-               .map(FormTransition::getTargetForm)
+               .map(FormTransition::getTargetFormSpecification)
                .toList();
   }
 
@@ -260,7 +270,7 @@ public class FormServiceImpl implements FormService {
     List<FormTransition> transitions = formTransitionRepository.getAllBySourceFormAndType(formSpecification, FormTransition.TransitionType.REDIRECT);
     return transitions.stream()
                .filter(transition -> transition.getSourceFormStates().contains(targetState))
-               .map(FormTransition::getTargetForm)
+               .map(FormTransition::getTargetFormSpecification)
                .toList();
   }
 
@@ -283,6 +293,11 @@ public class FormServiceImpl implements FormService {
   // TODO make transactional?
   public void updateFormItems(int formId, List<FormItem> updatedItems) {
     formRepository.findById(formId).orElseThrow(() -> new IllegalArgumentException("Form with ID " + formId + " not found"));
+    updatedItems.forEach(item -> {
+      if (item.getFormId() != formId) {
+        throw new IllegalArgumentException("Form id of item  " + item + " does not match the specified form id!");
+      }
+    });
 
     if (!validateUniqueOrdNums(updatedItems)) {
       // is this the correct placement for the check?
@@ -314,22 +329,27 @@ public class FormServiceImpl implements FormService {
     // updates
     for (FormItem updatedItem : updatedItems) {
       int actualId = updatedItem.getId();
-      if (actualId < 0) {
+      FormItem item = null;
+      if (updatedItem.getId() < 0) {
         actualId = newIdMap.get(updatedItem.getId());
       } else {
+        if (!existingById.containsKey(actualId)) {
+          throw new IllegalArgumentException("Trying to update a form item from another form!");
+        }
+        item = updatedItem;
         // check that updated items do not change destination, if so then warn/throw exception
         String oldDestination = existingById.get(actualId).getDestinationIdmAttribute();
-        String newDestination = updatedItem.getDestinationIdmAttribute();
-        boolean hasOpenApplications = applicationRepository.findByFormId(formId).stream()
-            .anyMatch(app -> app.getState().isOpenState());
-        if (!oldDestination.equals(newDestination) && hasOpenApplications) {
-          // TODO throw an exception, or display some sort of warning in this case?
-          throw new IllegalArgumentException("Cannot change destination of item with id " + actualId +
-                                                 " because there are open applications");
+        if (oldDestination != null) {
+          String newDestination = item.getDestinationIdmAttribute();
+          boolean hasOpenApplications = applicationRepository.findByFormId(formId).stream()
+                                            .anyMatch(app -> app.getState().isOpenState());
+          if (!oldDestination.equals(newDestination) && hasOpenApplications) {
+            // TODO throw an exception, or display some sort of warning in this case?
+            throw new IllegalArgumentException("Cannot change destination of item with id " + actualId +
+                                                   " because there are open applications");
+          }
         }
       }
-
-      FormItem item = existingById.get(actualId);
       if (item == null) {
         item = formItemRepository.getFormItemById(actualId)
                    .orElseThrow(() -> new DataInconsistencyException("Form item with id " + updatedItem.getId() + " should exist"));
@@ -359,6 +379,11 @@ public class FormServiceImpl implements FormService {
     validateFormStructureAndDeps(finalItems);
 
     checkFormItemVisibility(finalItems);
+  }
+
+  @Override
+  public Map<String, List<String>> getAvailableModulesWithRequiredOptions() {
+    return Map.of();
   }
 
   /**
@@ -399,7 +424,7 @@ public class FormServiceImpl implements FormService {
       if (item.getDestinationIdmAttribute() != null) {
         throw new IllegalArgumentException("Layout form item " + item + " cannot have a destination attribute");
       }
-      if (item.getPrefillStrategyOptions() != null || !item.getPrefillStrategyOptions().isEmpty()) {
+      if (item.getPrefillStrategyOptions() != null && !item.getPrefillStrategyOptions().isEmpty()) {
         throw new IllegalArgumentException("Layout form item " + item + " cannot have a prefill strategy");
       }
     }

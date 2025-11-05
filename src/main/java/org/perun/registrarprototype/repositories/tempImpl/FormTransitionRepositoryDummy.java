@@ -36,7 +36,12 @@ public class FormTransitionRepositoryDummy implements FormTransitionRepository {
   @Override
   public List<FormTransition> getAllBySourceFormAndType(FormSpecification formSpecification, FormTransition.TransitionType type) {
     return formTransitions.stream()
-               .filter((transition) -> transition.getSourceForm().getId() == formSpecification.getId() &&
+               .filter((transition) -> transition.getSourceFormSpecification().getId() == formSpecification.getId() &&
                           transition.getType().equals(type)).toList();
+  }
+
+  @Override
+  public void remove(FormTransition formTransition) {
+    formTransitions.removeIf(trans ->  trans.getId() == formTransition.getId());
   }
 }

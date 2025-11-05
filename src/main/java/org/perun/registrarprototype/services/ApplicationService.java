@@ -1,6 +1,7 @@
 package org.perun.registrarprototype.services;
 
 import java.util.List;
+import org.perun.registrarprototype.exceptions.IdmObjectNotExistsException;
 import org.perun.registrarprototype.exceptions.InsufficientRightsException;
 import org.perun.registrarprototype.models.Application;
 import org.perun.registrarprototype.models.ApplicationForm;
@@ -134,7 +135,8 @@ public interface ApplicationService {
    * @param checkSimilarUsers if true, checks for similar identities and throws exception if found; set to false after user decides on consolidation
    * @return prefilled submission context with redirect URL and individual prefilled form data
    */
-  SubmissionContext loadForms(List<Requirement> requirements, String redirectUrl, boolean checkSimilarUsers);
+  SubmissionContext loadForms(List<Requirement> requirements, String redirectUrl, boolean checkSimilarUsers)
+      throws IdmObjectNotExistsException;
 
   /**
    * Generates prefilled form item data for the form and its type, calls module hooks, and ensures the validity of form

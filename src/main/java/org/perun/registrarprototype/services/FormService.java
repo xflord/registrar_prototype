@@ -1,6 +1,7 @@
 package org.perun.registrarprototype.services;
 
 import java.util.List;
+import java.util.Map;
 import org.perun.registrarprototype.exceptions.FormItemRegexNotValid;
 import org.perun.registrarprototype.exceptions.InsufficientRightsException;
 import org.perun.registrarprototype.models.AssignedFormModule;
@@ -103,6 +104,8 @@ public interface FormService {
   FormTransition addPrerequisiteToForm(FormSpecification sourceForm, FormSpecification prerequisiteForm,
                                        List<Requirement.TargetState> sourceFormStates, Requirement.TargetState targetState);
 
+  void removePrerequisiteFromForm(FormTransition transition);
+  List<FormTransition> getPrerequisiteTransitionsForForm(FormSpecification formSpecification);
   /**
    * Retrieves all forms that are required to be filled before applying for membership via the supplied form.
    *
@@ -156,5 +159,13 @@ public interface FormService {
   FormItem createFormItem(FormItem item);
 
   void updateFormItems( int formId, List<FormItem> updatedItems);
+
+
+  /**
+   * returns the modules assignable to forms and their required options
+   * TODO this is to change once groovy script/ pf4j implementation is decided and merged
+   * @return
+   */
+  Map<String, List<String>> getAvailableModulesWithRequiredOptions();
 }
 

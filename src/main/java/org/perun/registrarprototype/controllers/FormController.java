@@ -1,15 +1,19 @@
 package org.perun.registrarprototype.controllers;
 
 import java.util.List;
+import java.util.Map;
 import org.perun.registrarprototype.controllers.dto.PrincipalInfoDTO;
 import org.perun.registrarprototype.exceptions.FormItemRegexNotValid;
 import org.perun.registrarprototype.exceptions.InsufficientRightsException;
 import org.perun.registrarprototype.models.AssignedFormModule;
 import org.perun.registrarprototype.models.FormSpecification;
 import org.perun.registrarprototype.models.FormItem;
+import org.perun.registrarprototype.models.FormTransition;
+import org.perun.registrarprototype.models.Requirement;
 import org.perun.registrarprototype.security.CurrentUser;
 import org.perun.registrarprototype.security.RegistrarAuthenticationToken;
 import org.perun.registrarprototype.security.SessionProvider;
+import org.perun.registrarprototype.services.AuthorizationService;
 import org.perun.registrarprototype.services.FormService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -27,10 +31,12 @@ public class FormController {
 
   private final FormService formService;
   private final SessionProvider sessionProvider;
+  private final AuthorizationService  authorizationService;
 
-  public FormController(FormService formService, SessionProvider sessionProvider) {
+  public FormController(FormService formService, SessionProvider sessionProvider,  AuthorizationService authorizationService) {
       this.formService = formService;
       this.sessionProvider = sessionProvider;
+      this.authorizationService = authorizationService;
   }
 
   @PostMapping("/create")
@@ -58,9 +64,59 @@ public class FormController {
     return ResponseEntity.ok(setModules);
   }
 
+  /**
+   * Updates form items. Existing items missing from the array will be removed, new items are expected to have negative id
+   * , all ids still have to be unique though
+   * @param formId
+   * @param items
+   * @return
+   */
+  @PostMapping("/updateFormItems")
+  public ResponseEntity<Void> updateFormItems(@RequestParam int formId, @RequestBody List<FormItem> items) {
+    //
+    formService.updateFormItems(formId, items);
+    return ResponseEntity.ok().build();
+  }
+
+  @PostMapping("/addPrerequisiteForm")
+  public ResponseEntity<FormTransition> addPrerequisiteForm(@RequestParam int sourceFormId,
+                                                            @RequestParam int targetFormId,
+                                                            @RequestBody List<Requirement.TargetState> sourceFormStates,
+                                                            @RequestParam Requirement.TargetState targetState) {
+    FormSpecification sourceForm = formService.getFormById(sourceFormId);
+    authorizationService.canManage(sessionProvider.getCurrentSession(), sourceForm.getGroupId());
+    FormSpecification targetForm = formService.getFormById(targetFormId);
+
+    return ResponseEntity.ok(formService.addPrerequisiteToForm(sourceForm, targetForm, sourceFormStates, targetState));
+  }
+
+  @PostMapping("/removePrerequisiteForm")
+  public ResponseEntity<Void> removePrerequisiteForm(@RequestBody FormTransition transition) {
+    FormSpecification form = formService.getFormById(transition.getSourceFormSpecification().getId());
+    // prolly do authorization in controllers, add ControllerAdvice that will translate the exceptions
+    authorizationService.canManage(sessionProvider.getCurrentSession(), form.getGroupId());
+
+    formService.removePrerequisiteFromForm(transition);
+    return ResponseEntity.ok().build();
+  }
+
+  @GetMapping("/prerequisiteForms")
+  public ResponseEntity<List<FormTransition>> getPrerequisiteForms(@RequestParam int formId) {
+    FormSpecification form = formService.getFormById(formId);
+    authorizationService.canManage(sessionProvider.getCurrentSession(), form.getGroupId());
+
+    return ResponseEntity.ok(formService.getPrerequisiteTransitionsForForm(form));
+  }
+
   @GetMapping
   public ResponseEntity<List<FormSpecification>> getForms() {
     return ResponseEntity.ok(formService.getAllFormsWithItems());
+  }
+
+  @GetMapping("/modules")
+  public ResponseEntity<Map<String, List<String>>> getModules() {
+    // subject to change, currently returns Map of available modules' names as keys and required options as list of strings
+    return ResponseEntity.ok(formService.getAvailableModulesWithRequiredOptions());
   }
 
   // Testing principal endpoint

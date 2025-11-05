@@ -26,7 +26,31 @@ urn:perun:user:attribute-def:def:login-namespace:einfra:
       help: "Zadejte své E-infra přihlašovací jméno"
       error: "Neplatný formát přihlašovacího jména"
 
-urn:perun:user:attribute-def:def:displayName:
+#urn:perun:user:attribute-def:core:displayName:
+#  displayName: Full name
+#  allowAsDestination: true
+#  allowAsSource: true
+#  sourcePrefillStrategy: IDM_ATTRIBUTE
+#  allowedItemTypes:
+#    - TEXTFIELD
+#  allowedPrefillStrategies:
+#    - IDM_ATTRIBUTE
+#    - IDENTITY_ATTRIBUTE
+#  allowedSourceAttributes:
+#    - urn:perun:user:attribute-def:core:displayName
+#    - name
+#  enforcedUpdatable: false
+#  enforcedRequired: true
+#  enforceLabels: true
+#  enforceHelp: true
+#  enforcedTexts:
+#    en:
+#      label: "Full name"
+#      help: "Please enter your full name"
+#    cs:
+#      label: "Jmeno a prijmeni"
+#      help: "Prosim zadejte sve jmeno a prijmeni"
+urn:perun:user:attribute-def:core:displayName:
   displayName: Full name
   allowAsDestination: true
   allowAsSource: true
@@ -37,24 +61,35 @@ urn:perun:user:attribute-def:def:displayName:
     - IDM_ATTRIBUTE
     - IDENTITY_ATTRIBUTE
   allowedSourceAttributes:
-    - urn:perun:user:attribute-def:def:displayName
+    - urn:perun:user:attribute-def:core:displayName
     - name
-  enforcedUpdatable: false
-  enforcedRequired: true
-  enforceLabels: true
-  enforceHelp: true
-  enforcedTexts:
-    en:
-      label: "Full name"
-      help: "Please enter your full name"
-    cs:
-      label: "Jmeno a prijmeni"
-      help: "Prosim zadejte sve jmeno a prijmeni"
 
 name:
   displayName: Full name (identity)
   allowAsSource: true
   sourcePrefillStrategy: IDENTITY_ATTRIBUTE
+
+#urn:perun:member:attribute-def:def:address:
+#  displayName: Member address
+#  allowAsDestination: true
+#  allowedItemTypes:
+#    - TEXTFIELD
+#  enforcedPrefillOptions:
+#    - prefillStrategyType: IDM_ATTRIBUTE
+#      sourceAttribute: urn:perun:member:attribute-def:def:address
+#      options:
+#        test: test
+#  enforcedUpdatable: false
+#  enforcedRequired: true
+#  enforceLabels: true
+#  enforceHelp: true
+#  enforcedTexts:
+#    en:
+#      label: "Address"
+#      help: "Please enter your home address"
+#    cs:
+#      label: "Adresa"
+#      help: "Prosim zadejte svou adresu"
 
 urn:perun:member:attribute-def:def:address:
   displayName: Member address
@@ -63,17 +98,7 @@ urn:perun:member:attribute-def:def:address:
     - TEXTFIELD
   enforcedPrefillOptions:
     - prefillStrategyType: IDM_ATTRIBUTE
-      sourceAttribute: urn:perun:member:attribute-def:def:address
+      sourceAttribute: urn:perun:user:attribute-def:def:address
       options:
         test: test
-  enforcedUpdatable: false
-  enforcedRequired: true
-  enforceLabels: true
-  enforceHelp: true
-  enforcedTexts:
-    en:
-      label: "Address"
-      help: "Please enter your home address"
-    cs:
-      label: "Adresa"
-      help: "Prosim zadejte svou adresu"
+  enforcedUpdatable: true

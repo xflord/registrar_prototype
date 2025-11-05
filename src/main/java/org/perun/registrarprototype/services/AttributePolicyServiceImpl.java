@@ -116,36 +116,28 @@ public class AttributePolicyServiceImpl implements AttributePolicyService {
 
   @Override
   public void applyAttributePolicyToItem(FormItem formItem) {
-    // TODO probably better way to keep source attributes?
-    List<String> itemSources = formItem.getPrefillStrategyOptions().stream()
-                                   .map(PrefillStrategyEntry::getSourceAttribute)
-                                   .toList();
 
     // check source attribute validity
     String destinationAttribute = formItem.getDestinationIdmAttribute();
-    formItem.getPrefillStrategyOptions().forEach(entry -> {
-      AttributePolicy sourcePolicy = attributePolicyRepository.findByUrn(entry.getSourceAttribute()).orElse(null);
-
-      if (sourcePolicy == null || !sourcePolicy.isAllowAsSource()) {
-        if (destinationAttribute == null) {
+    if (formItem.getDestinationIdmAttribute() == null) {
+      formItem.getPrefillStrategyOptions().forEach(entry -> {
+        AttributePolicy sourcePolicy = attributePolicyRepository.findByUrn(entry.getSourceAttribute()).orElse(null);
+        if (sourcePolicy == null || !sourcePolicy.isAllowAsSource()) {
           throw new IllegalArgumentException("Source attribute " + entry.getSourceAttribute() + " is not allowed as source attribute");
         }
-        AttributePolicy destinationPolicy = getAttributePolicy(destinationAttribute);
-        if (!destinationPolicy.getAllowedSourceAttributes().contains(entry.getSourceAttribute())) {
-          throw new IllegalArgumentException("Source attribute " + entry.getSourceAttribute() + " is not allowed as source attribute");
+        if (!entry.getPrefillStrategyType().equals(sourcePolicy.getSourcePrefillStrategy())) {
+          throw new IllegalArgumentException("Source attribute " + entry.getSourceAttribute() + " is not allowed as source for prefill strategy " + entry.getPrefillStrategyType());
         }
-      } else if (!entry.getPrefillStrategyType().equals(sourcePolicy.getSourcePrefillStrategy())) {
-        throw new IllegalArgumentException("Source attribute " + entry.getSourceAttribute() + " is not allowed as source for prefill strategy " + entry.getPrefillStrategyType());
-      }
-    });
-
-    if (formItem.getDestinationIdmAttribute() == null) return;
+      });
+      return;
+    }
 
     // check destination attribute validity
     AttributePolicy policy = getAttributePolicy(destinationAttribute);
     if (!policy.isAllowAsDestination()) {
       throw new IllegalArgumentException("Destination attribute is not allowed for form item " + formItem);
     }
+
 
     if (policy.getAllowedItemTypes() != null && !policy.getAllowedItemTypes().contains(formItem.getType())) {
       throw new IllegalArgumentException("Item type " + formItem.getType() +" is not allowed for destination attribute " + policy.getUrn() );
@@ -165,15 +157,6 @@ public class AttributePolicyServiceImpl implements AttributePolicyService {
 
     if (policy.getEnforcedHidden() != null && !policy.getEnforcedHidden().equals(formItem.getHidden())) {
       throw new IllegalArgumentException("Item has to have disabled set as " + policy.getEnforcedHidden() + " for destination attribute " + policy.getUrn());
-    }
-
-    if (policy.getAllowedPrefillStrategies() != null) {
-      formItem.getPrefillStrategyOptions().forEach(prefillStrategyOption -> {
-        if (!policy.getAllowedPrefillStrategies().contains(prefillStrategyOption.getPrefillStrategyType())) {
-          throw new IllegalArgumentException("Prefill strategy `" + prefillStrategyOption.getPrefillStrategyType() +
-                                                " is not allowed for destination attribute " + policy.getUrn());
-        }
-      });
     }
 
 
@@ -207,17 +190,30 @@ public class AttributePolicyServiceImpl implements AttributePolicyService {
       }
     }
 
-      if (policy.getEnforcedPrefillOptions() != null) {
-        if (formItem.getPrefillStrategyOptions().retainAll(policy.getEnforcedPrefillOptions())) {
-          throw new IllegalArgumentException("Prefill options have to match those enforced by destination attribute " + policy.getUrn());
+    if (policy.getEnforcedPrefillOptions() != null) {
+      if (formItem.getPrefillStrategyOptions().retainAll(policy.getEnforcedPrefillOptions())) {
+        throw new IllegalArgumentException("Prefill options have to match those enforced by destination attribute " + policy.getUrn());
+      }
+    } else {
+      if (policy.getAllowedPrefillStrategies() != null) {
+        formItem.getPrefillStrategyOptions().forEach(prefillStrategyOption -> {
+          if (!policy.getAllowedPrefillStrategies().contains(prefillStrategyOption.getPrefillStrategyType())) {
+            throw new IllegalArgumentException("Prefill strategy `" + prefillStrategyOption.getPrefillStrategyType() +
+                                                  " is not allowed for destination attribute " + policy.getUrn());
+          }
+        });
+      }
+      List<String> itemSources = formItem.getPrefillStrategyOptions().stream()
+                                   .map(PrefillStrategyEntry::getSourceAttribute)
+                                   .toList();
+      itemSources.forEach(source -> {
+        if (policy.getAllowedSourceAttributes() != null && !policy.getAllowedSourceAttributes().contains(source)) {
+          throw new IllegalArgumentException("Prefill options contain source attributes not allowed for destination attribute " + policy.getUrn());
         }
-      }
+      });
+    }
 
-    itemSources.forEach(source -> {
-      if (policy.getAllowedSourceAttributes() != null && !policy.getAllowedSourceAttributes().contains(source)) {
-        throw new IllegalArgumentException("Prefill options contain source attributes not allowed for destination attribute " + policy.getUrn());
-      }
-    });
+
   }
 
   /**

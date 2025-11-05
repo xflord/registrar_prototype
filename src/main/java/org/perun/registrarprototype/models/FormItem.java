@@ -37,7 +37,7 @@ public class FormItem {
   private boolean required;
   private String constraint; // regex or similar
   private List<PrefillStrategyEntry> prefillStrategyOptions = new ArrayList<>(); // options for prefill strategies  TODO how to persist? might need separate table
-  private String destinationIdmAttribute;
+  private String destinationIdmAttribute; // TODO this could theoretically be `AttributePolicy` if we decide to implement some further logic for that class - e.g. value transformers
   private String defaultValue;
   private List<FormSpecification.FormType> formTypes = List.of(FormSpecification.FormType.INITIAL, FormSpecification.FormType.EXTENSION);
   private Condition hidden;
@@ -46,6 +46,27 @@ public class FormItem {
   private Integer disabledDependencyItemId;
 
   public FormItem() {}
+
+  public FormItem(FormItem formItem) {
+    this.id = formItem.id;
+    this.formId = formItem.formId;
+    this.shortName = formItem.shortName;
+    this.parentId = formItem.parentId;
+    this.ordNum = formItem.ordNum;
+    this.type = formItem.type;
+    this.texts = formItem.texts;
+    this.updatable = formItem.updatable;
+    this.required = formItem.required;
+    this.constraint = formItem.constraint;
+    this.prefillStrategyOptions = formItem.prefillStrategyOptions;
+    this.destinationIdmAttribute = formItem.destinationIdmAttribute;
+    this.defaultValue = formItem.defaultValue;
+    this.formTypes = formItem.formTypes;
+    this.hidden = formItem.hidden;
+    this.disabled = formItem.disabled;
+    this.hiddenDependencyItemId = formItem.hiddenDependencyItemId;
+    this.disabledDependencyItemId = formItem.disabledDependencyItemId;
+  }
 
   public FormItem(int id, Type type) {
     this.id = id;
@@ -290,10 +311,15 @@ public class FormItem {
     return "FormItem{" +
                "id=" + id +
                ", formId=" + formId +
+               ", shortName='" + shortName + '\'' +
+               ", parentId=" + parentId +
+               ", ordNum=" + ordNum +
                ", type=" + type +
                ", texts=" + texts +
+               ", updatable=" + updatable +
                ", required=" + required +
                ", constraint='" + constraint + '\'' +
+               ", prefillStrategyOptions=" + prefillStrategyOptions +
                ", destinationIdmAttribute='" + destinationIdmAttribute + '\'' +
                ", defaultValue='" + defaultValue + '\'' +
                ", formTypes=" + formTypes +

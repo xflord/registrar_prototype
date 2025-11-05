@@ -25,19 +25,19 @@ public class FormTransition {
     this.type = type;
   }
 
-  public FormSpecification getSourceForm() {
+  public FormSpecification getSourceFormSpecification() {
     return sourceFormSpecification;
   }
 
-  public void setSourceForm(FormSpecification sourceFormSpecification) {
+  public void setSourceFormSpecification(FormSpecification sourceFormSpecification) {
     this.sourceFormSpecification = sourceFormSpecification;
   }
 
-  public FormSpecification getTargetForm() {
+  public FormSpecification getTargetFormSpecification() {
     return targetFormSpecification;
   }
 
-  public void setTargetForm(FormSpecification targetFormSpecification) {
+  public void setTargetFormSpecification(FormSpecification targetFormSpecification) {
     this.targetFormSpecification = targetFormSpecification;
   }
 

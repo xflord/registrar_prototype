@@ -18,6 +18,7 @@ import org.perun.registrarprototype.events.ApplicationVerifiedEvent;
 import org.perun.registrarprototype.events.ChangesRequestedToApplicationEvent;
 import org.perun.registrarprototype.exceptions.DataInconsistencyException;
 import org.perun.registrarprototype.exceptions.IdmAttributeNotExistsException;
+import org.perun.registrarprototype.exceptions.IdmObjectNotExistsException;
 import org.perun.registrarprototype.exceptions.InsufficientRightsException;
 import org.perun.registrarprototype.exceptions.InvalidApplicationDataException;
 import org.perun.registrarprototype.exceptions.InvalidApplicationStateTransitionException;
@@ -443,16 +444,16 @@ public class ApplicationServiceImpl implements ApplicationService {
 
     SubmissionContext autoSubmitData;
     try {
-      FormSpecification.FormType type = selectFormType(new Requirement(autoSubmitTransition.getTargetForm().getGroupId(),
+      FormSpecification.FormType type = selectFormType(new Requirement(autoSubmitTransition.getTargetFormSpecification().getGroupId(),
           autoSubmitTransition.getTargetFormState()));
       if (type == null) {
-        System.out.println("Requirement for auto submit " + autoSubmitTransition.getTargetForm().getGroupId() + " already fulfilled");
+        System.out.println("Requirement for auto submit " + autoSubmitTransition.getTargetFormSpecification().getGroupId() + " already fulfilled");
         return;
       }
-      autoSubmitData = prepareApplicationForms(Map.of(autoSubmitTransition.getTargetForm(), type), null);
+      autoSubmitData = prepareApplicationForms(Map.of(autoSubmitTransition.getTargetFormSpecification(), type), null);
       applyForMemberships(autoSubmitData);
     } catch (Exception e) {
-      System.out.println("Error while auto-submitting application for form " + autoSubmitTransition.getTargetForm().getGroupId() + " with error: " + e.getMessage()); // TODO log properly
+      System.out.println("Error while auto-submitting application for form " + autoSubmitTransition.getTargetFormSpecification().getGroupId() + " with error: " + e.getMessage()); // TODO log properly
       // consider adding error into result messages?
     }
   }
@@ -558,7 +559,7 @@ public class ApplicationServiceImpl implements ApplicationService {
     if (!redirectTransitions.isEmpty()) {
       // TODO do we want to load prerequisites of redirect forms like so?
       List<Requirement> requirements = redirectTransitions.stream()
-                                           .map(transition -> new Requirement(transition.getTargetForm().getGroupId(),
+                                           .map(transition -> new Requirement(transition.getTargetFormSpecification().getGroupId(),
                                                transition.getTargetFormState())).toList();
       try {
         submissionResult.setRedirectForms(loadForms(requirements, submissionResult.getRedirectUrl(), false));
@@ -574,7 +575,8 @@ public class ApplicationServiceImpl implements ApplicationService {
 
   //TODO should be enough to build the whole form page? or do we need more info?
   @Override
-  public SubmissionContext loadForms(List<Requirement> requirements, String redirectUrl, boolean checkSimilarUsers) {
+  public SubmissionContext loadForms(List<Requirement> requirements, String redirectUrl, boolean checkSimilarUsers)
+      throws IdmObjectNotExistsException {
     if (checkSimilarUsers) { // potentially enable/disable with config
       // Check this once when loading registrar for the first time -> offer user the option to consolidate, do not check again afterwards
       List<Identity> similarIdentities =
@@ -590,6 +592,14 @@ public class ApplicationServiceImpl implements ApplicationService {
     requirements.forEach(requirement -> prerequisites.addAll(getPrerequisiteRequirements(requirement, new ArrayList<>())));
 
     requirements.addAll(prerequisites);
+
+    for (Requirement requirement : requirements) {
+      if (!idmService.checkGroupExists(requirement.getGroupId())) {
+        // TODO should not happen with message queue up, but alert admins/form managers?
+        throw new IdmObjectNotExistsException("Group " + requirement.getGroupId() + " not found in underlying IDM",
+            requirement.getGroupId());
+      }
+    }
 
     // Reversed should make it so that the prerequisites are in correct order
     // TODO do we want to keep information about what forms are prerequisites for?
@@ -1022,7 +1032,7 @@ public class ApplicationServiceImpl implements ApplicationService {
         requirement.getTargetState());
 
     prerequisiteTransitions.forEach(transition -> {
-      Requirement prerequisiteRequirement = new Requirement(transition.getTargetForm().getGroupId(),
+      Requirement prerequisiteRequirement = new Requirement(transition.getTargetFormSpecification().getGroupId(),
           transition.getTargetFormState());
       requirements.add(prerequisiteRequirement);
       requirements.addAll(getPrerequisiteRequirements(prerequisiteRequirement, requirements));

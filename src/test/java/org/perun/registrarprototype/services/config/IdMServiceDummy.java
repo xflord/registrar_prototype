@@ -37,17 +37,17 @@ public class IdMServiceDummy implements IdMService {
   }
 
   @Override
-  public String getMemberAttribute(Integer userId, String attributeName, int groupId) {
+  public String getMemberAttribute(Integer userId, String attributeName, Integer groupId) {
     return "";
   }
 
   @Override
-  public String getMemberGroupAttribute(Integer userId, String attributeName, int groupId) {
+  public String getMemberGroupAttribute(Integer userId, String attributeName, Integer groupId) {
     return "";
   }
 
   @Override
-  public boolean canExtendMembership(Integer userId, int groupId) {
+  public boolean canExtendMembership(Integer userId, Integer groupId) {
     return false;
   }
 
@@ -57,7 +57,7 @@ public class IdMServiceDummy implements IdMService {
   }
 
   @Override
-  public String getGroupAttribute(String attributeName, int groupId) {
+  public String getGroupAttribute(String attributeName, Integer groupId) {
     return "";
   }
 

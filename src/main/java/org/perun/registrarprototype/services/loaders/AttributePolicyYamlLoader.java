@@ -14,7 +14,6 @@ import org.perun.registrarprototype.models.AttributePolicy;
 import org.perun.registrarprototype.models.FormItem;
 import org.perun.registrarprototype.models.ItemTexts;
 import org.perun.registrarprototype.models.PrefillStrategyEntry;
-import org.perun.registrarprototype.services.AttributePolicyServiceImpl;
 import org.springframework.core.io.ResourceLoader;
 import org.springframework.stereotype.Component;
 import org.yaml.snakeyaml.Yaml;
