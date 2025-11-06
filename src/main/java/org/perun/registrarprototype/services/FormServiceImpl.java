@@ -9,8 +9,6 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.function.Function;
-import java.util.regex.Pattern;
-import java.util.regex.PatternSyntaxException;
 import java.util.stream.Collectors;
 import org.perun.registrarprototype.exceptions.DataInconsistencyException;
 import org.perun.registrarprototype.exceptions.FormItemRegexNotValid;
@@ -20,6 +18,8 @@ import org.perun.registrarprototype.models.AssignedFormModule;
 import org.perun.registrarprototype.models.FormSpecification;
 import org.perun.registrarprototype.models.FormItem;
 import org.perun.registrarprototype.models.FormTransition;
+import org.perun.registrarprototype.models.ItemDefinition;
+import org.perun.registrarprototype.models.ItemType;
 import org.perun.registrarprototype.models.Requirement;
 import org.perun.registrarprototype.repositories.FormItemRepository;
 import org.perun.registrarprototype.repositories.ApplicationRepository;
@@ -97,14 +97,6 @@ public class FormServiceImpl implements FormService {
   public FormItem setFormItem(int formId, FormItem formItem) throws FormItemRegexNotValid {
     FormSpecification formSpecification = formRepository.findById(formId).orElseThrow(() -> new IllegalArgumentException("Form with ID " + formId + " not found"));
 
-    if (formItem.getConstraint() != null && !formItem.getConstraint().isEmpty()) {
-        try {
-          Pattern.compile(formItem.getConstraint());
-        } catch (PatternSyntaxException e) {
-          throw new FormItemRegexNotValid("Cannot compile regex: " + formItem.getConstraint(), formItem);
-        }
-      }
-
     formItem.setFormId(formId);
     formItemRepository.save(formItem);
 
@@ -119,16 +111,6 @@ public class FormServiceImpl implements FormService {
   @Override
   public void setFormItems(int formId, List<FormItem> items) throws FormItemRegexNotValid {
     FormSpecification formSpecification = formRepository.findById(formId).orElseThrow(() -> new IllegalArgumentException("Form with ID " + formId + " not found"));
-
-    for (FormItem item : items) {
-      if (item.getConstraint() != null && !item.getConstraint().isEmpty()) {
-        try {
-          Pattern.compile(item.getConstraint());
-        } catch (PatternSyntaxException e) {
-          throw new FormItemRegexNotValid("Cannot compile regex: " + item.getConstraint(), item);
-        }
-      }
-    }
 
     items.forEach(item -> {
                       item.setFormId(formSpecification.getId());
@@ -276,7 +258,8 @@ public class FormServiceImpl implements FormService {
 
   @Override
   public List<FormItem> getFormItems(FormSpecification formSpecification, FormSpecification.FormType type) {
-    return formItemRepository.getFormItemsByFormId(formSpecification.getId()).stream().filter(formItem -> formItem.getFormTypes().contains(type)).toList();
+    return formItemRepository.getFormItemsByFormId(formSpecification.getId()).stream()
+               .filter(formItem -> formItem.getItemDefinition().getFormTypes().contains(type)).toList();
   }
 
   @Override
@@ -306,8 +289,9 @@ public class FormServiceImpl implements FormService {
 
     updatedItems.forEach(formItem -> {
       attributePolicyService.applyAttributePolicyToItem(formItem);
-      performTypeSpecificChecks(formItem);
-      checkPrefillStrategyOptions(formItem);
+      performTypeSpecificChecks(formItem.getItemDefinition());
+      checkPrefillStrategyOptions(formItem.getItemDefinition());
+      // TODO check validators (e.g. valid regexes, etc.)
     });
 
     List<FormItem> existingItems = formItemRepository.getFormItemsByFormId(formId);
@@ -338,9 +322,9 @@ public class FormServiceImpl implements FormService {
         }
         item = updatedItem;
         // check that updated items do not change destination, if so then warn/throw exception
-        String oldDestination = existingById.get(actualId).getDestinationIdmAttribute();
+        String oldDestination = existingById.get(actualId).getItemDefinition().getDestinationAttributeUrn();
         if (oldDestination != null) {
-          String newDestination = item.getDestinationIdmAttribute();
+          String newDestination = item.getItemDefinition().getDestinationAttributeUrn();
           boolean hasOpenApplications = applicationRepository.findByFormId(formId).stream()
                                             .anyMatch(app -> app.getState().isOpenState());
           if (!oldDestination.equals(newDestination) && hasOpenApplications) {
@@ -390,13 +374,13 @@ public class FormServiceImpl implements FormService {
    * If there are prefill strategies defined, checks that the options map contains all the required entries
    * @param formItem
    */
-  private void checkPrefillStrategyOptions(FormItem formItem) {
-    if (formItem.getPrefillStrategyOptions() != null) {
-      formItem.getPrefillStrategyOptions().forEach(entry -> {
-        if (entry.getPrefillStrategyType().requiresSource() && StringUtils.isEmpty(entry.getSourceAttribute())) {
-          throw new IllegalArgumentException("Prefill strategy " + entry.getPrefillStrategyType() + " requires attribute");
+  private void checkPrefillStrategyOptions(ItemDefinition formItem) {
+    if (formItem.getPrefillStrategies() != null) {
+      formItem.getPrefillStrategies().forEach(entry -> {
+        if (entry.getType().requiresSource() && StringUtils.isEmpty(entry.getSourceAttribute())) {
+          throw new IllegalArgumentException("Prefill strategy " + entry.getType() + " requires attribute");
         }
-        List<String> requiredOptions = entry.getPrefillStrategyType().getRequiredOptions();
+        List<String> requiredOptions = entry.getType().getRequiredOptions();
         if (!requiredOptions.isEmpty()) {
           if (entry.getOptions() == null) {
             throw new IllegalArgumentException("No prefill options are defined but are required for strategy " + entry);
@@ -409,7 +393,7 @@ public class FormServiceImpl implements FormService {
     }
   }
 
-  private void performTypeSpecificChecks(FormItem item) {
+  private void performTypeSpecificChecks(ItemDefinition item) {
     if (item.isUpdatable() && !item.getType().isUpdatable()) {
       throw new IllegalArgumentException("Form item " + item + " of non-updatable type cannot be updatable");
     }
@@ -421,18 +405,18 @@ public class FormServiceImpl implements FormService {
       if (item.getDefaultValue() != null) {
         throw new IllegalArgumentException("Layout form item " + item + " cannot have a default value");
       }
-      if (item.getDestinationIdmAttribute() != null) {
+      if (item.getDestinationAttributeUrn() != null) {
         throw new IllegalArgumentException("Layout form item " + item + " cannot have a destination attribute");
       }
-      if (item.getPrefillStrategyOptions() != null && !item.getPrefillStrategyOptions().isEmpty()) {
+      if (item.getPrefillStrategies() != null && !item.getPrefillStrategies().isEmpty()) {
         throw new IllegalArgumentException("Layout form item " + item + " cannot have a prefill strategy");
       }
     }
 
 
-    if (item.getType().equals(FormItem.Type.PASSWORD)) {
+    if (item.getType().equals(ItemType.PASSWORD)) {
       // TODO a form of enforcing certain rules (label format, allowed destination attributes, etc.) via yaml config?
-      if (item.getDestinationIdmAttribute() == null) {
+      if (item.getDestinationAttributeUrn() == null) {
         throw new IllegalArgumentException("Password item must have a destination IDM attribute");
       }
     }
@@ -454,7 +438,7 @@ public class FormServiceImpl implements FormService {
 
     items.forEach(item -> {
       Set<Integer> seenItems = new HashSet<>();
-      if (item.isRequired() && willItemAlwaysBeEmpty(item, formItemMap, seenItems)) {
+      if (item.getItemDefinition().isRequired() && willItemAlwaysBeEmpty(item, formItemMap, seenItems)) {
         invalidItems.add(item);
       }
     });
@@ -478,25 +462,25 @@ public class FormServiceImpl implements FormService {
       // Circular dependencies on their own aren't a problem(?), as long as they don't cause the items to be unfillable (as is the case here)
       throw new IllegalArgumentException("Circular dependency detected starting with item: " + item);
     }
-    return isItemPrefillEmpty(item) &&
+    return isItemPrefillEmpty(item.getItemDefinition()) &&
                (isEmptyItemHidden(item, formItemMap, seenItems) || isEmptyItemDisabled(item, formItemMap, seenItems));
 
   }
 
-  private boolean isItemPrefillEmpty(FormItem item) {
-    return StringUtils.isEmpty(item.getDefaultValue()) &&
-               (item.getPrefillStrategyOptions() == null || item.getPrefillStrategyOptions().isEmpty());
+  private boolean isItemPrefillEmpty(ItemDefinition itemDef) {
+    return StringUtils.isEmpty(itemDef.getDefaultValue()) &&
+               (itemDef.getPrefillStrategies() == null || itemDef.getPrefillStrategies().isEmpty());
   }
 
   private boolean isEmptyItemHidden(FormItem item, Map<Integer, FormItem> formItemMap, Set<Integer> seenItems) {
-    return isEmptyItemConditionApplied(item.getHidden(), item, formItemMap, seenItems);
+    return isEmptyItemConditionApplied(item.getItemDefinition().getHidden(), item, formItemMap, seenItems);
   }
 
   private boolean isEmptyItemDisabled(FormItem item, Map<Integer, FormItem> formItemMap, Set<Integer> seenItems) {
-    return isEmptyItemConditionApplied(item.getDisabled(), item, formItemMap, seenItems);
+    return isEmptyItemConditionApplied(item.getItemDefinition().getDisabled(), item, formItemMap, seenItems);
   }
 
-  private boolean isEmptyItemConditionApplied(FormItem.Condition condition, FormItem item,
+  private boolean isEmptyItemConditionApplied(ItemDefinition.Condition condition, FormItem item,
                                               Map<Integer, FormItem> formItemMap, Set<Integer> seenItems) {
     FormItem dependencyItem = formItemMap.get(item.getHiddenDependencyItemId());
     if (dependencyItem != null) {
@@ -506,7 +490,7 @@ public class FormServiceImpl implements FormService {
         case IF_EMPTY -> willItemAlwaysBeEmpty(dependencyItem, formItemMap, seenItems);
         // TODO how do we want to behave if the dependency item is prefilled, but changed by the user afterwards (e.g. the item itself
         //  is not disabled/hidden if_prefilled). This is mostly a GUI question, but still relates to this check.
-        case IF_PREFILLED -> !isItemPrefillEmpty(dependencyItem); // not problematic if it doesn't actually get prefilled, still should not allow TODO verify this
+        case IF_PREFILLED -> !isItemPrefillEmpty(dependencyItem.getItemDefinition()); // not problematic if it doesn't actually get prefilled, still should not allow TODO verify this
       };
     }
 
@@ -583,12 +567,14 @@ public class FormServiceImpl implements FormService {
    */
   private void checkSubmissibility(List<FormItem> items) {
     boolean containsValueItems = items.stream()
-            .anyMatch(item -> !item.getType().isLayoutItem());
+                                     .map(FormItem::getItemDefinition)
+            .anyMatch(itemDef -> !itemDef.getType().isLayoutItem());
     if (containsValueItems &&
             items.stream()
-                .noneMatch(item -> item.getType().isSubmitItem() &&
-                                       !(item.getHidden().equals(FormItem.Condition.ALWAYS) ||
-                                           item.getHidden().equals(FormItem.Condition.IF_EMPTY)))) {
+                .map(FormItem::getItemDefinition)
+                .noneMatch(itemDef -> itemDef.getType().isSubmitItem() &&
+                                       !(itemDef.getHidden().equals(ItemDefinition.Condition.ALWAYS) ||
+                                           itemDef.getHidden().equals(ItemDefinition.Condition.IF_EMPTY)))) {
       throw new IllegalArgumentException("Submit item required but not present or visible.");
     }
   }
@@ -604,7 +590,7 @@ public class FormServiceImpl implements FormService {
         throw new IllegalArgumentException(dependencyType + " dependency item" + dependencyId + " cannot be the same as the item itself");
       }
 
-      if (!dependencyType.equals("Parent") && existingById.get(dependencyId).getType().isLayoutItem()) {
+      if (!dependencyType.equals("Parent") && existingById.get(dependencyId).getItemDefinition().getType().isLayoutItem()) {
         throw new IllegalArgumentException("Cannot depend on layout item as it does not have a value");
       }
     }

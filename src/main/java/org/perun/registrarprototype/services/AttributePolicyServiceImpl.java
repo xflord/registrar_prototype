@@ -10,29 +10,29 @@ import org.perun.registrarprototype.models.ItemTexts;
 import org.perun.registrarprototype.models.PrefillStrategyEntry;
 import org.perun.registrarprototype.repositories.AttributePolicyRepository;
 import org.perun.registrarprototype.repositories.FormItemRepository;
-import org.perun.registrarprototype.services.loaders.AttributePolicyYamlLoader;
+import org.perun.registrarprototype.services.loaders.ItemConfigLoader;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 @Service
 public class AttributePolicyServiceImpl implements AttributePolicyService {
   private final AttributePolicyRepository attributePolicyRepository;
-  private final AttributePolicyYamlLoader attributePolicyYamlLoader;
+  private final ItemConfigLoader itemConfigLoader;
   private final FormItemRepository formItemRepository;
   @Value( "${attribute.policy.yaml.path}" )
   private String configPath;
 
   public AttributePolicyServiceImpl(AttributePolicyRepository attributePolicyRepository,
-                                    AttributePolicyYamlLoader attributePolicyYamlLoader,
+                                    ItemConfigLoader itemConfigLoader,
                                     FormItemRepository formItemRepository) {
     this.attributePolicyRepository = attributePolicyRepository;
-    this.attributePolicyYamlLoader = attributePolicyYamlLoader;
+    this.itemConfigLoader = itemConfigLoader;
     this.formItemRepository = formItemRepository;
   }
 
   @PostConstruct
   public void initializePolicies() {
-    List<AttributePolicy> policiesFromYamlConfig = attributePolicyYamlLoader.load(configPath);
+    List<AttributePolicy> policiesFromYamlConfig = itemConfigLoader.load(configPath);
 
     policiesFromYamlConfig.forEach(attributePolicy -> {
       if (attributePolicyRepository.findByUrn(attributePolicy.getUrn()).isEmpty()) {
@@ -258,8 +258,8 @@ public class AttributePolicyServiceImpl implements AttributePolicyService {
     if (attributePolicy.getAllowedPrefillStrategies() == null) return;
 
     for (PrefillStrategyEntry prefillStrategyEntry : attributePolicy.getEnforcedPrefillOptions()) {
-      if (!attributePolicy.getAllowedPrefillStrategies().contains(prefillStrategyEntry.getPrefillStrategyType())) {
-        throw new IllegalArgumentException("Cannot enforce strategy " + prefillStrategyEntry.getPrefillStrategyType() + " if it is not allowed in attribute " + attributePolicy.getUrn());
+      if (!attributePolicy.getAllowedPrefillStrategies().contains(prefillStrategyEntry.getType())) {
+        throw new IllegalArgumentException("Cannot enforce strategy " + prefillStrategyEntry.getType() + " if it is not allowed in attribute " + attributePolicy.getUrn());
       }
     }
   }

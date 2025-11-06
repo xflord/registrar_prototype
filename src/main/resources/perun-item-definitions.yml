@@ -1,0 +1,38 @@
+# global item definitions assignable to form specifications by system admins
+
+E-INFRA Login:
+  type: LOGIN
+  updatable: false
+  required: true
+  prefillStrategies:
+    - type: LOGIN_ATTRIBUTE
+  destinationAttributeUrn: urn:perun:user:attribute-def:def:login-namespace:einfra
+  formTypes:
+    - INITIAL
+  hidden: NEVER
+  disabled: IF_PREFILLED
+  texts:
+    en:
+      label: "E-INFRA Login"
+      help: "Enter your E-infra login username"
+      error: "Invalid login format"
+    cs:
+      label: "E-INFRA přihlašovací jméno"
+      help: "Zadejte své E-infra přihlašovací jméno"
+      error: "Neplatný formát přihlašovacího jména"
+
+
+Full name:
+  type: TEXTFIELD
+  updatable: true
+  required: true
+  prefillStrategies:
+    - type: IDM_ATTRIBUTE
+      sourceAttribute: urn:perun:user:attribute-def:core:displayName
+    - type: IDENTITY_ATTRIBUTE
+      sourceAttribute: name
+  destinationAttributeUrn: urn:perun:user:attribute-def:core:displayName
+  formTypes:
+    - INITIAL
+  hidden: NEVER
+  disabled: NEVER

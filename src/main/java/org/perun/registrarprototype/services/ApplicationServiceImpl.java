@@ -33,6 +33,8 @@ import org.perun.registrarprototype.models.FormItemData;
 import org.perun.registrarprototype.models.ApplicationForm;
 import org.perun.registrarprototype.models.FormTransition;
 import org.perun.registrarprototype.models.Identity;
+import org.perun.registrarprototype.models.ItemDefinition;
+import org.perun.registrarprototype.models.ItemType;
 import org.perun.registrarprototype.models.Requirement;
 import org.perun.registrarprototype.models.Role;
 import org.perun.registrarprototype.models.SubmissionContext;
@@ -390,10 +392,12 @@ public class ApplicationServiceImpl implements ApplicationService {
     }
 
     List<ValidationError> result = items.stream()
-                                       .map(item -> item.validate(
+                                       .map(item -> validate(item,
         data.getFormItemData().stream()
             .filter(itemData -> itemData.getFormItem().getId() == item.getId())
-            .findFirst().orElse(null))
+            .map(FormItemData::getValue)
+            .findFirst()
+            .orElse(null))
         )
                                        .filter(Objects::nonNull).toList();
     if (!result.isEmpty()) {
@@ -480,7 +484,7 @@ public class ApplicationServiceImpl implements ApplicationService {
       if (!existingItemToDataMap.containsKey(item.getFormItem())) {
         throw new IllegalArgumentException("Item " + item.getFormItem().getId() + " does not belong to application " + applicationId);
       }
-      if (!item.getFormItem().isUpdatable()) {
+      if (!item.getFormItem().getItemDefinition().isUpdatable()) {
         throw new IllegalArgumentException("Item " + item.getFormItem().getId() + " cannot be updated");
       }
 
@@ -488,7 +492,7 @@ public class ApplicationServiceImpl implements ApplicationService {
 
       existingItem.setValue(item.getValue());
 
-      if (item.getFormItem().getType().isVerifiedItem()) {
+      if (item.getFormItem().getItemDefinition().getType().isVerifiedItem()) {
         checkPrefilledValueConsistency(sessionProvider.getCurrentSession(), existingItem);
       }
     });
@@ -527,7 +531,7 @@ public class ApplicationServiceImpl implements ApplicationService {
    */
   private void attemptApplicationVerification(Application application) {
     List<FormItemData> unassuredItems = application.getFormItemData().stream()
-        .filter(itemData -> itemData.getFormItem().getType().isVerifiedItem())
+        .filter(itemData -> itemData.getFormItem().getItemDefinition().getType().isVerifiedItem())
         .filter(itemData -> !itemData.isValueAssured()).toList();
 
     if (unassuredItems.isEmpty()) {
@@ -675,7 +679,6 @@ public class ApplicationServiceImpl implements ApplicationService {
     }
   }
 
-
   @Override
   public List<FormItemData> loadForm(RegistrarAuthenticationToken sess, FormSpecification formSpecification, FormSpecification.FormType type) {
 //    if (type.equals(Form.FormType.UPDATE)) {
@@ -709,6 +712,32 @@ public class ApplicationServiceImpl implements ApplicationService {
                .toList();
   }
 
+  private ValidationError validate(FormItem item, String value) {
+    // TODO ideally replace hardcoded strings with enums/inheritance and let GUI translate them
+    ItemDefinition itemDef = item.getItemDefinition();
+
+    if (itemDef.getType().isLayoutItem() && itemDef.isRequired()) {
+      throw new IllegalStateException("Layout item required: " + this);
+    }
+
+    if (itemDef.getType().isLayoutItem() && !value.isEmpty()) {
+      return new ValidationError(item.getId(), "Layout item " + itemDef.getTexts() + " cannot hold value");
+    }
+
+    if (itemDef.isRequired() && (value == null || value.isEmpty())) {
+        return new ValidationError(item.getId(), "Field " + itemDef.getLabel() + " is required");
+    }
+
+    // TODO apply validators
+    if (value != null && itemDef.getValidator() != null) {
+        if (!value.matches(itemDef.getValidator())) {
+            return new ValidationError(item.getId(), "Item " + itemDef.getLabel() + " must match constraint " + itemDef.getValidator());
+        }
+    }
+
+    return null;
+  }
+
   /**
    * Returns prefilled form item data for supplied form's items.
    * Allow admin to define where to fill item from (e.g. federation, IdM, more complex solutions/external sources -> from submitted prerequisites)]
@@ -739,8 +768,8 @@ public class ApplicationServiceImpl implements ApplicationService {
     List<FormItemData> itemsWithMissingData = new ArrayList<>();
     prefilledItems.stream()
         .filter(item -> hasItemIncorrectVisibility(item, prefilledItems)).forEach(item -> {
-          if (item.getFormItem().getPrefillStrategyOptions() == null ||
-              item.getFormItem().getPrefillStrategyOptions().isEmpty()) {
+          if (item.getFormItem().getItemDefinition().getPrefillStrategies() == null ||
+              item.getFormItem().getItemDefinition().getPrefillStrategies().isEmpty()) {
             unmodifiableRequiredButEmpty.add(item);
           } else {
             itemsWithMissingData.add(item);
@@ -768,7 +797,7 @@ public class ApplicationServiceImpl implements ApplicationService {
    * @return
    */
   private boolean hasItemIncorrectVisibility(FormItemData item, List<FormItemData> prefilledFormItemData) {
-    return item.getFormItem().isRequired() && StringUtils.isEmpty(item.getPrefilledValue()) &&
+    return item.getFormItem().getItemDefinition().isRequired() && StringUtils.isEmpty(item.getPrefilledValue()) &&
             (isItemHidden(item, prefilledFormItemData) || isItemDisabled(item, prefilledFormItemData));
   }
 
@@ -779,7 +808,8 @@ public class ApplicationServiceImpl implements ApplicationService {
    * @return
    */
   private boolean isItemHidden(FormItemData item, List<FormItemData> prefilledFormItemData) {
-    return isItemConditionApplied(item.getPrefilledValue(), prefilledFormItemData, item.getFormItem().getHidden(),
+    return isItemConditionApplied(item.getPrefilledValue(), prefilledFormItemData,
+        item.getFormItem().getItemDefinition().getHidden(),
         item.getFormItem().getHiddenDependencyItemId());
   }
 
@@ -790,7 +820,8 @@ public class ApplicationServiceImpl implements ApplicationService {
    * @return
    */
   private boolean isItemDisabled(FormItemData item, List<FormItemData> prefilledFormItemData) {
-    return isItemConditionApplied(item.getPrefilledValue(), prefilledFormItemData, item.getFormItem().getDisabled(),
+    return isItemConditionApplied(item.getPrefilledValue(), prefilledFormItemData,
+        item.getFormItem().getItemDefinition().getDisabled(),
         item.getFormItem().getDisabledDependencyItemId());
   }
 
@@ -803,7 +834,7 @@ public class ApplicationServiceImpl implements ApplicationService {
    * @return
    */
   private boolean isItemConditionApplied(String valueToCheck, List<FormItemData> prefilledFormItemData,
-                                         FormItem.Condition condition, Integer dependencyItemId) {
+                                         ItemDefinition.Condition condition, Integer dependencyItemId) {
     if (dependencyItemId != null) {
       FormItemData dependentItem = prefilledFormItemData.stream().
                                        filter(otherItem -> otherItem.getFormItem().getId() == dependencyItemId)
@@ -829,12 +860,12 @@ public class ApplicationServiceImpl implements ApplicationService {
 
     if (!sess.isAuthenticated()) {
       // TODO potentially move this to the strategy logic? Could there be a strategy that returns value for unauthenticated users?
-      return item.getDefaultValue();
+      return item.getItemDefinition().getDefaultValue();
     }
 
     Optional<String> prefilledValue = prefillStrategyResolver.prefill(item);
 
-    return prefilledValue.orElseGet(item::getDefaultValue);
+    return prefilledValue.orElse(item.getItemDefinition().getDefaultValue());
 
   }
 
@@ -853,19 +884,21 @@ public class ApplicationServiceImpl implements ApplicationService {
     List<FormItemData> loginItemsToLeaveOut = new ArrayList<>();
     if (application.getIdmUserId() != null) {
       application.getFormItemData().stream()
-          .filter(item -> item.getFormItem().getType().equals(FormItem.Type.LOGIN))
+          .filter(item -> item.getFormItem().getItemDefinition().getType().equals(ItemType.LOGIN))
           .forEach(loginItem -> {
             String perunLogin;
             try {
               perunLogin =
-                  idmService.getUserAttribute(application.getIdmUserId(), loginItem.getFormItem().getDestinationIdmAttribute());
+                  idmService.getUserAttribute(application.getIdmUserId(), loginItem.getFormItem().getItemDefinition().
+                                                                              getDestinationAttributeUrn());
             } catch (IdmAttributeNotExistsException e) {
               // TODO login attribute definition was removed in IdM between submission and approval, alert admins?
               throw new IllegalStateException("Login item attribute has been deleted in the underlying IdM system, " +
                                                  e.getMessage());
             }
             String itemLogin = loginItem.getValue();
-            String namespace = extractNamespaceFromLoginAttrName(loginItem.getFormItem().getDestinationIdmAttribute());
+            String namespace = extractNamespaceFromLoginAttrName(loginItem.getFormItem().getItemDefinition().
+                                                                     getDestinationAttributeUrn());
             if (!StringUtils.isEmpty(perunLogin)) {
               loginItemsToLeaveOut.add(loginItem);
               idmService.deletePassword(namespace, itemLogin);
@@ -879,9 +912,10 @@ public class ApplicationServiceImpl implements ApplicationService {
 
   private void releaseLogins(List<FormItemData> itemData) {
     itemData.stream()
-        .filter(item -> item.getFormItem().getType().equals(FormItem.Type.LOGIN))
+        .filter(item -> item.getFormItem().getItemDefinition().getType().equals(ItemType.LOGIN))
         .forEach(loginItem -> {
-          String namespace = extractNamespaceFromLoginAttrName(loginItem.getFormItem().getDestinationIdmAttribute());
+          String namespace = extractNamespaceFromLoginAttrName(loginItem.getFormItem().getItemDefinition().
+                                                                   getDestinationAttributeUrn());
           if (namespace == null) {
             throw new IllegalStateException("Destination attribute of " + loginItem + " is not a login-namespace attribute.");
           }
@@ -899,14 +933,15 @@ public class ApplicationServiceImpl implements ApplicationService {
   private void reserveLogins(List<FormItemData> itemData) {
 
     for (FormItemData formItemData : itemData) {
-      if (formItemData.getFormItem().getType().equals(FormItem.Type.LOGIN)) {
+      if (formItemData.getFormItem().getItemDefinition().getType().equals(ItemType.LOGIN)) {
         if (StringUtils.isEmpty(formItemData.getValue()) ||
                 formItemData.isValueAssured()) { // login with prefilled value => value alr reserved
           continue;
         }
         // could be a lot of calls, at the same time this checks that the attribute actually exists
         // AttributeDefinition attrDef = idmService.getAttributeDefinition(formItemData.getFormItem().getDestinationIdmAttribute());
-        String namespace = extractNamespaceFromLoginAttrName(formItemData.getFormItem().getDestinationIdmAttribute());
+        String namespace = extractNamespaceFromLoginAttrName(formItemData.getFormItem().getItemDefinition().
+                                                                 getDestinationAttributeUrn());
         if (namespace == null) {
           throw new IllegalStateException("Destination attribute of " + formItemData + " is not a login-namespace attribute.");
         }
@@ -914,7 +949,8 @@ public class ApplicationServiceImpl implements ApplicationService {
         if (idmService.isLoginAvailable(namespace, login)) {
           idmService.reserveLogin(namespace, login);
           itemData.stream()
-              .filter(passwordItem -> passwordItem.getFormItem().getType().equals(FormItem.Type.PASSWORD))
+              .filter(passwordItem -> passwordItem.getFormItem().getItemDefinition()
+                                          .getType().equals(ItemType.PASSWORD))
               .forEach(passwordItem -> idmService.reservePassword(namespace, login, passwordItem.getValue()));
 
         } else {

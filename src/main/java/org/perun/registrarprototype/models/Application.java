@@ -46,12 +46,6 @@ public class Application extends ApplicationForm {
     if (state != ApplicationState.PENDING) {
       throw new InvalidApplicationStateTransitionException("Only new applications can be submitted", this);
     }
-    // TODO this is probably unnecessary, consider removing `submit` `approve` and `reject` methods
-    ValidationResult result = formSpecification.validateItemData(this.getFormItemData());
-    if (!result.isValid()) {
-        throw new InvalidApplicationDataException("Some of the form items were incorrectly filled in",
-            result.errors(), this);
-    }
     this.state = ApplicationState.SUBMITTED;
   }
 

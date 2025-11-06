@@ -1,25 +1,29 @@
 package org.perun.registrarprototype.models;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
 public class PrefillStrategyEntry {
-  private FormItem.PrefillStrategyType prefillStrategyType;
+  private PrefillStrategyType type;
   private Map<String, String> options;
   private String sourceAttribute;
 
-  public PrefillStrategyEntry(FormItem.PrefillStrategyType prefillStrategyType, Map<String, String> options, String sourceAttribute) {
-    this.prefillStrategyType = prefillStrategyType;
+  public PrefillStrategyEntry() {}
+
+  public PrefillStrategyEntry(PrefillStrategyType type, Map<String, String> options, String sourceAttribute) {
+    this.type = type;
     this.options = options;
     this.sourceAttribute = sourceAttribute;
   }
 
-  public FormItem.PrefillStrategyType getPrefillStrategyType() {
-    return prefillStrategyType;
+  public PrefillStrategyType getType() {
+    return type;
   }
 
-  public void setPrefillStrategyType(FormItem.PrefillStrategyType prefillStrategyType) {
-    this.prefillStrategyType = prefillStrategyType;
+  public void setType(PrefillStrategyType type) {
+    this.type = type;
   }
 
   public Map<String, String> getOptions() {
@@ -44,22 +48,37 @@ public class PrefillStrategyEntry {
       return false;
     }
     PrefillStrategyEntry that = (PrefillStrategyEntry) o;
-    return getPrefillStrategyType() == that.getPrefillStrategyType() &&
+    return getType() == that.getType() &&
                getSourceAttribute().equals(that.getSourceAttribute()) &&
                Objects.equals(getOptions(), that.getOptions());
   }
 
   @Override
   public int hashCode() {
-    return Objects.hash(getPrefillStrategyType(), getOptions(), getSourceAttribute());
+    return Objects.hash(getType(), getOptions(), getSourceAttribute());
   }
 
   @Override
   public String toString() {
     return "PrefillStrategyEntry{" +
-               "prefillStrategyType=" + prefillStrategyType +
+               "prefillStrategyType=" + type +
                ", options=" + options +
                ", sourceAttribute='" + sourceAttribute + '\'' +
                '}';
+  }
+
+  public enum PrefillStrategyType {
+    IDENTITY_ATTRIBUTE, IDM_ATTRIBUTE, LOGIN_ATTRIBUTE, APPLICATION;
+
+    public List<String> getRequiredOptions() {
+      return new ArrayList<>();
+    }
+
+    public boolean requiresSource() {
+      return switch (this) {
+        case IDENTITY_ATTRIBUTE, IDM_ATTRIBUTE -> true;
+        default -> false;
+      };
+    }
   }
 }

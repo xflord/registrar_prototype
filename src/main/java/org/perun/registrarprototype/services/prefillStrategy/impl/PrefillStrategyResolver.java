@@ -22,7 +22,7 @@ public class PrefillStrategyResolver {
 
   public Optional<String> prefill(FormItem item) {
     for (PrefillStrategyEntry entry : item.getPrefillStrategyOptions()) {
-      PrefillStrategy prefillStrategy = getStrategyForKey(entry.getPrefillStrategyType());
+      PrefillStrategy prefillStrategy = getStrategyForKey(entry.getType());
       prefillStrategy.validateOptions(entry);
       Optional<String> result = prefillStrategy.prefill(item, entry);
       if (result.isPresent()) {

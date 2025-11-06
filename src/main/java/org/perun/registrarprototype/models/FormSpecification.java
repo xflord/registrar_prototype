@@ -1,6 +1,5 @@
 package org.perun.registrarprototype.models;
 
-import java.util.ArrayList;
 import java.util.List;
 
 public class FormSpecification {
@@ -10,6 +9,8 @@ public class FormSpecification {
   private List<FormItem> items;
   private boolean autoApprove = false;
   private boolean autoApproveExtension = false;
+//  private List<PrefillStrategyEntry> availablePrefillStrategies;
+//  private List<String> availableDestinationUrns;
 
   public FormSpecification() {
   }
@@ -27,22 +28,6 @@ public class FormSpecification {
     this.items = items;
     this.autoApprove = autoApprove;
     this.autoApproveExtension = autoApproveExtension;
-  }
-
-  public ValidationResult validateItemData(List<FormItemData> itemData) {
-    List<ValidationError> errors = new ArrayList<>();
-    for (FormItem item : items) {
-      FormItemData response = itemData.stream()
-          .filter(r -> r.getFormItem().getId() == item.getId())
-          .findFirst()
-          .orElse(null);
-
-      ValidationError validationResult = item.validate(response);
-      if (validationResult != null) {
-        errors.add(validationResult);
-      }
-    }
-    return new ValidationResult(errors);
   }
 
   public int getId() {
