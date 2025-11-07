@@ -9,4 +9,5 @@ public interface AuthorizationService {
 
   boolean canDecide(RegistrarAuthenticationToken sess, int groupId);
 
+  boolean isAdmin(RegistrarAuthenticationToken sess);
 }

@@ -9,6 +9,8 @@ import org.perun.registrarprototype.models.AssignedFormModule;
 import org.perun.registrarprototype.models.FormSpecification;
 import org.perun.registrarprototype.models.FormItem;
 import org.perun.registrarprototype.models.FormTransition;
+import org.perun.registrarprototype.models.ItemDefinition;
+import org.perun.registrarprototype.models.PrefillStrategyEntry;
 import org.perun.registrarprototype.models.Requirement;
 import org.perun.registrarprototype.security.CurrentUser;
 import org.perun.registrarprototype.security.RegistrarAuthenticationToken;
@@ -73,9 +75,99 @@ public class FormController {
    */
   @PostMapping("/updateFormItems")
   public ResponseEntity<Void> updateFormItems(@RequestParam int formId, @RequestBody List<FormItem> items) {
-    //
+    RegistrarAuthenticationToken session = sessionProvider.getCurrentSession();
+    FormSpecification formSpec = formService.getFormById(formId);
+
+    // Authorization check
+    if (!authorizationService.canManage(session, formSpec.getGroupId())) {
+      return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+    }
+
+    boolean isSystemAdmin = authorizationService.isAdmin(session);
+
+    // Validate prefill strategy scoping
+    validatePrefillStrategyScoping(items, formSpec, isSystemAdmin);
+
+
     formService.updateFormItems(formId, items);
     return ResponseEntity.ok().build();
+  }
+
+  @PostMapping("/createPrefillStrategyEntry")
+  public ResponseEntity<PrefillStrategyEntry> createPrefillStrategyEntry(@RequestBody PrefillStrategyEntry prefillStrategyEntry) {
+    RegistrarAuthenticationToken session = sessionProvider.getCurrentSession();
+    if (prefillStrategyEntry.isGlobal()) {
+      if (!authorizationService.isAdmin(session)) {
+        return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+      }
+    } else {
+      if (prefillStrategyEntry.getFormSpecification() == null) {
+        throw new IllegalArgumentException("Form specification is null");
+      }
+      FormSpecification formSpec = formService.getFormById(prefillStrategyEntry.getFormSpecification().getId());
+      authorizationService.canManage(session, formSpec.getGroupId());
+    }
+    return ResponseEntity.ok(formService.createPrefillStrategy(prefillStrategyEntry));
+  }
+
+  @GetMapping("/getPrefillStrategyEntries/forForm")
+  public ResponseEntity<List<PrefillStrategyEntry>> getPrefillStrategyEntries(@RequestParam int formId) {
+    RegistrarAuthenticationToken session = sessionProvider.getCurrentSession();
+    FormSpecification formSpec = formService.getFormById(formId);
+    if (!authorizationService.canManage(session, formSpec.getGroupId())) {
+      return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+    }
+    List<PrefillStrategyEntry> prefillStrategyEntries = formService.getPrefillStrategiesForForm(formSpec);
+    if (authorizationService.isAdmin(session)) {
+      prefillStrategyEntries.addAll(formService.getGlobalPrefillStrategies());
+    }
+    return ResponseEntity.ok(prefillStrategyEntries);
+  }
+
+  @GetMapping("/getPrefillStrategyEntries/global")
+  public ResponseEntity<List<PrefillStrategyEntry>> getPrefillStrategyEntriesGlobal() {
+    RegistrarAuthenticationToken session = sessionProvider.getCurrentSession();
+    if (!authorizationService.isAdmin(session)) {
+      return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+    }
+
+    return ResponseEntity.ok(formService.getGlobalPrefillStrategies());
+  }
+
+  @PostMapping("/createItemDefinition")
+  public ResponseEntity<ItemDefinition> createItemDefinition(@RequestBody ItemDefinition itemDefinition) {
+    RegistrarAuthenticationToken session = sessionProvider.getCurrentSession();
+    if (itemDefinition.isGlobal()) {
+      if (!authorizationService.isAdmin(session)) {
+        return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+      }
+    } else {
+      if (itemDefinition.getFormSpecification() == null) {
+        throw new IllegalArgumentException("Form specification is null");
+      }
+      FormSpecification formSpec = formService.getFormById(itemDefinition.getFormSpecification().getId());
+      authorizationService.canManage(session, formSpec.getGroupId());
+    }
+    return ResponseEntity.ok(formService.createItemDefinition(itemDefinition));
+  }
+
+  @GetMapping("/getItemDefinitions/forForm")
+  public ResponseEntity<List<ItemDefinition>> getItemDefinitions(@RequestParam int formId) {
+    RegistrarAuthenticationToken session = sessionProvider.getCurrentSession();
+    FormSpecification formSpec = formService.getFormById(formId);
+    if (!authorizationService.canManage(session, formSpec.getGroupId())) {
+      return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+    }
+    return ResponseEntity.ok(formService.getItemDefinitionsForForm(formSpec));
+  }
+
+  @GetMapping("/getItemDefinitions/global")
+  public ResponseEntity<List<ItemDefinition>> getItemDefinitionsGlobal() {
+    RegistrarAuthenticationToken session = sessionProvider.getCurrentSession();
+    if (!authorizationService.isAdmin(session)) {
+      return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+    }
+    return ResponseEntity.ok(formService.getGlobalItemDefinitions());
   }
 
   @PostMapping("/addPrerequisiteForm")
@@ -137,5 +229,57 @@ public class FormController {
       principal.getAttributes(),
       principal.getRoles()
     ));
+  }
+
+  private void validatePrefillStrategyScoping(List<FormItem> items, FormSpecification formSpec, boolean isSystemAdmin) {
+  for (FormItem item : items) {
+    ItemDefinition itemDef = item.getItemDefinition();
+    if (itemDef.getPrefillStrategies() == null || itemDef.getPrefillStrategies().isEmpty()) {
+      continue;
+    }
+
+    if (itemDef.isGlobal()) {
+      // Global ItemDefinitions can only use global PrefillStrategyEntries
+      for (PrefillStrategyEntry strategy : itemDef.getPrefillStrategies()) {
+        PrefillStrategyEntry existing = formService.getPrefillStrategyById(strategy.getId());
+        if (existing == null) {
+          throw new IllegalArgumentException(
+              "PrefillStrategyEntry with id " + strategy.getId() + " not found");
+        }
+
+        if (!existing.isGlobal()) {
+          throw new IllegalArgumentException(
+              "Global ItemDefinition cannot use form-specific PrefillStrategyEntry with id " + strategy.getId());
+        }
+      }
+    } else {
+      // Non-global ItemDefinitions: form managers can only use form-specific strategies
+      // System admins can also use global strategies
+      for (PrefillStrategyEntry strategy : itemDef.getPrefillStrategies()) {
+        PrefillStrategyEntry existing = formService.getPrefillStrategyById(strategy.getId());
+        if (existing == null) {
+          throw new IllegalArgumentException(
+              "PrefillStrategyEntry with id " + strategy.getId() + " not found");
+        }
+
+        if (existing.isGlobal()) {
+          // Only system admins can use global strategies for non-global definitions
+          if (!isSystemAdmin) {
+            throw new IllegalArgumentException(
+                "Form managers cannot use global PrefillStrategyEntry with id " + strategy.getId() +
+                " for non-global ItemDefinition. Only system admins can do this.");
+          }
+        } else {
+          // Form-specific strategy must belong to this form
+          if (existing.getFormSpecification() == null ||
+              !existing.getFormSpecification().equals(formSpec)) {
+            throw new IllegalArgumentException(
+                "PrefillStrategyEntry with id " + strategy.getId() +
+                " does not belong to FormSpecification " + formSpec.getId());
+            }
+          }
+        }
+      }
+    }
   }
 }

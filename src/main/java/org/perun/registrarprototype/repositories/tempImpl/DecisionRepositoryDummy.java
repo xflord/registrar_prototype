@@ -20,10 +20,8 @@ public class DecisionRepositoryDummy implements DecisionRepository {
       decisions.add(decision);
       if (removed) {
         System.out.println("Updated decision " + decision.getId());
-      } else {
-        System.out.println("Created decision " + decision.getId() + " (with existing ID)");
+        return decision;
       }
-      return decision;
     }
     
     // Create new decision

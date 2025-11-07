@@ -20,10 +20,8 @@ public class FormTransitionRepositoryDummy implements FormTransitionRepository {
       formTransitions.add(formTransition);
       if (removed) {
         System.out.println("Updated form transition " + formTransition.getId());
-      } else {
-        System.out.println("Created form transition " + formTransition.getId() + " (with existing ID)");
+        return formTransition;
       }
-      return formTransition;
     }
 
     // Create new form

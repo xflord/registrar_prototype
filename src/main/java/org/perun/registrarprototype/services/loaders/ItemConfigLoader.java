@@ -14,6 +14,8 @@ import org.perun.registrarprototype.models.ItemDefinition;
 import org.perun.registrarprototype.models.ItemTexts;
 import org.perun.registrarprototype.models.ItemType;
 import org.perun.registrarprototype.models.PrefillStrategyEntry;
+import org.perun.registrarprototype.repositories.ItemDefinitionRepository;
+import org.perun.registrarprototype.repositories.PrefillStrategyEntryRepository;
 import org.springframework.core.io.ResourceLoader;
 import org.springframework.stereotype.Component;
 import org.yaml.snakeyaml.Yaml;
@@ -22,9 +24,15 @@ import org.yaml.snakeyaml.Yaml;
 public class ItemConfigLoader {
 
   private final ResourceLoader resourceLoader;
+  private ItemDefinitionRepository itemDefinitionRepository;
+  private PrefillStrategyEntryRepository prefillStrategyEntryRepository;
 
-  public ItemConfigLoader(ResourceLoader resourceLoader) {
+  public ItemConfigLoader(ResourceLoader resourceLoader,
+                          ItemDefinitionRepository itemDefinitionRepository,
+                          PrefillStrategyEntryRepository prefillStrategyEntryRepository) {
     this.resourceLoader = resourceLoader;
+    this.itemDefinitionRepository = itemDefinitionRepository;
+    this.prefillStrategyEntryRepository = prefillStrategyEntryRepository;
   }
 
   public void loadItemDefinitions(String path) {
@@ -71,6 +79,7 @@ public class ItemConfigLoader {
       itemDefinition.setGlobal(true);
       itemDefinitions.add(itemDefinition);
     }
+    itemDefinitionRepository.saveAll(itemDefinitions);
   }
 
   private List<PrefillStrategyEntry> getPrefillStrategyEntries(List<Map<String, Object>> prefillStrategiesRaw) {
@@ -88,10 +97,11 @@ public class ItemConfigLoader {
   }
 
   public void loadPrefillStrategies(String path) {
-    List<PrefillStrategyEntry> prefillStrategies = new ArrayList<>();
     List<Map<String, Object>> prefillStrategiesMap = loadYaml(path);
-    prefillStrategies = getPrefillStrategyEntries(prefillStrategiesMap);
-    // TODO set `global` field?
+    List<PrefillStrategyEntry> prefillStrategies = getPrefillStrategyEntries(prefillStrategiesMap);
+    prefillStrategies
+        .forEach(prefillStrategy -> prefillStrategy.setGlobal(true));
+    prefillStrategyEntryRepository.saveAll(prefillStrategies);
 
   }
 

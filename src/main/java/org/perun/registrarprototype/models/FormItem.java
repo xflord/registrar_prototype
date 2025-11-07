@@ -36,6 +36,20 @@ public class FormItem {
   private ItemDefinition itemDefinition;
 
 
+  public FormItem() {
+  }
+
+  public FormItem(FormItem formItem) {
+    this.id = formItem.id;
+    this.formId = formItem.formId;
+    this.shortName = formItem.shortName;
+    this.parentId = formItem.parentId;
+    this.ordNum = formItem.ordNum;
+    this.hiddenDependencyItemId = formItem.hiddenDependencyItemId;
+    this.disabledDependencyItemId = formItem.disabledDependencyItemId;
+    this.itemDefinition = formItem.itemDefinition;
+  }
+
   public FormItem(int id, int formId, String shortName, Integer parentId, int ordNum, Integer hiddenDependencyItemId,
                   Integer disabledDependencyItemId, ItemDefinition itemDefinition) {
     this.id = id;

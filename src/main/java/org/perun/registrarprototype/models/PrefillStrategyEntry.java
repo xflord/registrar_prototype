@@ -6,16 +6,25 @@ import java.util.Map;
 import java.util.Objects;
 
 public class PrefillStrategyEntry {
+  private int id;
+
   private PrefillStrategyType type;
   private Map<String, String> options;
   private String sourceAttribute;
 
+  private FormSpecification formSpecification;
+  private boolean global;
+
   public PrefillStrategyEntry() {}
 
-  public PrefillStrategyEntry(PrefillStrategyType type, Map<String, String> options, String sourceAttribute) {
+  public PrefillStrategyEntry(int id, PrefillStrategyType type, Map<String, String> options, String sourceAttribute,
+                              FormSpecification formSpecification, boolean global) {
+    this.id = id;
     this.type = type;
     this.options = options;
     this.sourceAttribute = sourceAttribute;
+    this.formSpecification = formSpecification;
+    this.global = global;
   }
 
   public PrefillStrategyType getType() {
@@ -65,6 +74,30 @@ public class PrefillStrategyEntry {
                ", options=" + options +
                ", sourceAttribute='" + sourceAttribute + '\'' +
                '}';
+  }
+
+  public int getId() {
+    return id;
+  }
+
+  public void setId(int id) {
+    this.id = id;
+  }
+
+  public FormSpecification getFormSpecification() {
+    return formSpecification;
+  }
+
+  public void setFormSpecification(FormSpecification formSpecification) {
+    this.formSpecification = formSpecification;
+  }
+
+  public boolean isGlobal() {
+    return global;
+  }
+
+  public void setGlobal(boolean global) {
+    this.global = global;
   }
 
   public enum PrefillStrategyType {

@@ -14,4 +14,9 @@ public class AuthorizationServiceDummy implements AuthorizationService {
   public boolean canDecide(RegistrarAuthenticationToken sess, int groupId) {
     return true;
   }
+
+  @Override
+  public boolean isAdmin(RegistrarAuthenticationToken sess) {
+    return false;
+  }
 }

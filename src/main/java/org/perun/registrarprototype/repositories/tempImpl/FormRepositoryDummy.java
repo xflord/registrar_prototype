@@ -38,10 +38,8 @@ public class FormRepositoryDummy implements FormRepository {
       formSpecifications.add(formSpecification);
       if (removed) {
         System.out.println("Updated form " + formSpecification.getId());
-      } else {
-        System.out.println("Created form " + formSpecification.getId() + " (with existing ID)");
+        return formSpecification;
       }
-      return formSpecification;
     }
     
     // Create new form

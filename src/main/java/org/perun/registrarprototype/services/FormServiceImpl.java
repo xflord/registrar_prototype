@@ -20,12 +20,15 @@ import org.perun.registrarprototype.models.FormItem;
 import org.perun.registrarprototype.models.FormTransition;
 import org.perun.registrarprototype.models.ItemDefinition;
 import org.perun.registrarprototype.models.ItemType;
+import org.perun.registrarprototype.models.PrefillStrategyEntry;
 import org.perun.registrarprototype.models.Requirement;
 import org.perun.registrarprototype.repositories.FormItemRepository;
 import org.perun.registrarprototype.repositories.ApplicationRepository;
 import org.perun.registrarprototype.repositories.FormModuleRepository;
 import org.perun.registrarprototype.repositories.FormRepository;
 import org.perun.registrarprototype.repositories.FormTransitionRepository;
+import org.perun.registrarprototype.repositories.ItemDefinitionRepository;
+import org.perun.registrarprototype.repositories.PrefillStrategyEntryRepository;
 import org.perun.registrarprototype.security.RegistrarAuthenticationToken;
 import org.perun.registrarprototype.security.SessionProvider;
 import org.perun.registrarprototype.services.modules.FormModule;
@@ -43,13 +46,15 @@ public class FormServiceImpl implements FormService {
   private final ApplicationContext context;
   private final ApplicationRepository applicationRepository;
   private final SessionProvider sessionProvider;
-  private final AttributePolicyService attributePolicyService;
+  private final ItemDefinitionRepository itemDefinitionRepository;
+  private final PrefillStrategyEntryRepository prefillStrategyEntryRepository;
 
   public FormServiceImpl(FormRepository formRepository, AuthorizationService authorizationService,
                          FormModuleRepository formModuleRepository, ApplicationContext context,
                          FormItemRepository formItemRepository, FormTransitionRepository formTransitionRepository,
                          ApplicationRepository applicationRepository, SessionProvider sessionProvider,
-                         AttributePolicyService attributePolicyService) {
+                         ItemDefinitionRepository itemDefinitionRepository,
+                         PrefillStrategyEntryRepository prefillStrategyEntryRepository) {
     this.formRepository = formRepository;
     this.authorizationService = authorizationService;
     this.formModuleRepository = formModuleRepository;
@@ -58,7 +63,8 @@ public class FormServiceImpl implements FormService {
     this.formTransitionRepository = formTransitionRepository;
     this.applicationRepository = applicationRepository;
     this.sessionProvider = sessionProvider;
-    this.attributePolicyService = attributePolicyService;
+    this.itemDefinitionRepository = itemDefinitionRepository;
+    this.prefillStrategyEntryRepository = prefillStrategyEntryRepository;
   }
 
   @Override
@@ -268,7 +274,54 @@ public class FormServiceImpl implements FormService {
   }
 
   @Override
+  public List<PrefillStrategyEntry> getPrefillStrategiesForForm(FormSpecification formSpecification) {
+    return prefillStrategyEntryRepository.findByFormSpecification(formSpecification);
+  }
+
+  @Override
+  public  List<PrefillStrategyEntry> getGlobalPrefillStrategies() {
+    return prefillStrategyEntryRepository.findAllGlobal();
+  }
+
+  @Override
+  public PrefillStrategyEntry getPrefillStrategyById(int prefillStrategyId) {
+    return prefillStrategyEntryRepository.findById(prefillStrategyId).orElse(null);
+  }
+
+  @Override
+  public PrefillStrategyEntry createPrefillStrategy(PrefillStrategyEntry prefillStrategyEntry) {
+    if (prefillStrategyEntryRepository.findById(prefillStrategyEntry.getId()).isPresent()) {
+      throw new IllegalArgumentException("Prefill strategy with ID " + prefillStrategyEntry.getId() + " already exists");
+    }
+
+    return prefillStrategyEntryRepository.save(prefillStrategyEntry);
+  }
+
+  @Override
+  public List<ItemDefinition> getItemDefinitionsForForm(FormSpecification formSpecification) {
+
+    return itemDefinitionRepository.findAllByForm(formSpecification);
+  }
+
+  @Override
+  public List<ItemDefinition> getGlobalItemDefinitions() {
+
+    return itemDefinitionRepository.findAllGlobal();
+  }
+
+  @Override
+  public ItemDefinition createItemDefinition(ItemDefinition itemDefinition) {
+    if (itemDefinitionRepository.findById(itemDefinition.getId()).isPresent()) {
+      throw new IllegalArgumentException("Item definition with ID " + itemDefinition.getId() + " already exists");
+    }
+
+    return itemDefinitionRepository.save(itemDefinition);
+  }
+
+  @Override
   public FormItem createFormItem(FormItem item) {
+    // TODO add some validation?
+
     return formItemRepository.save(item);
   }
 
@@ -288,7 +341,6 @@ public class FormServiceImpl implements FormService {
     }
 
     updatedItems.forEach(formItem -> {
-      attributePolicyService.applyAttributePolicyToItem(formItem);
       performTypeSpecificChecks(formItem.getItemDefinition());
       checkPrefillStrategyOptions(formItem.getItemDefinition());
       // TODO check validators (e.g. valid regexes, etc.)
@@ -321,17 +373,30 @@ public class FormServiceImpl implements FormService {
           throw new IllegalArgumentException("Trying to update a form item from another form!");
         }
         item = updatedItem;
-        // check that updated items do not change destination, if so then warn/throw exception
-        String oldDestination = existingById.get(actualId).getItemDefinition().getDestinationAttributeUrn();
-        if (oldDestination != null) {
-          String newDestination = item.getItemDefinition().getDestinationAttributeUrn();
-          boolean hasOpenApplications = applicationRepository.findByFormId(formId).stream()
-                                            .anyMatch(app -> app.getState().isOpenState());
-          if (!oldDestination.equals(newDestination) && hasOpenApplications) {
-            // TODO throw an exception, or display some sort of warning in this case?
-            throw new IllegalArgumentException("Cannot change destination of item with id " + actualId +
-                                                   " because there are open applications");
+        // existing item so definition has to exist as well
+        ItemDefinition existingItemDef = existingById.get(actualId).getItemDefinition();
+        // prolly retrieve the items from db based on id in the entry layer (along with validation)
+        if (existingItemDef.getId() != updatedItem.getItemDefinition().getId()) {
+          throw new IllegalArgumentException("Trying to edit definition of another form item!");
+        }
+
+        // no need for checks if item definition is defined globally
+        if (!existingItemDef.isGlobal()) {
+          // check that updated items do not change destination, if so then warn/throw exception
+          String oldDestination = existingItemDef.getDestinationAttributeUrn();
+          if (oldDestination != null) {
+            String newDestination = item.getItemDefinition().getDestinationAttributeUrn();
+            boolean hasOpenApplications = applicationRepository.findByFormId(formId).stream()
+                                              .anyMatch(app -> app.getState().isOpenState());
+            if (!oldDestination.equals(newDestination) && hasOpenApplications) {
+              // TODO throw an exception, or display some sort of warning in this case?
+              throw new IllegalArgumentException("Cannot change destination of item with id " + actualId +
+                                                     " because there are open applications");
+            }
           }
+        } else {
+          // rewrite with global definition to prevent unauthorized changes to it
+          updatedItem.setItemDefinition(existingItemDef);
         }
       }
       if (item == null) {

@@ -27,10 +27,8 @@ public class ApplicationRepositoryDummy implements ApplicationRepository {
       applications.add(application);
       if (removed) {
         System.out.println("Updated application " + application.getId());
-      } else {
-        System.out.println("Created application " + application.getId() + " (with existing ID)");
+        return application;
       }
-      return application;
     }
     
     // Create new application

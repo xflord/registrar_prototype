@@ -46,4 +46,9 @@ public class AuthorizationServiceImpl implements AuthorizationService {
     return sess.getPrincipal().getRoles().get(Role.FORM_APPROVER).contains(groupId);
   }
 
+  @Override
+  public boolean isAdmin(RegistrarAuthenticationToken sess) {
+    return sess.getPrincipal().getRoles().containsKey(Role.ADMIN);
+  }
+
 }

@@ -7,6 +7,9 @@ import java.util.Map;
 import java.util.Set;
 
 public class ItemDefinition {
+  private int id;
+  private FormSpecification formSpecification; // TODO duplicit in FormItem, decide on where to keep
+
   private String displayName;
   private ItemType type;
   private Boolean updatable;
@@ -25,10 +28,29 @@ public class ItemDefinition {
 
   public ItemDefinition() {}
 
-  public ItemDefinition(String displayName, ItemType type, Boolean updatable, Boolean required, String validator,
+  public ItemDefinition(ItemDefinition itemDefinition) {
+    this.id = itemDefinition.getId();
+    this.displayName = itemDefinition.getDisplayName();
+    this.type = itemDefinition.getType();
+    this.updatable = itemDefinition.getUpdatable();
+    this.required = itemDefinition.getRequired();
+    this.validator = itemDefinition.getValidator();
+    this.prefillStrategies = itemDefinition.getPrefillStrategies();
+    this.destinationAttributeUrn = itemDefinition.getDestinationAttributeUrn();
+    this.formTypes = itemDefinition.getFormTypes();
+    this.texts = itemDefinition.getTexts();
+    this.hidden = itemDefinition.getHidden();
+    this.disabled = itemDefinition.getDisabled();
+    this.defaultValue = itemDefinition.getDefaultValue();
+    this.global = itemDefinition.isGlobal();
+  }
+
+  public ItemDefinition(int id, String displayName, ItemType type, Boolean updatable, Boolean required,
+                        String validator,
                         List<PrefillStrategyEntry> prefillStrategies, String destinationAttributeUrn,
                         Set<FormSpecification.FormType> formTypes, Map<Locale, ItemTexts> texts, Condition hidden,
                         Condition disabled, String defaultValue, boolean global) {
+    this.id = id;
     this.displayName = displayName;
     this.type = type;
     this.updatable = updatable;
@@ -151,6 +173,30 @@ public class ItemDefinition {
   public String getLabel() {
     return "default";
 //    return texts.get(Locale.ENGLISH).getLabel();
+  }
+
+  public int getId() {
+    return id;
+  }
+
+  public void setId(int id) {
+    this.id = id;
+  }
+
+  public Boolean getUpdatable() {
+    return updatable;
+  }
+
+  public void setUpdatable(Boolean updatable) {
+    this.updatable = updatable;
+  }
+
+  public Boolean getRequired() {
+    return required;
+  }
+
+  public void setRequired(Boolean required) {
+    this.required = required;
   }
 
   @Override

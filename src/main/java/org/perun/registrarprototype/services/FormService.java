@@ -8,8 +8,11 @@ import org.perun.registrarprototype.models.AssignedFormModule;
 import org.perun.registrarprototype.models.FormSpecification;
 import org.perun.registrarprototype.models.FormItem;
 import org.perun.registrarprototype.models.FormTransition;
+import org.perun.registrarprototype.models.ItemDefinition;
+import org.perun.registrarprototype.models.PrefillStrategyEntry;
 import org.perun.registrarprototype.models.Requirement;
 import org.perun.registrarprototype.security.RegistrarAuthenticationToken;
+import org.perun.registrarprototype.services.prefillStrategy.PrefillStrategy;
 
 /**
  * Service for managing forms, form items, form modules, and form transitions.
@@ -149,6 +152,20 @@ public interface FormService {
    * @return the form item
    */
   FormItem getFormItemById(int formItemId);
+
+  List<PrefillStrategyEntry> getPrefillStrategiesForForm(FormSpecification formSpecification);
+
+  List<PrefillStrategyEntry> getGlobalPrefillStrategies();
+
+  PrefillStrategyEntry getPrefillStrategyById(int prefillStrategyId);
+
+  PrefillStrategyEntry createPrefillStrategy(PrefillStrategyEntry prefillStrategy);
+
+  List<ItemDefinition> getItemDefinitionsForForm(FormSpecification formSpecification);
+
+  List<ItemDefinition> getGlobalItemDefinitions();
+
+  ItemDefinition createItemDefinition(ItemDefinition itemDefinition);
 
   /**
    * Creates a new form item.
