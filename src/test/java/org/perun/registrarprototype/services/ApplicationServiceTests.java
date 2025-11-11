@@ -3,7 +3,7 @@ package org.perun.registrarprototype.services;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
+import java.util.Set;
 import org.junit.jupiter.api.Test;
 import org.perun.registrarprototype.models.Application;
 import org.perun.registrarprototype.models.ApplicationState;
@@ -13,6 +13,8 @@ import org.perun.registrarprototype.models.FormItem;
 import org.perun.registrarprototype.models.FormItemData;
 import org.perun.registrarprototype.models.ApplicationForm;
 import org.perun.registrarprototype.models.PrefillStrategyEntry;
+import org.perun.registrarprototype.models.ItemDefinition;
+import org.perun.registrarprototype.models.ItemType;
 import org.springframework.boot.test.context.SpringBootTest;
 
 @SpringBootTest
@@ -22,10 +24,10 @@ class ApplicationServiceTests extends GenericRegistrarServiceTests {
 //  void registerUserIntoGroup() throws Exception {
 //
 //    int userId = 1;
-//    FormItem item1 = new FormItem(1, FormItem.Type.TEXTFIELD);
-//    item1 = formService.createFormItem(item1);
-//    FormItem item2 = new FormItem(2, FormItem.Type.TEXTFIELD);
-//    item2 = formService.createFormItem(item2);
+//    ItemDefinition itemDef1 = createItemDefinition(ItemType.TEXTFIELD, "item1", false, null);
+//    FormItem item1 = formService.createFormItem(createFormItem(0, itemDef1, 1));
+//    ItemDefinition itemDef2 = createItemDefinition(ItemType.TEXTFIELD, "item2", false, null);
+//    FormItem item2 = formService.createFormItem(createFormItem(0, itemDef2, 2));
 //    int groupId = 1;
 //    perunIntegrationService.createGroup(groupId);
 //    Form form = new Form(formRepository.getNextId(), groupId, List.of(item1, item2));
@@ -45,9 +47,9 @@ class ApplicationServiceTests extends GenericRegistrarServiceTests {
     int groupId = getGroupId();
     FormSpecification formSpecification = formService.createForm(groupId);
 
-    FormItem item1 = new FormItem(1, FormItem.Type.VERIFIED_EMAIL, "email", false, "^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$");
+    ItemDefinition itemDef1 = createItemDefinition(ItemType.VERIFIED_EMAIL, "email", false, "^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$");
+    FormItem item1 = createFormItem(formSpecification.getId(), itemDef1, 1);
     item1 = formService.setFormItem(formSpecification.getId(), item1);
-
 
     FormItemData formItemData1 = new FormItemData(item1, "test@gmail.com");
 
@@ -65,7 +67,8 @@ class ApplicationServiceTests extends GenericRegistrarServiceTests {
 
     FormSpecification formSpecification = formService.createForm(groupId);
 
-    FormItem item1 = new FormItem(1, FormItem.Type.VERIFIED_EMAIL, "email", false, "^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$");
+    ItemDefinition itemDef1 = createItemDefinition(ItemType.VERIFIED_EMAIL, "email", false, "^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$");
+    FormItem item1 = createFormItem(formSpecification.getId(), itemDef1, 1);
     item1 = formService.setFormItem(formSpecification.getId(), item1);
 
     FormItemData formItemData1 = new FormItemData(item1, "test@gmail.com");
@@ -90,7 +93,8 @@ class ApplicationServiceTests extends GenericRegistrarServiceTests {
 
     FormSpecification formSpecification = formService.createForm(groupId);
 
-    FormItem item1 = new FormItem(1, FormItem.Type.VERIFIED_EMAIL, "email", false, "^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$");
+    ItemDefinition itemDef1 = createItemDefinition(ItemType.VERIFIED_EMAIL, "email", false, "^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$");
+    FormItem item1 = createFormItem(formSpecification.getId(), itemDef1, 1);
     item1 = formService.setFormItem(formSpecification.getId(), item1);
 
     List<FormItemData> data = applicationService.loadForm(sessionProvider.getCurrentSession(), formSpecification, FormSpecification.FormType.INITIAL);
@@ -106,7 +110,8 @@ class ApplicationServiceTests extends GenericRegistrarServiceTests {
 
     FormSpecification formSpecification = formService.createForm(groupId);
 
-    FormItem item1 = new FormItem(1, FormItem.Type.TEXTFIELD);
+    ItemDefinition itemDef1 = createItemDefinition(ItemType.TEXTFIELD, "item1", false, null);
+    FormItem item1 = createFormItem(formSpecification.getId(), itemDef1, 1);
     item1 = formService.setFormItem(formSpecification.getId(), item1);
 
     AssignedFormModule module = new AssignedFormModule("testModuleBeforeSubmission", new HashMap<>());
@@ -126,10 +131,26 @@ class ApplicationServiceTests extends GenericRegistrarServiceTests {
     int groupId = getGroupId();
     FormSpecification formSpecification = formService.createForm(groupId);
 
-
-    FormItem item1 = new FormItem(1, FormItem.Type.TEXTFIELD);
-    Map<String, String> prefillStrategyOptions = new HashMap<>();
-    item1.addPrefillStrategyEntry(new PrefillStrategyEntry(FormItem.PrefillStrategyType.IDENTITY_ATTRIBUTE, prefillStrategyOptions, "testAttribute"));
+    // Create ItemDefinition with prefill strategy from the start
+    ItemDefinition itemDef1 = new ItemDefinition();
+    itemDef1.setType(ItemType.TEXTFIELD);
+    itemDef1.setDisplayName("item1");
+    itemDef1.setRequired(false);
+    itemDef1.setValidator(null);
+    itemDef1.setFormTypes(Set.of(FormSpecification.FormType.INITIAL, FormSpecification.FormType.EXTENSION));
+    itemDef1.setHidden(ItemDefinition.Condition.NEVER);
+    itemDef1.setDisabled(ItemDefinition.Condition.NEVER);
+    itemDef1.setGlobal(false);
+    
+    // Add prefill strategy to ItemDefinition
+    PrefillStrategyEntry prefillStrategy = new PrefillStrategyEntry();
+    prefillStrategy.setType(PrefillStrategyEntry.PrefillStrategyType.IDENTITY_ATTRIBUTE);
+    prefillStrategy.setSourceAttribute("testAttribute");
+    prefillStrategy.setOptions(new HashMap<>());
+    itemDef1.setPrefillStrategies(List.of(prefillStrategy));
+    itemDef1 = formService.createItemDefinition(itemDef1);
+    
+    FormItem item1 = createFormItem(formSpecification.getId(), itemDef1, 1);
     item1 = formService.setFormItem(formSpecification.getId(), item1);
 
     List<FormItemData> data = applicationService.loadForm(sessionProvider.getCurrentSession(), formSpecification, FormSpecification.FormType.INITIAL);

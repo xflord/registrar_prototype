@@ -21,6 +21,9 @@ public class PrefillStrategyResolver {
   }
 
   public Optional<String> prefill(FormItem item) {
+    if (item.getItemDefinition().getPrefillStrategies() == null) {
+      return Optional.empty();
+    }
     for (PrefillStrategyEntry entry : item.getItemDefinition().getPrefillStrategies()) {
       PrefillStrategy prefillStrategy = getStrategyForKey(entry.getType());
       prefillStrategy.validateOptions(entry);

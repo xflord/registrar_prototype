@@ -10,6 +10,8 @@ import org.perun.registrarprototype.exceptions.FormItemRegexNotValid;
 import org.perun.registrarprototype.models.AssignedFormModule;
 import org.perun.registrarprototype.models.FormSpecification;
 import org.perun.registrarprototype.models.FormItem;
+import org.perun.registrarprototype.models.ItemDefinition;
+import org.perun.registrarprototype.models.ItemType;
 
 public class FormSpecificationServiceFailTests extends GenericRegistrarServiceTests {
 
@@ -19,9 +21,9 @@ public class FormSpecificationServiceFailTests extends GenericRegistrarServiceTe
 
     FormSpecification formSpecification = formService.createForm(groupId);
 
-
-    FormItem item1 = formService.createFormItem(new FormItem(1, FormItem.Type.VERIFIED_EMAIL, "email", false, "^[a-zA-Z0-9._%+-+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$"));
-
+    // Create ItemDefinition with invalid regex - this should fail when setting the form item
+    ItemDefinition itemDef1 = createItemDefinition(ItemType.VERIFIED_EMAIL, "email", false, "^[a-zA-Z0-9._%+-+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$");
+    FormItem item1 = createFormItem(formSpecification.getId(), itemDef1, 1);
 
     assertThrows(FormItemRegexNotValid.class, () -> formService.setFormItem(formSpecification.getId(), item1));
   }
@@ -32,7 +34,8 @@ public class FormSpecificationServiceFailTests extends GenericRegistrarServiceTe
 
     FormSpecification formSpecification = formService.createForm(groupId);
 
-    FormItem item1 = new FormItem(1, FormItem.Type.TEXTFIELD);
+    ItemDefinition itemDef1 = createItemDefinition(ItemType.TEXTFIELD, "item1", false, null);
+    FormItem item1 = createFormItem(formSpecification.getId(), itemDef1, 1);
     item1 = formService.setFormItem(formSpecification.getId(), item1);
 
     AssignedFormModule
@@ -47,8 +50,8 @@ public class FormSpecificationServiceFailTests extends GenericRegistrarServiceTe
 
     FormSpecification formSpecification = formService.createForm(groupId);
 
-
-    FormItem item1 = new FormItem(1, FormItem.Type.TEXTFIELD);
+    ItemDefinition itemDef1 = createItemDefinition(ItemType.TEXTFIELD, "item1", false, null);
+    FormItem item1 = createFormItem(formSpecification.getId(), itemDef1, 1);
     item1 = formService.setFormItem(formSpecification.getId(), item1);
 
     AssignedFormModule

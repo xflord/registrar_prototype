@@ -7,6 +7,8 @@ import org.junit.jupiter.api.Test;
 import org.perun.registrarprototype.models.AssignedFormModule;
 import org.perun.registrarprototype.models.FormSpecification;
 import org.perun.registrarprototype.models.FormItem;
+import org.perun.registrarprototype.models.ItemDefinition;
+import org.perun.registrarprototype.models.ItemType;
 import org.springframework.boot.test.context.SpringBootTest;
 
 @SpringBootTest
@@ -18,9 +20,12 @@ public class FormSpecificationServiceTests extends GenericRegistrarServiceTests 
 
     FormSpecification formSpecification = formService.createForm(groupId);
 
-    FormItem item1 = new FormItem(1, FormItem.Type.TEXTFIELD);
+    ItemDefinition itemDef1 = createItemDefinition(ItemType.TEXTFIELD, "item1", false, null);
+    FormItem item1 = createFormItem(formSpecification.getId(), itemDef1, 1);
     item1 = formService.setFormItem(formSpecification.getId(), item1);
-    FormItem item2 = new FormItem(2, FormItem.Type.TEXTFIELD);
+    
+    ItemDefinition itemDef2 = createItemDefinition(ItemType.TEXTFIELD, "item2", false, null);
+    FormItem item2 = createFormItem(formSpecification.getId(), itemDef2, 2);
     item2 = formService.setFormItem(formSpecification.getId(), item2);
 
     FormSpecification createdFormSpecification = formRepository.findById(formSpecification.getId()).orElse(null);
@@ -37,7 +42,8 @@ public class FormSpecificationServiceTests extends GenericRegistrarServiceTests 
 
     FormSpecification formSpecification = formService.createForm(groupId);
 
-    FormItem item1 = new FormItem(1, FormItem.Type.VERIFIED_EMAIL, "email", false, "^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$");
+    ItemDefinition itemDef1 = createItemDefinition(ItemType.VERIFIED_EMAIL, "email", false, "^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$");
+    FormItem item1 = createFormItem(formSpecification.getId(), itemDef1, 1);
     item1 = formService.setFormItem(formSpecification.getId(), item1);
 
     FormSpecification createdFormSpecification = formRepository.findById(formSpecification.getId()).orElse(null);
@@ -53,7 +59,8 @@ public class FormSpecificationServiceTests extends GenericRegistrarServiceTests 
 
     FormSpecification formSpecification = formService.createForm(groupId);
 
-    FormItem item1 = new FormItem(1, FormItem.Type.TEXTFIELD);
+    ItemDefinition itemDef1 = createItemDefinition(ItemType.TEXTFIELD, "item1", false, null);
+    FormItem item1 = createFormItem(formSpecification.getId(), itemDef1, 1);
     item1 = formService.setFormItem(formSpecification.getId(), item1);
 
     AssignedFormModule module = new AssignedFormModule("testModule", new HashMap<>());
@@ -77,7 +84,8 @@ public class FormSpecificationServiceTests extends GenericRegistrarServiceTests 
 
     FormSpecification formSpecification = formService.createForm(groupId);
 
-    FormItem item1 = new FormItem(1, FormItem.Type.TEXTFIELD);
+    ItemDefinition itemDef1 = createItemDefinition(ItemType.TEXTFIELD, "item1", false, null);
+    FormItem item1 = createFormItem(formSpecification.getId(), itemDef1, 1);
     item1 = formService.setFormItem(formSpecification.getId(), item1);
 
 

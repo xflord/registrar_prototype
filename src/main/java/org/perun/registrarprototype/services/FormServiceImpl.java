@@ -106,15 +106,24 @@ public class FormServiceImpl implements FormService {
   public FormItem setFormItem(int formId, FormItem formItem) throws FormItemRegexNotValid {
     FormSpecification formSpecification = formRepository.findById(formId).orElseThrow(() -> new IllegalArgumentException("Form with ID " + formId + " not found"));
 
+    // Validate regex if present
+    if (formItem.getItemDefinition() != null && formItem.getItemDefinition().getValidator() != null && !formItem.getItemDefinition().getValidator().isEmpty()) {
+      try {
+        java.util.regex.Pattern.compile(formItem.getItemDefinition().getValidator());
+      } catch (java.util.regex.PatternSyntaxException e) {
+        throw new FormItemRegexNotValid("Cannot compile regex: " + formItem.getItemDefinition().getValidator(), formItem);
+      }
+    }
+
     formItem.setFormId(formId);
-    formItemRepository.save(formItem);
+    FormItem savedItem = formItemRepository.save(formItem);
 
     List<FormItem> items = formSpecification.getItems();
-    items.add(formItem);
+    items.add(savedItem);
     formSpecification.setItems(items);
 
     formRepository.update(formSpecification);
-    return formItem;
+    return savedItem;
   }
 
   @Override

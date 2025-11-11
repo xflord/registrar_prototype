@@ -226,7 +226,7 @@ public class ItemDefinition {
   }
 
   private void performTypeSpecificChecks() {
-    if (this.isUpdatable() && !this.getType().isUpdatable()) {
+    if (this.isUpdatable() != null && this.isUpdatable() && !this.getType().isUpdatable()) {
       throw new IllegalArgumentException("Form item " + this + " of non-updatable type cannot be updatable");
     }
 
