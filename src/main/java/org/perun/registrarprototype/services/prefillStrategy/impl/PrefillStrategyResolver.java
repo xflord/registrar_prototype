@@ -21,7 +21,7 @@ public class PrefillStrategyResolver {
   }
 
   public Optional<String> prefill(FormItem item) {
-    for (PrefillStrategyEntry entry : item.getPrefillStrategyOptions()) {
+    for (PrefillStrategyEntry entry : item.getItemDefinition().getPrefillStrategies()) {
       PrefillStrategy prefillStrategy = getStrategyForKey(entry.getType());
       prefillStrategy.validateOptions(entry);
       Optional<String> result = prefillStrategy.prefill(item, entry);
@@ -32,7 +32,7 @@ public class PrefillStrategyResolver {
     return Optional.empty();
   }
 
-  private PrefillStrategy getStrategyForKey(FormItem.PrefillStrategyType type) {
+  private PrefillStrategy getStrategyForKey(PrefillStrategyEntry.PrefillStrategyType type) {
     switch (type) {
       case IDM_ATTRIBUTE -> {
         return find(IdmAttributePrefillStrategy.class);

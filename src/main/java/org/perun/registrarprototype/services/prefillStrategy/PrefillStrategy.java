@@ -26,7 +26,7 @@ public interface PrefillStrategy {
    * Return the type of the prefill strategy.
    * @return
    */
-  FormItem.PrefillStrategyType getType();
+  PrefillStrategyEntry.PrefillStrategyType getType();
 
   /**
    * From a map of all attribute's prefill strategy options, return the ones relevant for the current strategy.

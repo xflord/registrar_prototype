@@ -2,6 +2,7 @@ package org.perun.registrarprototype.services;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import org.perun.registrarprototype.exceptions.FormItemRegexNotValid;
 import org.perun.registrarprototype.exceptions.InsufficientRightsException;
 import org.perun.registrarprototype.models.AssignedFormModule;
@@ -12,7 +13,6 @@ import org.perun.registrarprototype.models.ItemDefinition;
 import org.perun.registrarprototype.models.PrefillStrategyEntry;
 import org.perun.registrarprototype.models.Requirement;
 import org.perun.registrarprototype.security.RegistrarAuthenticationToken;
-import org.perun.registrarprototype.services.prefillStrategy.PrefillStrategy;
 
 /**
  * Service for managing forms, form items, form modules, and form transitions.
@@ -166,6 +166,14 @@ public interface FormService {
   List<ItemDefinition> getGlobalItemDefinitions();
 
   ItemDefinition createItemDefinition(ItemDefinition itemDefinition);
+
+  Set<String> getGlobalDestinations();
+
+  Set<String> getDestinationsForForm(FormSpecification formSpecification);
+
+  String createDestination(FormSpecification formSpecification, String destination);
+
+  void removeDestination(FormSpecification formSpecification, String destination);
 
   /**
    * Creates a new form item.

@@ -38,7 +38,7 @@ public class IdentityAttributePrefillStrategy implements PrefillStrategy {
   }
 
   @Override
-  public FormItem.PrefillStrategyType getType() {
-    return FormItem.PrefillStrategyType.IDENTITY_ATTRIBUTE;
+  public PrefillStrategyEntry.PrefillStrategyType getType() {
+    return PrefillStrategyEntry.PrefillStrategyType.IDENTITY_ATTRIBUTE;
   }
 }

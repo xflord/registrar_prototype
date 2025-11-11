@@ -2,6 +2,7 @@ package org.perun.registrarprototype.repositories.tempImpl;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 import org.perun.registrarprototype.models.FormSpecification;
 import org.perun.registrarprototype.models.PrefillStrategyEntry;
@@ -22,7 +23,7 @@ public class PrefillStrategyEntryRepositoryDummy implements PrefillStrategyEntry
 
   @Override
   public List<PrefillStrategyEntry> saveAll(List<PrefillStrategyEntry> entry) {
-    prefillStrategyEntries.addAll(entry);
+    entry.forEach(this::save);
     return entry;
   }
 
@@ -45,5 +46,16 @@ public class PrefillStrategyEntryRepositoryDummy implements PrefillStrategyEntry
     return prefillStrategyEntries.stream()
                .filter(entry -> entry.getFormSpecification().equals(formSpecification))
                .toList();
+  }
+
+  @Override
+  public Optional<PrefillStrategyEntry> exists(PrefillStrategyEntry entry) {
+    return prefillStrategyEntries.stream().filter(existing ->
+                                                       existing.isGlobal() == entry.isGlobal() &&
+                                                       Objects.equals(existing.getFormSpecification(), entry.getFormSpecification()) &&
+                                                       existing.getType().equals(entry.getType()) &&
+                                                       Objects.equals(existing.getSourceAttribute(), entry.getSourceAttribute()) &&
+                                                       existing.getOptions().equals(entry.getOptions()))
+               .findFirst();
   }
 }

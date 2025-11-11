@@ -7,6 +7,7 @@ import org.perun.registrarprototype.models.ItemDefinition;
 
 public interface ItemDefinitionRepository {
   Optional<ItemDefinition> findById(int id);
+  Optional<ItemDefinition> findByShortName(String shortName);
   List<ItemDefinition> findAllGlobal();
   List<ItemDefinition> findAllByForm(FormSpecification formSpecification);
   ItemDefinition save(ItemDefinition itemDefinition);

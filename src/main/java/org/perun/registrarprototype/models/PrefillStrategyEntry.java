@@ -1,5 +1,6 @@
 package org.perun.registrarprototype.models;
 
+import io.micrometer.common.util.StringUtils;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -25,6 +26,7 @@ public class PrefillStrategyEntry {
     this.sourceAttribute = sourceAttribute;
     this.formSpecification = formSpecification;
     this.global = global;
+    this.checkPrefillStrategyOptions();
   }
 
   public PrefillStrategyType getType() {
@@ -57,14 +59,15 @@ public class PrefillStrategyEntry {
       return false;
     }
     PrefillStrategyEntry that = (PrefillStrategyEntry) o;
-    return getType() == that.getType() &&
-               getSourceAttribute().equals(that.getSourceAttribute()) &&
-               Objects.equals(getOptions(), that.getOptions());
+    return id == that.id && global == that.global && type == that.type &&
+               Objects.equals(options, that.options) &&
+               Objects.equals(sourceAttribute, that.sourceAttribute) &&
+               Objects.equals(formSpecification, that.formSpecification);
   }
 
   @Override
   public int hashCode() {
-    return Objects.hash(getType(), getOptions(), getSourceAttribute());
+    return Objects.hash(id, type, options, sourceAttribute, formSpecification, global);
   }
 
   @Override
@@ -112,6 +115,24 @@ public class PrefillStrategyEntry {
         case IDENTITY_ATTRIBUTE, IDM_ATTRIBUTE -> true;
         default -> false;
       };
+    }
+  }
+
+  /**
+   * Checks that the options map contains all the required entries
+   */
+  private void checkPrefillStrategyOptions() {
+    if (this.getType().requiresSource() && StringUtils.isEmpty(this.getSourceAttribute())) {
+      throw new IllegalArgumentException("Prefill strategy " + this.getType() + " requires attribute");
+    }
+    List<String> requiredOptions = this.getType().getRequiredOptions();
+    if (!requiredOptions.isEmpty()) {
+      if (this.getOptions() == null) {
+        throw new IllegalArgumentException("No prefill options are defined but are required for strategy " + this);
+      }
+      if (!this.getOptions().keySet().containsAll(requiredOptions)) {
+        throw new IllegalArgumentException("Missing required options ( " + requiredOptions + " for strategy " + this);
+      }
     }
   }
 }

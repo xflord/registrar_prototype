@@ -47,6 +47,11 @@ public class IdMServiceDummy implements IdMService {
   }
 
   @Override
+  public boolean checkGroupExists(Integer groupId) {
+    return false;
+  }
+
+  @Override
   public boolean canExtendMembership(Integer userId, Integer groupId) {
     return false;
   }

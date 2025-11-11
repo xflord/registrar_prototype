@@ -4,6 +4,8 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
 import org.perun.registrarprototype.models.FormItem;
+import org.perun.registrarprototype.models.ItemDefinition;
+import org.perun.registrarprototype.models.ItemType;
 import org.perun.registrarprototype.models.PrefillStrategyEntry;
 import org.perun.registrarprototype.security.CurrentUser;
 import org.perun.registrarprototype.security.SessionProvider;
@@ -28,7 +30,7 @@ public class LoginItemPrefillStrategy implements PrefillStrategy {
 
   @Override
   public Optional<String> prefill(FormItem item, PrefillStrategyEntry entry) {
-    if (!item.getType().equals(FormItem.Type.LOGIN)) {
+    if (!item.getItemDefinition().getType().equals(ItemType.LOGIN)) {
       throw new IllegalStateException("This strategy can only be used for LOGIN items");
     }
 
@@ -37,7 +39,7 @@ public class LoginItemPrefillStrategy implements PrefillStrategy {
 
     for (String reservedNamespace : reservedLogins.keySet()) {
       String loginAttributeDefinition = idmService.getLoginAttributeUrn() + reservedNamespace;
-      if (item.getDestinationIdmAttribute().equals(loginAttributeDefinition)) {
+      if (item.getItemDefinition().getDestinationAttributeUrn().equals(loginAttributeDefinition)) {
         return Optional.of(reservedLogins.get(reservedNamespace));
       }
     }
@@ -50,8 +52,8 @@ public class LoginItemPrefillStrategy implements PrefillStrategy {
   }
 
   @Override
-  public FormItem.PrefillStrategyType getType() {
-    return FormItem.PrefillStrategyType.LOGIN_ATTRIBUTE;
+  public PrefillStrategyEntry.PrefillStrategyType getType() {
+    return PrefillStrategyEntry.PrefillStrategyType.LOGIN_ATTRIBUTE;
   }
 
   /**

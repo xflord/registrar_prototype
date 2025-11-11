@@ -5,57 +5,90 @@ import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import org.perun.registrarprototype.models.FormSpecification;
 import org.perun.registrarprototype.models.ItemDefinition;
 import org.perun.registrarprototype.models.ItemTexts;
 import org.perun.registrarprototype.models.ItemType;
 import org.perun.registrarprototype.models.PrefillStrategyEntry;
+import org.perun.registrarprototype.repositories.DestinationRepository;
 import org.perun.registrarprototype.repositories.ItemDefinitionRepository;
 import org.perun.registrarprototype.repositories.PrefillStrategyEntryRepository;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.CommandLineRunner;
 import org.springframework.core.io.ResourceLoader;
 import org.springframework.stereotype.Component;
 import org.yaml.snakeyaml.Yaml;
 
 @Component
-public class ItemConfigLoader {
+public class ItemConfigLoader implements CommandLineRunner {
 
   private final ResourceLoader resourceLoader;
+
+  @Value("${item-config.yaml.path}")
+  private String configPath;
   private ItemDefinitionRepository itemDefinitionRepository;
   private PrefillStrategyEntryRepository prefillStrategyEntryRepository;
+  private DestinationRepository destinationRepository;
 
   public ItemConfigLoader(ResourceLoader resourceLoader,
                           ItemDefinitionRepository itemDefinitionRepository,
-                          PrefillStrategyEntryRepository prefillStrategyEntryRepository) {
+                          PrefillStrategyEntryRepository prefillStrategyEntryRepository,
+                          DestinationRepository destinationRepository) {
     this.resourceLoader = resourceLoader;
     this.itemDefinitionRepository = itemDefinitionRepository;
     this.prefillStrategyEntryRepository = prefillStrategyEntryRepository;
+    this.destinationRepository = destinationRepository;
   }
 
-  public void loadItemDefinitions(String path) {
+
+  @Override
+  public void run(String... args) throws Exception {
+    System.out.println("Loading config from " + configPath);
+    load();
+    System.out.println("Finished loading config from " + configPath);
+  }
+
+  // TODO transactional
+  public void load() {
+    Map<String, Object> config = loadYaml(configPath);
+
+    loadDestinations((List<String>) config.get("destinations"));
+    loadPrefillStrategies((List<Map<String, Object>>) config.get("strategies"));
+    loadItemDefinitions((Map<String, Map<String, Object>>) config.get("definitions"));
+  }
+
+  public void loadItemDefinitions(Map<String, Map<String, Object>> itemDefinitionMap) {
     List<ItemDefinition> itemDefinitions = new ArrayList<>();
-    Map<String, Map<String, Object>> itemDefinitionMap = loadYaml(path);
     for (Map.Entry<String, Map<String, Object>> entry : itemDefinitionMap.entrySet()) {
       Map<String, Object> definitionMap = entry.getValue();
       String displayName = entry.getKey();
 
-      ItemDefinition itemDefinition = new ItemDefinition();
-      itemDefinition.setDisplayName(displayName);
-      itemDefinition.setType(getEnum(definitionMap.get("type"), ItemType.class));
+      ItemType type = getEnum(definitionMap.get("type"), ItemType.class);
+      Boolean updatable = getBool(definitionMap, "updatable", null);
+      Boolean required = getBool(definitionMap, "required", null);
+      String validator = (String) definitionMap.get("validator");
       List<PrefillStrategyEntry> prefillStrategies = null;
       List<Map<String, Object>> prefillStrategiesRaw = (List<Map<String, Object>>) definitionMap.get("prefillStrategies");
       if (prefillStrategiesRaw != null) {
         prefillStrategies = getPrefillStrategyEntries(prefillStrategiesRaw);
       }
-      itemDefinition.setPrefillStrategies(prefillStrategies);
 
-      itemDefinition.setDestinationAttributeUrn((String) definitionMap.get("destinationAttributeUrn"));
-      itemDefinition.setFormTypes(parseEnumSet(definitionMap.get("formTypes"), FormSpecification.FormType.class));
-      itemDefinition.setHidden(getEnum(definitionMap.get("hidden"), ItemDefinition.Condition.class));
-      itemDefinition.setDisabled(getEnum(definitionMap.get("disabled"), ItemDefinition.Condition.class));
+      String destination = (String) definitionMap.get("destinationAttributeUrn");
+      if (destination != null) {
+        if (!destinationRepository.exists(null, destination)) {
+          destinationRepository.createDestination(null, destination);
+        }
+      }
+
+      Set<FormSpecification.FormType> formTypes = parseEnumSet(definitionMap.get("formTypes"), FormSpecification.FormType.class);
+      ItemDefinition.Condition hidden = (getEnum(definitionMap.get("hidden"), ItemDefinition.Condition.class));
+      ItemDefinition.Condition disabled = (getEnum(definitionMap.get("disabled"), ItemDefinition.Condition.class));
       Map<String, Map<String, String>> textsRaw =
                     (Map<String, Map<String, String>>) definitionMap.get("texts");
       Map<Locale, ItemTexts> itemTexts = null;
@@ -73,36 +106,52 @@ public class ItemConfigLoader {
           itemTexts.put(locale, text);
         }
       }
-      itemDefinition.setTexts(itemTexts);
-      itemDefinition.setDefaultValue((String) definitionMap.get("defaultValue"));
+      String defaultValue = (String) definitionMap.get("defaultValue");
 
-      itemDefinition.setGlobal(true);
-      itemDefinitions.add(itemDefinition);
+
+      itemDefinitions.add(new ItemDefinition(-1, null, displayName, type, updatable, required, validator,
+          prefillStrategies, destination, formTypes, itemTexts, hidden, disabled, defaultValue, true));
     }
+
     itemDefinitionRepository.saveAll(itemDefinitions);
   }
 
   private List<PrefillStrategyEntry> getPrefillStrategyEntries(List<Map<String, Object>> prefillStrategiesRaw) {
-    List<PrefillStrategyEntry> prefillStrategies;
-    prefillStrategies = new ArrayList<>();
+    List<PrefillStrategyEntry> prefillStrategies = new ArrayList<>();
+    List<PrefillStrategyEntry> entriesToSave = new ArrayList<>();
     for (Map<String, Object> prefillStrategyRaw : prefillStrategiesRaw) {
-      PrefillStrategyEntry prefillStrategy = new PrefillStrategyEntry();
-      prefillStrategy.setType(getEnum(prefillStrategyRaw.get("type"), PrefillStrategyEntry.PrefillStrategyType.class));
-      prefillStrategy.setSourceAttribute((String) prefillStrategyRaw.get("sourceAttribute"));
-      prefillStrategy.setOptions(prefillStrategyRaw.containsKey("options") ? (Map<String, String>)  prefillStrategyRaw.get("options") : null);
+      PrefillStrategyEntry.PrefillStrategyType type = getEnum(prefillStrategyRaw.get("type"), PrefillStrategyEntry.PrefillStrategyType.class);
+      String sourceAttr = (String) prefillStrategyRaw.get("sourceAttribute");
+      Map<String, String> options = (prefillStrategyRaw.containsKey("options") ? (Map<String, String>)  prefillStrategyRaw.get("options") : null);
+      PrefillStrategyEntry prefillStrategy = new PrefillStrategyEntry(-1, type, options, sourceAttr, null, true);
+
+      Optional<PrefillStrategyEntry> existing = prefillStrategyEntryRepository.exists(prefillStrategy);
+      if (existing.isPresent()) {
+        System.out.println("YAML LOADER: Skipping prefill strategy " + prefillStrategy + " because it already exists");
+        prefillStrategy =  existing.get();
+      } else {
+        entriesToSave.add(prefillStrategy);
+      }
 
       prefillStrategies.add(prefillStrategy);
     }
+
+    prefillStrategyEntryRepository.saveAll(entriesToSave);
     return prefillStrategies;
   }
 
-  public void loadPrefillStrategies(String path) {
-    List<Map<String, Object>> prefillStrategiesMap = loadYaml(path);
-    List<PrefillStrategyEntry> prefillStrategies = getPrefillStrategyEntries(prefillStrategiesMap);
-    prefillStrategies
-        .forEach(prefillStrategy -> prefillStrategy.setGlobal(true));
-    prefillStrategyEntryRepository.saveAll(prefillStrategies);
+  public void loadPrefillStrategies(List<Map<String, Object>> prefillStrategiesMap) {
+    getPrefillStrategyEntries(prefillStrategiesMap);
+  }
 
+  public void loadDestinations(List<String> destinations) {
+    Map<FormSpecification, Set<String>> destMap = new HashMap<>();
+    destinations.forEach(destination -> {
+      if (!destinationRepository.exists(null, destination)) {
+        destMap.put(null, new HashSet<>(destinations));
+      }
+    });
+    destinationRepository.saveAll(destMap);
   }
 
   private <T> T loadYaml(String path) {
@@ -110,8 +159,8 @@ public class ItemConfigLoader {
     try (InputStream in = resourceLoader.getResource(path).getInputStream()) {
       return yaml.load(in);
     } catch (IOException e) {
-      System.err.println("Failed to load attribute policy file: " + path);
-      throw new RuntimeException("Failed to load attribute policy file: " + path, e);
+      System.err.println("Failed to load item config file: " + path);
+      throw new RuntimeException("Failed to load config file: " + path, e);
     }
   }
 

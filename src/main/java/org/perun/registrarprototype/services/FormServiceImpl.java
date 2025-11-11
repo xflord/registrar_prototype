@@ -19,9 +19,9 @@ import org.perun.registrarprototype.models.FormSpecification;
 import org.perun.registrarprototype.models.FormItem;
 import org.perun.registrarprototype.models.FormTransition;
 import org.perun.registrarprototype.models.ItemDefinition;
-import org.perun.registrarprototype.models.ItemType;
 import org.perun.registrarprototype.models.PrefillStrategyEntry;
 import org.perun.registrarprototype.models.Requirement;
+import org.perun.registrarprototype.repositories.DestinationRepository;
 import org.perun.registrarprototype.repositories.FormItemRepository;
 import org.perun.registrarprototype.repositories.ApplicationRepository;
 import org.perun.registrarprototype.repositories.FormModuleRepository;
@@ -48,13 +48,15 @@ public class FormServiceImpl implements FormService {
   private final SessionProvider sessionProvider;
   private final ItemDefinitionRepository itemDefinitionRepository;
   private final PrefillStrategyEntryRepository prefillStrategyEntryRepository;
+  private final DestinationRepository destinationRepository;
 
   public FormServiceImpl(FormRepository formRepository, AuthorizationService authorizationService,
                          FormModuleRepository formModuleRepository, ApplicationContext context,
                          FormItemRepository formItemRepository, FormTransitionRepository formTransitionRepository,
                          ApplicationRepository applicationRepository, SessionProvider sessionProvider,
                          ItemDefinitionRepository itemDefinitionRepository,
-                         PrefillStrategyEntryRepository prefillStrategyEntryRepository) {
+                         PrefillStrategyEntryRepository prefillStrategyEntryRepository,
+                         DestinationRepository destinationRepository) {
     this.formRepository = formRepository;
     this.authorizationService = authorizationService;
     this.formModuleRepository = formModuleRepository;
@@ -65,6 +67,7 @@ public class FormServiceImpl implements FormService {
     this.sessionProvider = sessionProvider;
     this.itemDefinitionRepository = itemDefinitionRepository;
     this.prefillStrategyEntryRepository = prefillStrategyEntryRepository;
+    this.destinationRepository = destinationRepository;
   }
 
   @Override
@@ -310,6 +313,26 @@ public class FormServiceImpl implements FormService {
   }
 
   @Override
+  public Set<String> getGlobalDestinations() {
+    return destinationRepository.getGlobalDestinations();
+  }
+
+  @Override
+  public Set<String> getDestinationsForForm(FormSpecification formSpecification) {
+    return destinationRepository.getDestinationsForForm(formSpecification);
+  }
+
+  @Override
+  public String createDestination(FormSpecification formSpecification, String destination) {
+    return destinationRepository.createDestination(formSpecification, destination);
+  }
+
+  @Override
+  public void removeDestination(FormSpecification formSpecification, String destination) {
+    destinationRepository.removeDestination(formSpecification, destination);
+  }
+
+  @Override
   public ItemDefinition createItemDefinition(ItemDefinition itemDefinition) {
     if (itemDefinitionRepository.findById(itemDefinition.getId()).isPresent()) {
       throw new IllegalArgumentException("Item definition with ID " + itemDefinition.getId() + " already exists");
@@ -335,16 +358,31 @@ public class FormServiceImpl implements FormService {
       }
     });
 
+    Set<Integer> presentGlobalDefinitions = new HashSet<>();
+    updatedItems.forEach(item -> {
+      ItemDefinition itemDefinition = itemDefinitionRepository.findById(item.getItemDefinition().getId())
+                                          .orElseThrow(() -> new IllegalArgumentException("Item definition with ID " + item.getItemDefinition().getId() + " not found"));
+      item.setItemDefinition(itemDefinition);
+      if (itemDefinition.isGlobal()) {
+        presentGlobalDefinitions.add(itemDefinition.getId());
+        return;
+      }
+      if (itemDefinition.getFormSpecification().getId() != formId) {
+        throw new IllegalArgumentException("Item definition " + item.getItemDefinition().getId() + " does not match the specified form id!");
+      }
+    });
+    Set<Integer> globalDefinitions = getGlobalItemDefinitions().stream()
+                                         .map(ItemDefinition::getId).collect(Collectors.toSet());
+    Set<Integer> missingGlobalDefinitions = globalDefinitions.stream().filter(presentGlobalDefinitions::contains).collect(Collectors.toSet());
+    if (!missingGlobalDefinitions.isEmpty()) {
+      // ensure all enforced items are present
+      throw new IllegalArgumentException("Global item definitions " + missingGlobalDefinitions + " not found");
+    }
+
     if (!validateUniqueOrdNums(updatedItems)) {
       // is this the correct placement for the check?
       throw new IllegalArgumentException("Form items should have unique ordNums");
     }
-
-    updatedItems.forEach(formItem -> {
-      performTypeSpecificChecks(formItem.getItemDefinition());
-      checkPrefillStrategyOptions(formItem.getItemDefinition());
-      // TODO check validators (e.g. valid regexes, etc.)
-    });
 
     List<FormItem> existingItems = formItemRepository.getFormItemsByFormId(formId);
 
@@ -433,62 +471,6 @@ public class FormServiceImpl implements FormService {
   @Override
   public Map<String, List<String>> getAvailableModulesWithRequiredOptions() {
     return Map.of();
-  }
-
-  /**
-   * If there are prefill strategies defined, checks that the options map contains all the required entries
-   * @param formItem
-   */
-  private void checkPrefillStrategyOptions(ItemDefinition formItem) {
-    if (formItem.getPrefillStrategies() != null) {
-      formItem.getPrefillStrategies().forEach(entry -> {
-        if (entry.getType().requiresSource() && StringUtils.isEmpty(entry.getSourceAttribute())) {
-          throw new IllegalArgumentException("Prefill strategy " + entry.getType() + " requires attribute");
-        }
-        List<String> requiredOptions = entry.getType().getRequiredOptions();
-        if (!requiredOptions.isEmpty()) {
-          if (entry.getOptions() == null) {
-            throw new IllegalArgumentException("No prefill options are defined but are required for strategy " + entry);
-          }
-          if (!entry.getOptions().keySet().containsAll(requiredOptions)) {
-            throw new IllegalArgumentException("Missing required options ( " + requiredOptions + " for strategy " + entry);
-          }
-        }
-      });
-    }
-  }
-
-  private void performTypeSpecificChecks(ItemDefinition item) {
-    if (item.isUpdatable() && !item.getType().isUpdatable()) {
-      throw new IllegalArgumentException("Form item " + item + " of non-updatable type cannot be updatable");
-    }
-
-    if (item.getType().isLayoutItem()) {
-      if (item.isRequired()) {
-        throw new IllegalArgumentException("Layout form item " + item + " cannot be required");
-      }
-      if (item.getDefaultValue() != null) {
-        throw new IllegalArgumentException("Layout form item " + item + " cannot have a default value");
-      }
-      if (item.getDestinationAttributeUrn() != null) {
-        throw new IllegalArgumentException("Layout form item " + item + " cannot have a destination attribute");
-      }
-      if (item.getPrefillStrategies() != null && !item.getPrefillStrategies().isEmpty()) {
-        throw new IllegalArgumentException("Layout form item " + item + " cannot have a prefill strategy");
-      }
-    }
-
-
-    if (item.getType().equals(ItemType.PASSWORD)) {
-      // TODO a form of enforcing certain rules (label format, allowed destination attributes, etc.) via yaml config?
-      if (item.getDestinationAttributeUrn() == null) {
-        throw new IllegalArgumentException("Password item must have a destination IDM attribute");
-      }
-    }
-
-    if (item.getType().isHtmlItem()) {
-      // TODO validate/sanitize HTML content
-    }
   }
 
   /**

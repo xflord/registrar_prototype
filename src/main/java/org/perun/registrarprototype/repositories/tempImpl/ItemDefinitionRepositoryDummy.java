@@ -22,6 +22,13 @@ public class ItemDefinitionRepositoryDummy implements ItemDefinitionRepository {
   }
 
   @Override
+  public Optional<ItemDefinition> findByShortName(String shortName) {
+    return storedItemDefinitions.stream()
+               .filter(item -> item.getDisplayName().equals(shortName))
+               .findFirst();
+  }
+
+  @Override
   public List<ItemDefinition> findAllGlobal() {
     return storedItemDefinitions.stream()
                .filter(ItemDefinition::isGlobal)
@@ -53,7 +60,7 @@ public class ItemDefinitionRepositoryDummy implements ItemDefinitionRepository {
 
   @Override
   public List<ItemDefinition> saveAll(List<ItemDefinition> itemDefinitions) {
-    storedItemDefinitions.addAll(itemDefinitions);
+    itemDefinitions.forEach(this::save);
     return itemDefinitions;
   }
 }

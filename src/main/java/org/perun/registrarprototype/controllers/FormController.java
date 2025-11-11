@@ -86,8 +86,7 @@ public class FormController {
     boolean isSystemAdmin = authorizationService.isAdmin(session);
 
     // Validate prefill strategy scoping
-    validatePrefillStrategyScoping(items, formSpec, isSystemAdmin);
-
+    items.forEach(item -> validatePrefillStrategyScoping(item.getItemDefinition(), isSystemAdmin));
 
     formService.updateFormItems(formId, items);
     return ResponseEntity.ok().build();
@@ -137,8 +136,9 @@ public class FormController {
   @PostMapping("/createItemDefinition")
   public ResponseEntity<ItemDefinition> createItemDefinition(@RequestBody ItemDefinition itemDefinition) {
     RegistrarAuthenticationToken session = sessionProvider.getCurrentSession();
+    boolean isSystemAdmin = authorizationService.isAdmin(session);
     if (itemDefinition.isGlobal()) {
-      if (!authorizationService.isAdmin(session)) {
+      if (!isSystemAdmin) {
         return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
       }
     } else {
@@ -148,6 +148,9 @@ public class FormController {
       FormSpecification formSpec = formService.getFormById(itemDefinition.getFormSpecification().getId());
       authorizationService.canManage(session, formSpec.getGroupId());
     }
+
+    validatePrefillStrategyScoping(itemDefinition, isSystemAdmin);
+
     return ResponseEntity.ok(formService.createItemDefinition(itemDefinition));
   }
 
@@ -231,13 +234,10 @@ public class FormController {
     ));
   }
 
-  private void validatePrefillStrategyScoping(List<FormItem> items, FormSpecification formSpec, boolean isSystemAdmin) {
-  for (FormItem item : items) {
-    ItemDefinition itemDef = item.getItemDefinition();
+  private void validatePrefillStrategyScoping(ItemDefinition itemDef, boolean isSystemAdmin) {
     if (itemDef.getPrefillStrategies() == null || itemDef.getPrefillStrategies().isEmpty()) {
-      continue;
+      return;
     }
-
     if (itemDef.isGlobal()) {
       // Global ItemDefinitions can only use global PrefillStrategyEntries
       for (PrefillStrategyEntry strategy : itemDef.getPrefillStrategies()) {
@@ -272,11 +272,10 @@ public class FormController {
         } else {
           // Form-specific strategy must belong to this form
           if (existing.getFormSpecification() == null ||
-              !existing.getFormSpecification().equals(formSpec)) {
+              !existing.getFormSpecification().equals(itemDef.getFormSpecification())) {
             throw new IllegalArgumentException(
                 "PrefillStrategyEntry with id " + strategy.getId() +
-                " does not belong to FormSpecification " + formSpec.getId());
-            }
+                " does not belong to FormSpecification " + itemDef.getFormSpecification().getId());
           }
         }
       }

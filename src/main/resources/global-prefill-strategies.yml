@@ -1,3 +1,0 @@
-# global prefill strategies usable by system admins when defining new global item definitions
-- type: IDM_ATTRIBUTE
-  sourceAttribute: urn:perun:member:attribute-def:def:address

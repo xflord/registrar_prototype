@@ -4,9 +4,12 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
 import org.perun.registrarprototype.models.FormSpecification;
 import org.perun.registrarprototype.models.FormItem;
+import org.perun.registrarprototype.models.ItemDefinition;
 import org.perun.registrarprototype.models.ItemTexts;
+import org.perun.registrarprototype.models.ItemType;
 import org.perun.registrarprototype.models.PrefillStrategyEntry;
 import org.perun.registrarprototype.services.ApplicationService;
 import org.perun.registrarprototype.services.FormService;
@@ -29,21 +32,31 @@ public class TestData {
       FormSpecification formSpecification = formService.createForm(20644);
 
       ItemTexts itemTexts1 = new ItemTexts("Address", "Enter your address", "Address is required");
-      FormItem item1 = new FormItem(-1, formSpecification.getId(), "address", null, 1, FormItem.Type.TEXTFIELD, new HashMap<>(Map.of(Locale.ENGLISH, itemTexts1)), true, false,
-          null, ADDRESS_ATTR_DEF_M, null, List.of(FormSpecification.FormType.INITIAL), FormItem.Condition.NEVER,
-          FormItem.Condition.NEVER, null, null);
-      item1.addPrefillStrategyEntry(new PrefillStrategyEntry(
-          FormItem.PrefillStrategyType.IDM_ATTRIBUTE, new HashMap<>(Map.of("test", "test")), ADDRESS_ATTR_DEF_U));
+      PrefillStrategyEntry prefillStrat = new PrefillStrategyEntry(-1,
+          PrefillStrategyEntry.PrefillStrategyType.IDM_ATTRIBUTE, new HashMap<>(Map.of("test", "test")), ADDRESS_ATTR_DEF_U, formSpecification, false);
+      ItemDefinition itemDef1 = new ItemDefinition(-1, formSpecification, "address", ItemType.TEXTFIELD, true, false, null,
+          List.of(prefillStrat), ADDRESS_ATTR_DEF_M, Set.of(FormSpecification.FormType.INITIAL),
+          Map.of(Locale.ENGLISH, itemTexts1), ItemDefinition.Condition.NEVER,
+          ItemDefinition.Condition.NEVER, null, false);
+      itemDef1 = formService.createItemDefinition(itemDef1);
+      FormItem item1 = new FormItem(-1, formSpecification.getId(), "address", null, 1, null, null, itemDef1);
+
 
       ItemTexts itemTexts2 = new ItemTexts("Full name", "Enter your full name", "Name is required");
-      FormItem item2 = new FormItem(-2, formSpecification.getId(), "full name", null, 2, FormItem.Type.TEXTFIELD, new HashMap<>(Map.of(Locale.ENGLISH, itemTexts2)), false, true,
-          null, DISPLAY_NAME_ATTR_DEF_U, null, List.of(FormSpecification.FormType.INITIAL), FormItem.Condition.NEVER,
-          FormItem.Condition.IF_PREFILLED, null, null);
-      item2.addPrefillStrategyEntry(new PrefillStrategyEntry(FormItem.PrefillStrategyType.IDENTITY_ATTRIBUTE, new HashMap<>(), "name"));
+      PrefillStrategyEntry prefillStrat2 = new PrefillStrategyEntry(-2, PrefillStrategyEntry.PrefillStrategyType.IDENTITY_ATTRIBUTE, new HashMap<>(), "name", formSpecification, false);
+      ItemDefinition itemDef2 = new ItemDefinition(-2, formSpecification, "full name", ItemType.TEXTFIELD, false, true, null,
+          List.of(prefillStrat2), DISPLAY_NAME_ATTR_DEF_U, Set.of(FormSpecification.FormType.INITIAL),
+          Map.of(Locale.ENGLISH, itemTexts2), ItemDefinition.Condition.NEVER,
+          ItemDefinition.Condition.IF_PREFILLED, null, false);
+      itemDef2 = formService.createItemDefinition(itemDef2);
+      FormItem item2 = new FormItem(-2, formSpecification.getId(), "full name", null, 2, null, null, itemDef2);
 
-      FormItem submit = new FormItem(-3, formSpecification.getId(), "submit", null, 3, FormItem.Type.SUBMIT_BUTTON, new HashMap<>(), false, false,
-          null, null, null, List.of(FormSpecification.FormType.INITIAL), FormItem.Condition.NEVER,
-          FormItem.Condition.NEVER, null, null);
+      ItemDefinition itemDef3 = new ItemDefinition(-3, formSpecification, "submit", ItemType.SUBMIT_BUTTON, false, false, null,
+          null, null, Set.of(FormSpecification.FormType.INITIAL),
+          Map.of(Locale.ENGLISH, itemTexts2), ItemDefinition.Condition.NEVER,
+          ItemDefinition.Condition.NEVER, null, false);
+      itemDef3 = formService.createItemDefinition(itemDef3);
+      FormItem submit = new FormItem(-3, formSpecification.getId(), "submit", null, 3, null, null, itemDef3);
 
       formService.updateFormItems(formSpecification.getId(), List.of(item1, item2, submit));
     };

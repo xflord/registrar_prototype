@@ -1,5 +1,6 @@
 package org.perun.registrarprototype.models;
 
+import io.micrometer.common.util.StringUtils;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
@@ -29,28 +30,21 @@ public class ItemDefinition {
   public ItemDefinition() {}
 
   public ItemDefinition(ItemDefinition itemDefinition) {
-    this.id = itemDefinition.getId();
-    this.displayName = itemDefinition.getDisplayName();
-    this.type = itemDefinition.getType();
-    this.updatable = itemDefinition.getUpdatable();
-    this.required = itemDefinition.getRequired();
-    this.validator = itemDefinition.getValidator();
-    this.prefillStrategies = itemDefinition.getPrefillStrategies();
-    this.destinationAttributeUrn = itemDefinition.getDestinationAttributeUrn();
-    this.formTypes = itemDefinition.getFormTypes();
-    this.texts = itemDefinition.getTexts();
-    this.hidden = itemDefinition.getHidden();
-    this.disabled = itemDefinition.getDisabled();
-    this.defaultValue = itemDefinition.getDefaultValue();
-    this.global = itemDefinition.isGlobal();
+    this(itemDefinition.getId(), itemDefinition.getFormSpecification(), itemDefinition.getDisplayName(),
+        itemDefinition.getType(), itemDefinition.getUpdatable(), itemDefinition.getRequired(),
+        itemDefinition.getValidator(), itemDefinition.getPrefillStrategies(),
+        itemDefinition.getDestinationAttributeUrn(), itemDefinition.getFormTypes(),
+        itemDefinition.getTexts(), itemDefinition.getHidden(), itemDefinition.getDisabled(),
+        itemDefinition.getDefaultValue(), itemDefinition.isGlobal());
   }
 
-  public ItemDefinition(int id, String displayName, ItemType type, Boolean updatable, Boolean required,
+  public ItemDefinition(int id, FormSpecification formSpecification, String displayName, ItemType type, Boolean updatable, Boolean required,
                         String validator,
                         List<PrefillStrategyEntry> prefillStrategies, String destinationAttributeUrn,
                         Set<FormSpecification.FormType> formTypes, Map<Locale, ItemTexts> texts, Condition hidden,
                         Condition disabled, String defaultValue, boolean global) {
     this.id = id;
+    this.formSpecification = formSpecification;
     this.displayName = displayName;
     this.type = type;
     this.updatable = updatable;
@@ -64,6 +58,7 @@ public class ItemDefinition {
     this.disabled = disabled;
     this.defaultValue = defaultValue;
     this.global = global;
+    this.performTypeSpecificChecks();
   }
 
   public String getDisplayName() {
@@ -199,6 +194,14 @@ public class ItemDefinition {
     this.required = required;
   }
 
+  public FormSpecification getFormSpecification() {
+    return formSpecification;
+  }
+
+  public void setFormSpecification(FormSpecification formSpecification) {
+    this.formSpecification = formSpecification;
+  }
+
   @Override
   public String toString() {
     return "ItemDefinition{" +
@@ -220,5 +223,39 @@ public class ItemDefinition {
 
   public enum Condition {
     NEVER, ALWAYS, IF_PREFILLED, IF_EMPTY
+  }
+
+  private void performTypeSpecificChecks() {
+    if (this.isUpdatable() && !this.getType().isUpdatable()) {
+      throw new IllegalArgumentException("Form item " + this + " of non-updatable type cannot be updatable");
+    }
+
+    if (this.getType().isLayoutItem()) {
+      if (this.isRequired()) {
+        throw new IllegalArgumentException("Layout form item " + this + " cannot be required");
+      }
+      if (this.getDefaultValue() != null) {
+        throw new IllegalArgumentException("Layout form item " + this + " cannot have a default value");
+      }
+      if (this.getDestinationAttributeUrn() != null) {
+        throw new IllegalArgumentException("Layout form item " + this + " cannot have a destination attribute");
+      }
+      if (this.getPrefillStrategies() != null && !this.getPrefillStrategies().isEmpty()) {
+        throw new IllegalArgumentException("Layout form item " + this + " cannot have a prefill strategy");
+      }
+    }
+
+
+    if (this.getType().equals(ItemType.PASSWORD)) {
+      // TODO a form of enforcing certain rules (label format, allowed destination attributes, etc.) via yaml config?
+      if (this.getDestinationAttributeUrn() == null) {
+        throw new IllegalArgumentException("Password item must have a destination IDM attribute");
+      }
+    }
+
+    if (this.getType().isHtmlItem()) {
+      // TODO validate/sanitize HTML content
+    }
+    // TODO check validators (e.g. valid regexes, etc.)
   }
 }

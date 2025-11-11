@@ -20,7 +20,7 @@ public class ExistingApplicationPrefillStrategy implements PrefillStrategy {
   }
 
   @Override
-  public FormItem.PrefillStrategyType getType() {
-    return FormItem.PrefillStrategyType.APPLICATION;
+  public PrefillStrategyEntry.PrefillStrategyType getType() {
+    return PrefillStrategyEntry.PrefillStrategyType.APPLICATION;
   }
 }

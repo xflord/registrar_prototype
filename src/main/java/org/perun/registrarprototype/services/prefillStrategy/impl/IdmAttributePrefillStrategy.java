@@ -70,7 +70,7 @@ public class IdmAttributePrefillStrategy implements PrefillStrategy {
   }
 
   @Override
-  public FormItem.PrefillStrategyType getType() {
-    return FormItem.PrefillStrategyType.IDM_ATTRIBUTE;
+  public PrefillStrategyEntry.PrefillStrategyType getType() {
+    return PrefillStrategyEntry.PrefillStrategyType.IDM_ATTRIBUTE;
   }
 }

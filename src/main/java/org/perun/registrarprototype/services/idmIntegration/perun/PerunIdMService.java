@@ -35,6 +35,7 @@ import org.perun.registrarprototype.models.Application;
 import org.perun.registrarprototype.models.FormItem;
 import org.perun.registrarprototype.models.FormItemData;
 import org.perun.registrarprototype.models.Identity;
+import org.perun.registrarprototype.models.ItemType;
 import org.perun.registrarprototype.models.Role;
 import org.perun.registrarprototype.services.EventService;
 import org.perun.registrarprototype.services.idmIntegration.IdMService;
@@ -418,9 +419,9 @@ public class PerunIdMService implements IdMService {
     Candidate candidate = getCandidate(application);
     Map<String, String> attributes = new HashMap<>();
         application.getFormItemData().stream()
-            .filter(item -> StringUtils.isNotEmpty(item.getFormItem().getDestinationIdmAttribute()))
+            .filter(item -> StringUtils.isNotEmpty(item.getFormItem().getItemDefinition().getDestinationAttributeUrn()))
             // TODO some necessary filtering/processing might be done here, see `createCandidateFromApplicationData` in Perun
-            .forEach(item -> attributes.put(item.getFormItem().getDestinationIdmAttribute(), item.getValue()));
+            .forEach(item -> attributes.put(item.getFormItem().getItemDefinition().getDestinationAttributeUrn(), item.getValue()));
     candidate.setAttributes(attributes);
     input.setCandidate(candidate);
     Member createdMember = rpc.getMembersManager().createMemberForCandidate(input);
@@ -529,14 +530,14 @@ public class PerunIdMService implements IdMService {
     List<ApplicationFormItemData> perunFormItems = new ArrayList<>();
 
     itemData.stream()
-        .filter(item -> item.getFormItem().getDestinationIdmAttribute() != null ||
-                            item.getFormItem().getType().equals(FormItem.Type.VERIFIED_EMAIL))
+        .filter(item -> item.getFormItem().getItemDefinition().getDestinationAttributeUrn() != null ||
+                            item.getFormItem().getItemDefinition().getType().equals(ItemType.VERIFIED_EMAIL))
         .map(item -> {
           ApplicationFormItemData perunAppData = new ApplicationFormItemData();
           perunAppData.setValue(item.getValue());
           ApplicationFormItem perunAppItem = new ApplicationFormItem();
-          perunAppItem.setPerunDestinationAttribute(item.getFormItem().getDestinationIdmAttribute());
-          if (item.getFormItem().getType().equals(FormItem.Type.VERIFIED_EMAIL)) {
+          perunAppItem.setPerunDestinationAttribute(item.getFormItem().getItemDefinition().getDestinationAttributeUrn());
+          if (item.getFormItem().getItemDefinition().getType().equals(ItemType.VERIFIED_EMAIL)) {
             perunAppItem.setType(Type.VALIDATED_EMAIL);
           }
           perunAppData.setFormItem(perunAppItem);
@@ -604,10 +605,10 @@ public class PerunIdMService implements IdMService {
 
   private List<Attribute> mapFormDataToAttributeObjects(List<FormItemData> itemData) {
     return itemData.stream()
-               .filter(item -> item.getFormItem().getDestinationIdmAttribute() != null)
+               .filter(item -> item.getFormItem().getItemDefinition().getDestinationAttributeUrn() != null)
                .map(item -> {
                  AttributeDefinition attrDef = rpc.getAttributesManager()
-                                                   .getAttributeDefinitionByName(item.getFormItem().getDestinationIdmAttribute());
+                                                   .getAttributeDefinitionByName(item.getFormItem().getItemDefinition().getDestinationAttributeUrn());
                  Attribute attr = new Attribute();
                  attr.setId(attrDef.getId());
                  attr.setValue(item.getValue());
@@ -630,7 +631,7 @@ public class PerunIdMService implements IdMService {
 
     String nameFromDisplayNameAttr = application.getFormItemData()
                                                         .stream()
-                                                        .filter(formItemData -> formItemData.getFormItem().getDestinationIdmAttribute().equals(DISPLAY_NAME))
+                                                        .filter(formItemData -> formItemData.getFormItem().getItemDefinition().getDestinationAttributeUrn().equals(DISPLAY_NAME))
                                                         .map(FormItemData::getValue)
                                          .findFirst().orElse(null);
     NameParser.ParsedName parsedName = NameParser.parseDisplayName(nameFromDisplayNameAttr);
