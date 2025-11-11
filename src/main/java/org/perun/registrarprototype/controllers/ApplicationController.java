@@ -1,29 +1,34 @@
 package org.perun.registrarprototype.controllers;
 
 import java.util.ArrayList;
-import org.perun.registrarprototype.exceptions.IdmObjectNotExistsException;
-import org.perun.registrarprototype.exceptions.InsufficientRightsException;
-import org.perun.registrarprototype.models.Application;
-import org.perun.registrarprototype.models.FormItemData;
-import org.perun.registrarprototype.models.Identity;
-import org.perun.registrarprototype.models.Requirement;
-import org.perun.registrarprototype.models.SubmissionContext;
-import org.perun.registrarprototype.models.SubmissionResult;
-import org.perun.registrarprototype.security.SessionProvider;
-import org.perun.registrarprototype.services.ApplicationService;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
-
 import java.util.List;
 import java.util.stream.Collectors;
 import org.perun.registrarprototype.controllers.dto.ApplicationDTO;
 import org.perun.registrarprototype.controllers.dto.ApplicationDetailDTO;
+import org.perun.registrarprototype.controllers.dto.ApplicationFormDTO;
 import org.perun.registrarprototype.controllers.dto.DecisionDTO;
+import org.perun.registrarprototype.controllers.dto.FormItemDataDTO;
+import org.perun.registrarprototype.controllers.dto.SubmissionContextDTO;
 import org.perun.registrarprototype.controllers.dto.SubmissionDTO;
 import org.perun.registrarprototype.controllers.dto.SubmissionResultDTO;
+import org.perun.registrarprototype.exceptions.IdmObjectNotExistsException;
+import org.perun.registrarprototype.exceptions.InsufficientRightsException;
+import org.perun.registrarprototype.models.Application;
+import org.perun.registrarprototype.models.ApplicationForm;
 import org.perun.registrarprototype.models.Decision;
+import org.perun.registrarprototype.models.FormItem;
+import org.perun.registrarprototype.models.FormItemData;
+import org.perun.registrarprototype.models.Identity;
+import org.perun.registrarprototype.models.Requirement;
 import org.perun.registrarprototype.models.Submission;
+import org.perun.registrarprototype.models.SubmissionContext;
+import org.perun.registrarprototype.models.SubmissionResult;
+import org.perun.registrarprototype.security.SessionProvider;
+import org.perun.registrarprototype.services.ApplicationService;
+import org.perun.registrarprototype.services.FormService;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/applications")
@@ -31,10 +36,12 @@ public class ApplicationController {
 
   private final ApplicationService applicationService;
   private final SessionProvider sessionProvider;
+  private final FormService formService;
 
-  public ApplicationController(ApplicationService applicationService, SessionProvider sessionProvider) {
+  public ApplicationController(ApplicationService applicationService, SessionProvider sessionProvider, FormService formService) {
       this.applicationService = applicationService;
       this.sessionProvider = sessionProvider;
+      this.formService = formService;
   }
 
   // --- Manager approves an application ---
@@ -60,7 +67,10 @@ public class ApplicationController {
   }
 
   @GetMapping("/similarIdentities")
-  public ResponseEntity<List<Identity>> getSimilarIdentitiesForPossibleConsolidation(@RequestBody List<FormItemData> itemData) {
+  public ResponseEntity<List<Identity>> getSimilarIdentitiesForPossibleConsolidation(@RequestBody List<FormItemDataDTO> itemDataDTO) {
+    List<FormItemData> itemData = itemDataDTO.stream()
+        .map(this::toFormItemData)
+        .collect(Collectors.toList());
     return ResponseEntity.ok(applicationService.checkForSimilarIdentities(itemData));
   }
 
@@ -84,13 +94,15 @@ public class ApplicationController {
   }
 
   @GetMapping("/loadForms")
-  public ResponseEntity<SubmissionContext> getSubmissionContext(@RequestParam int groupId)
+  public ResponseEntity<SubmissionContextDTO> getSubmissionContext(@RequestParam int groupId)
       throws IdmObjectNotExistsException {
-    return ResponseEntity.ok(applicationService.loadForms(new ArrayList<>(List.of(new Requirement(groupId, Requirement.TargetState.MEMBER))), "", false));
+    SubmissionContext context = applicationService.loadForms(new ArrayList<>(List.of(new Requirement(groupId, Requirement.TargetState.MEMBER))), "", false);
+    return ResponseEntity.ok(toSubmissionContextDTO(context));
   }
 
   @PostMapping("/applyForMembership")
-  public ResponseEntity<SubmissionResultDTO> applyForMembership(@RequestBody SubmissionContext context) {
+  public ResponseEntity<SubmissionResultDTO> applyForMembership(@RequestBody SubmissionContextDTO contextDTO) {
+    SubmissionContext context = toSubmissionContext(contextDTO);
     SubmissionResult result = applicationService.applyForMemberships(context);
     return ResponseEntity.ok(toSubmissionResultDTO(result));
   }
@@ -99,7 +111,7 @@ public class ApplicationController {
   private ApplicationDTO toApplicationDTO(Application app) {
     return new ApplicationDTO(
         app.getId(),
-        app.getForm(),
+        app.getForm() != null ? app.getForm().getId() : null,
         app.getState(),
         app.getSubmission() != null ? app.getSubmission().getSubmitterName() : null,
         app.getSubmission() != null ? app.getSubmission().getId() : null,
@@ -110,15 +122,22 @@ public class ApplicationController {
   private ApplicationDetailDTO toApplicationDetailDTO(Application app) {
     SubmissionDTO submissionDTO = toSubmissionDTO(app.getSubmission());
     DecisionDTO latestDecisionDTO = toDecisionDTO(applicationService.getLatestDecisionByApplicationId(app.getId()));
+    
+    List<FormItemDataDTO> formItemDataDTO = null;
+    if (app.getFormItemData() != null) {
+      formItemDataDTO = app.getFormItemData().stream()
+          .map(this::toFormItemDataDTO)
+          .collect(Collectors.toList());
+    }
 
     return new ApplicationDetailDTO(
         app.getId(),
-        app.getForm(),
+        app.getForm() != null ? app.getForm().getId() : null,
         app.getState(),
         app.getSubmission() != null ? app.getSubmission().getSubmitterName() : null,
         app.getSubmission() != null ? app.getSubmission().getId() : null,
         app.getType(),
-        app.getFormItemData(),
+        formItemDataDTO,
         submissionDTO,
         latestDecisionDTO
     );
@@ -162,13 +181,105 @@ public class ApplicationController {
     List<Integer> applicationIds = result.getSubmission() != null && result.getSubmission().getApplications() != null
         ? result.getSubmission().getApplications().stream().map(Application::getId).collect(Collectors.toList())
         : List.of();
+    
+    SubmissionContextDTO redirectFormsDTO = null;
+    if (result.getRedirectForms() != null) {
+      redirectFormsDTO = toSubmissionContextDTO(result.getRedirectForms());
+    }
+    
     return new SubmissionResultDTO(
         result.getCustomMessages(),
         result.getRedirectUrl(),
-        result.getRedirectForms(),
+        redirectFormsDTO,
         submissionDTO,
         applicationIds
     );
+  }
+
+  // Mapper methods to convert DTOs to domain objects
+
+  private FormItemData toFormItemData(FormItemDataDTO dto) {
+    FormItem formItem = null;
+    if (dto.getFormItemId() != null) {
+      formItem = formService.getFormItemById(dto.getFormItemId());
+    }
+    return new FormItemData(
+        formItem,
+        dto.getValue(),
+        dto.getPrefilledValue(),
+        dto.getIdentityAttributeValue(),
+        dto.getIdmAttributeValue(),
+        dto.getValueAssured() != null ? dto.getValueAssured() : false
+    );
+  }
+
+  private ApplicationForm toApplicationForm(ApplicationFormDTO dto) {
+    org.perun.registrarprototype.models.FormSpecification formSpec = null;
+    if (dto.getFormSpecificationId() != null) {
+      formSpec = formService.getFormById(dto.getFormSpecificationId());
+    }
+    List<FormItemData> formItemData = null;
+    if (dto.getFormItemData() != null) {
+      formItemData = dto.getFormItemData().stream()
+          .map(this::toFormItemData)
+          .collect(Collectors.toList());
+    }
+    return new ApplicationForm(formSpec, formItemData, dto.getType());
+  }
+
+  private SubmissionContext toSubmissionContext(SubmissionContextDTO dto) {
+    List<ApplicationForm> prefilledData = null;
+    if (dto.getPrefilledData() != null) {
+      prefilledData = dto.getPrefilledData().stream()
+          .map(this::toApplicationForm)
+          .collect(Collectors.toList());
+    }
+    return new SubmissionContext(dto.getRedirectUrl(), prefilledData);
+  }
+
+  // Mapper methods to convert domain objects to DTOs
+
+  private FormItemDataDTO toFormItemDataDTO(FormItemData formItemData) {
+    if (formItemData == null) {
+      return null;
+    }
+    FormItemDataDTO dto = new FormItemDataDTO();
+    dto.setFormItemId(formItemData.getFormItem() != null ? formItemData.getFormItem().getId() : null);
+    dto.setValue(formItemData.getValue());
+    dto.setPrefilledValue(formItemData.getPrefilledValue());
+    dto.setIdentityAttributeValue(formItemData.getIdentityAttributeValue());
+    dto.setIdmAttributeValue(formItemData.getIdmAttributeValue());
+    dto.setValueAssured(formItemData.isValueAssured());
+    return dto;
+  }
+
+  private ApplicationFormDTO toApplicationFormDTO(ApplicationForm applicationForm) {
+    if (applicationForm == null) {
+      return null;
+    }
+    ApplicationFormDTO dto = new ApplicationFormDTO();
+    dto.setFormSpecificationId(applicationForm.getFormSpecification() != null ? applicationForm.getFormSpecification().getId() : null);
+    dto.setType(applicationForm.getType());
+    if (applicationForm.getFormItemData() != null) {
+      dto.setFormItemData(applicationForm.getFormItemData().stream()
+          .map(this::toFormItemDataDTO)
+          .collect(Collectors.toList()));
+    }
+    return dto;
+  }
+
+  private SubmissionContextDTO toSubmissionContextDTO(SubmissionContext context) {
+    if (context == null) {
+      return null;
+    }
+    SubmissionContextDTO dto = new SubmissionContextDTO();
+    dto.setRedirectUrl(context.getRedirectUrl());
+    if (context.getPrefilledData() != null) {
+      dto.setPrefilledData(context.getPrefilledData().stream()
+          .map(this::toApplicationFormDTO)
+          .collect(Collectors.toList()));
+    }
+    return dto;
   }
 
 }

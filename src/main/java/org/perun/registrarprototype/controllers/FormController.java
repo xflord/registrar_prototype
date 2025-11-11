@@ -1,7 +1,16 @@
 package org.perun.registrarprototype.controllers;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
+import java.util.stream.Collectors;
+import org.perun.registrarprototype.controllers.dto.AssignedFormModuleDTO;
+import org.perun.registrarprototype.controllers.dto.FormItemDTO;
+import org.perun.registrarprototype.controllers.dto.FormTransitionDTO;
+import org.perun.registrarprototype.controllers.dto.ItemDefinitionDTO;
+import org.perun.registrarprototype.controllers.dto.ItemTextsDTO;
+import org.perun.registrarprototype.controllers.dto.PrefillStrategyEntryDTO;
 import org.perun.registrarprototype.controllers.dto.PrincipalInfoDTO;
 import org.perun.registrarprototype.exceptions.FormItemRegexNotValid;
 import org.perun.registrarprototype.exceptions.InsufficientRightsException;
@@ -10,6 +19,7 @@ import org.perun.registrarprototype.models.FormSpecification;
 import org.perun.registrarprototype.models.FormItem;
 import org.perun.registrarprototype.models.FormTransition;
 import org.perun.registrarprototype.models.ItemDefinition;
+import org.perun.registrarprototype.models.ItemTexts;
 import org.perun.registrarprototype.models.PrefillStrategyEntry;
 import org.perun.registrarprototype.models.Requirement;
 import org.perun.registrarprototype.security.CurrentUser;
@@ -42,8 +52,11 @@ public class FormController {
   }
 
   @PostMapping("/create")
-  public ResponseEntity<FormSpecification> createForm(@RequestParam int groupId, @RequestBody List<FormItem> items) {
+  public ResponseEntity<FormSpecification> createForm(@RequestParam int groupId, @RequestBody List<FormItemDTO> itemsDTO) {
       try {
+        List<FormItem> items = itemsDTO.stream()
+            .map(this::toFormItem)
+            .collect(Collectors.toList());
         formService.createForm(groupId, items);
       } catch (FormItemRegexNotValid e) {
         throw new RuntimeException(e);
@@ -55,8 +68,11 @@ public class FormController {
 
   // TODO probably do not mix request params and body
   @PostMapping("/setModule")
-  public ResponseEntity<List<AssignedFormModule>> setModules(@RequestParam int formId, @RequestBody List<AssignedFormModule> modules) {
+  public ResponseEntity<List<AssignedFormModule>> setModules(@RequestParam int formId, @RequestBody List<AssignedFormModuleDTO> modulesDTO) {
     RegistrarAuthenticationToken user = sessionProvider.getCurrentSession();
+    List<AssignedFormModule> modules = modulesDTO.stream()
+        .map(this::toAssignedFormModule)
+        .collect(Collectors.toList());
     List<AssignedFormModule> setModules;
     try {
       setModules = formService.setModules(user, formId, modules);
@@ -74,7 +90,7 @@ public class FormController {
    * @return
    */
   @PostMapping("/updateFormItems")
-  public ResponseEntity<Void> updateFormItems(@RequestParam int formId, @RequestBody List<FormItem> items) {
+  public ResponseEntity<Void> updateFormItems(@RequestParam int formId, @RequestBody List<FormItemDTO> itemsDTO) {
     RegistrarAuthenticationToken session = sessionProvider.getCurrentSession();
     FormSpecification formSpec = formService.getFormById(formId);
 
@@ -85,6 +101,10 @@ public class FormController {
 
     boolean isSystemAdmin = authorizationService.isAdmin(session);
 
+    List<FormItem> items = itemsDTO.stream()
+        .map(this::toFormItem)
+        .collect(Collectors.toList());
+
     // Validate prefill strategy scoping
     items.forEach(item -> validatePrefillStrategyScoping(item.getItemDefinition(), isSystemAdmin));
 
@@ -93,8 +113,10 @@ public class FormController {
   }
 
   @PostMapping("/createPrefillStrategyEntry")
-  public ResponseEntity<PrefillStrategyEntry> createPrefillStrategyEntry(@RequestBody PrefillStrategyEntry prefillStrategyEntry) {
+  public ResponseEntity<PrefillStrategyEntry> createPrefillStrategyEntry(@RequestBody PrefillStrategyEntryDTO prefillStrategyEntryDTO) {
     RegistrarAuthenticationToken session = sessionProvider.getCurrentSession();
+    PrefillStrategyEntry prefillStrategyEntry = toPrefillStrategyEntry(prefillStrategyEntryDTO);
+    
     if (prefillStrategyEntry.isGlobal()) {
       if (!authorizationService.isAdmin(session)) {
         return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
@@ -134,9 +156,11 @@ public class FormController {
   }
 
   @PostMapping("/createItemDefinition")
-  public ResponseEntity<ItemDefinition> createItemDefinition(@RequestBody ItemDefinition itemDefinition) {
+  public ResponseEntity<ItemDefinition> createItemDefinition(@RequestBody ItemDefinitionDTO itemDefinitionDTO) {
     RegistrarAuthenticationToken session = sessionProvider.getCurrentSession();
     boolean isSystemAdmin = authorizationService.isAdmin(session);
+    ItemDefinition itemDefinition = toItemDefinition(itemDefinitionDTO);
+    
     if (itemDefinition.isGlobal()) {
       if (!isSystemAdmin) {
         return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
@@ -186,7 +210,8 @@ public class FormController {
   }
 
   @PostMapping("/removePrerequisiteForm")
-  public ResponseEntity<Void> removePrerequisiteForm(@RequestBody FormTransition transition) {
+  public ResponseEntity<Void> removePrerequisiteForm(@RequestBody FormTransitionDTO transitionDTO) {
+    FormTransition transition = toFormTransition(transitionDTO);
     FormSpecification form = formService.getFormById(transition.getSourceFormSpecification().getId());
     // prolly do authorization in controllers, add ControllerAdvice that will translate the exceptions
     authorizationService.canManage(sessionProvider.getCurrentSession(), form.getGroupId());
@@ -280,5 +305,157 @@ public class FormController {
         }
       }
     }
+  }
+
+  // Mapper methods to convert DTOs to domain objects using constructors with validation
+
+  private AssignedFormModule toAssignedFormModule(AssignedFormModuleDTO dto) {
+    return new AssignedFormModule(dto.getModuleName(), dto.getOptions());
+  }
+
+  private PrefillStrategyEntry toPrefillStrategyEntry(PrefillStrategyEntryDTO dto) {
+    FormSpecification formSpec = null;
+    if (dto.getFormSpecificationId() != null) {
+      formSpec = formService.getFormById(dto.getFormSpecificationId());
+    }
+    
+    // Validation: form specification must be defined if NOT global, must be null if global
+    if (dto.isGlobal()) {
+      if (formSpec != null) {
+        throw new IllegalArgumentException("PrefillStrategyEntry formSpecification must be null when global is true");
+      }
+    } else {
+      if (formSpec == null) {
+        throw new IllegalArgumentException("PrefillStrategyEntry formSpecificationId cannot be null when global is false");
+      }
+    }
+    
+    int id = dto.getId() != null ? dto.getId() : 0;
+    // Use constructor with validation
+    return new PrefillStrategyEntry(id, dto.getType(), dto.getOptions(), dto.getSourceAttribute(), formSpec, dto.isGlobal());
+  }
+
+  private ItemDefinition toItemDefinition(ItemDefinitionDTO dto) {
+    FormSpecification formSpec = null;
+    if (dto.getFormSpecificationId() != null) {
+      formSpec = formService.getFormById(dto.getFormSpecificationId());
+    }
+    
+    // Validation: form specification must be defined if NOT global, must be null if global
+    if (dto.isGlobal()) {
+      if (formSpec != null) {
+        throw new IllegalArgumentException("ItemDefinition formSpecification must be null when global is true");
+      }
+    } else {
+      if (formSpec == null) {
+        throw new IllegalArgumentException("ItemDefinition formSpecificationId cannot be null when global is false");
+      }
+    }
+
+    // Convert PrefillStrategyEntryDTOs to PrefillStrategyEntry objects
+    List<PrefillStrategyEntry> prefillStrategies = null;
+    if (dto.getPrefillStrategies() != null) {
+      prefillStrategies = dto.getPrefillStrategies().stream()
+          .map(this::toPrefillStrategyEntry)
+          .collect(Collectors.toList());
+    }
+
+    // Convert texts map from Map<String, ItemTextsDTO> to Map<Locale, ItemTexts>
+    Map<Locale, ItemTexts> texts = null;
+    if (dto.getTexts() != null) {
+      texts = new HashMap<>();
+      for (Map.Entry<String, ItemTextsDTO> entry : dto.getTexts().entrySet()) {
+        Locale locale = Locale.forLanguageTag(entry.getKey());
+        ItemTextsDTO textDTO = entry.getValue();
+        if (textDTO == null) {
+          throw new IllegalArgumentException("ItemDefinition texts entry for locale '" + entry.getKey() + "' cannot be null. Must contain label, help, and error keys.");
+        }
+        // ItemTextsDTO already has the required structure (label, help, error)
+        texts.put(locale, new ItemTexts(textDTO.getLabel(), textDTO.getHelp(), textDTO.getError()));
+      }
+    }
+
+    int id = dto.getId() != null ? dto.getId() : 0;
+    // Use constructor with validation
+    return new ItemDefinition(
+        id,
+        formSpec,
+        dto.getDisplayName(),
+        dto.getType(),
+        dto.getUpdatable(),
+        dto.getRequired(),
+        dto.getValidator(),
+        prefillStrategies,
+        dto.getDestinationAttributeUrn(),
+        dto.getFormTypes() != null ? dto.getFormTypes() : java.util.Set.of(FormSpecification.FormType.INITIAL, FormSpecification.FormType.EXTENSION),
+        texts != null ? texts : new HashMap<>(),
+        dto.getHidden() != null ? dto.getHidden() : ItemDefinition.Condition.NEVER,
+        dto.getDisabled() != null ? dto.getDisabled() : ItemDefinition.Condition.NEVER,
+        dto.getDefaultValue(),
+        dto.isGlobal()
+    );
+  }
+
+  private FormItem toFormItem(FormItemDTO dto) {
+    // Validation: formId cannot be null
+    if (dto.getFormId() == null) {
+      throw new IllegalArgumentException("FormItem formId cannot be null");
+    }
+    
+    // Validation: ordNum must be non-null and non-negative
+    if (dto.getOrdNum() == null) {
+      throw new IllegalArgumentException("FormItem ordNum cannot be null");
+    }
+    if (dto.getOrdNum() < 0) {
+      throw new IllegalArgumentException("FormItem ordNum must be non-negative, got: " + dto.getOrdNum());
+    }
+    
+    // Validation: id must be negative when updating form items (this is the only time it's passed currently)
+    if (dto.getId() != null && dto.getId() >= 0) {
+      throw new IllegalArgumentException("FormItem id must be negative when updating form items, got: " + dto.getId());
+    }
+    
+    ItemDefinition itemDefinition = null;
+    if (dto.getItemDefinition() != null) {
+      itemDefinition = toItemDefinition(dto.getItemDefinition());
+    }
+    int id = dto.getId() != null ? dto.getId() : 0;
+    int formId = dto.getFormId();
+    int ordNum = dto.getOrdNum();
+    // Use constructor
+    return new FormItem(
+        id,
+        formId,
+        dto.getShortName(),
+        dto.getParentId(),
+        ordNum,
+        dto.getHiddenDependencyItemId(),
+        dto.getDisabledDependencyItemId(),
+        itemDefinition
+    );
+  }
+
+  private FormTransition toFormTransition(FormTransitionDTO dto) {
+    // Validation: type cannot be null
+    if (dto.getType() == null) {
+      throw new IllegalArgumentException("FormTransition type cannot be null");
+    }
+    
+    FormSpecification sourceForm = null;
+    if (dto.getSourceFormSpecificationId() != null) {
+      sourceForm = formService.getFormById(dto.getSourceFormSpecificationId());
+    }
+    FormSpecification targetForm = null;
+    if (dto.getTargetFormSpecificationId() != null) {
+      targetForm = formService.getFormById(dto.getTargetFormSpecificationId());
+    }
+    // Use constructor
+    return new FormTransition(
+        sourceForm,
+        targetForm,
+        dto.getSourceFormStates(),
+        dto.getTargetFormState(),
+        dto.getType()
+    );
   }
 }

@@ -1,17 +1,18 @@
 package org.perun.registrarprototype.controllers.dto;
 
 import java.util.List;
-import org.perun.registrarprototype.models.SubmissionContext;
 
 public class SubmissionResultDTO {
   private List<String> customMessages;
   private String redirectUrl;
-  private SubmissionContext redirectForms;
+  private SubmissionContextDTO redirectForms;
   private SubmissionDTO submission;
   private List<Integer> applicationIds;
 
+  public SubmissionResultDTO() {}
+
   public SubmissionResultDTO(List<String> customMessages, String redirectUrl,
-                             SubmissionContext redirectForms, SubmissionDTO submission,
+                             SubmissionContextDTO redirectForms, SubmissionDTO submission,
                              List<Integer> applicationIds) {
     this.customMessages = customMessages;
     this.redirectUrl = redirectUrl;
@@ -24,20 +25,40 @@ public class SubmissionResultDTO {
     return customMessages;
   }
 
+  public void setCustomMessages(List<String> customMessages) {
+    this.customMessages = customMessages;
+  }
+
   public String getRedirectUrl() {
     return redirectUrl;
   }
 
-  public SubmissionContext getRedirectForms() {
+  public void setRedirectUrl(String redirectUrl) {
+    this.redirectUrl = redirectUrl;
+  }
+
+  public SubmissionContextDTO getRedirectForms() {
     return redirectForms;
+  }
+
+  public void setRedirectForms(SubmissionContextDTO redirectForms) {
+    this.redirectForms = redirectForms;
   }
 
   public SubmissionDTO getSubmission() {
     return submission;
   }
 
+  public void setSubmission(SubmissionDTO submission) {
+    this.submission = submission;
+  }
+
   public List<Integer> getApplicationIds() {
     return applicationIds;
+  }
+
+  public void setApplicationIds(List<Integer> applicationIds) {
+    this.applicationIds = applicationIds;
   }
 }
 

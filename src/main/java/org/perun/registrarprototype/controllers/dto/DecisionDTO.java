@@ -12,6 +12,8 @@ public class DecisionDTO {
   private LocalDateTime timestamp;
   private DecisionType decisionType;
 
+  public DecisionDTO() {}
+
   public DecisionDTO(int id, Integer applicationId, Integer approverId, String approverName, String message,
                      LocalDateTime timestamp, DecisionType decisionType) {
     this.id = id;
@@ -24,11 +26,24 @@ public class DecisionDTO {
   }
 
   public int getId() { return id; }
+  public void setId(int id) { this.id = id; }
+  
   public Integer getApplicationId() { return applicationId; }
+  public void setApplicationId(Integer applicationId) { this.applicationId = applicationId; }
+  
   public Integer getApproverId() { return approverId; }
+  public void setApproverId(Integer approverId) { this.approverId = approverId; }
+  
   public String getApproverName() { return approverName; }
+  public void setApproverName(String approverName) { this.approverName = approverName; }
+  
   public String getMessage() { return message; }
+  public void setMessage(String message) { this.message = message; }
+  
   public LocalDateTime getTimestamp() { return timestamp; }
+  public void setTimestamp(LocalDateTime timestamp) { this.timestamp = timestamp; }
+  
   public DecisionType getDecisionType() { return decisionType; }
+  public void setDecisionType(DecisionType decisionType) { this.decisionType = decisionType; }
 }
 
