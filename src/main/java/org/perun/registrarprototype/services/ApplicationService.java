@@ -30,10 +30,8 @@ public interface ApplicationService {
    * @param applicationId ID of the application to approve
    * @param message approval message from the approver
    * @return the approved application
-   * @throws InsufficientRightsException if the user is not authorized to approve the application
    */
-  Application approveApplication(RegistrarAuthenticationToken sess, int applicationId, String message)
-      throws InsufficientRightsException;
+  Application approveApplication(RegistrarAuthenticationToken sess, int applicationId, String message);
 
   /**
    * Rejects an application, executes form module hooks, and emits a rejection event.
@@ -42,10 +40,8 @@ public interface ApplicationService {
    * @param applicationId ID of the application to reject
    * @param message rejection message from the approver
    * @return the rejected application
-   * @throws InsufficientRightsException if the user is not authorized to reject the application
    */
-  Application rejectApplication(RegistrarAuthenticationToken sess, int applicationId, String message)
-      throws InsufficientRightsException;
+  Application rejectApplication(RegistrarAuthenticationToken sess, int applicationId, String message);
 
   /**
    * Requests changes to an application, transitions the application state, and emits a changes requested event.

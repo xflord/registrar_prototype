@@ -17,9 +17,9 @@ import org.perun.registrarprototype.events.ApplicationSubmittedEvent;
 import org.perun.registrarprototype.events.ApplicationVerifiedEvent;
 import org.perun.registrarprototype.events.ChangesRequestedToApplicationEvent;
 import org.perun.registrarprototype.exceptions.DataInconsistencyException;
+import org.perun.registrarprototype.exceptions.EntityNotExistsException;
 import org.perun.registrarprototype.exceptions.IdmAttributeNotExistsException;
 import org.perun.registrarprototype.exceptions.IdmObjectNotExistsException;
-import org.perun.registrarprototype.exceptions.InsufficientRightsException;
 import org.perun.registrarprototype.exceptions.InvalidApplicationDataException;
 import org.perun.registrarprototype.exceptions.InvalidApplicationStateTransitionException;
 import org.perun.registrarprototype.exceptions.SimilarIdentitiesFoundException;
@@ -86,17 +86,12 @@ public class ApplicationServiceImpl implements ApplicationService {
   }
 
   @Override
-  public Application approveApplication(RegistrarAuthenticationToken sess, int applicationId, String message) throws InsufficientRightsException {
-    Application app = applicationRepository.findById(applicationId).orElseThrow(() -> new IllegalArgumentException("Application not found"));
+  public Application approveApplication(RegistrarAuthenticationToken sess, int applicationId, String message) {
+    Application app = applicationRepository.findById(applicationId).orElseThrow(() -> new EntityNotExistsException("Application", applicationId));
 
-    List<AssignedFormModule> modules = formService.getAssignedFormModules(app.getForm());
+    List<AssignedFormModule> modules = formService.getAssignedFormModules(app.getFormSpecification());
     for (AssignedFormModule module : modules) {
       module.getFormModule().beforeApproval(app);
-    }
-
-    if (!authorizationService.canDecide(sess, app.getForm().getGroupId())) {
-      // return 403
-      throw new InsufficientRightsException("You are not authorized to approve this application");
     }
 
     makeDecision(sess.getPrincipal(), app, message, Decision.DecisionType.APPROVED);
@@ -166,13 +161,8 @@ public class ApplicationServiceImpl implements ApplicationService {
   }
 
   @Override
-  public Application rejectApplication(RegistrarAuthenticationToken sess, int applicationId, String message) throws InsufficientRightsException {
-    Application app = applicationRepository.findById(applicationId).orElseThrow(() -> new IllegalArgumentException("Application not found"));
-
-    if (!authorizationService.canDecide(sess, app.getForm().getGroupId())) {
-      // return 403
-      throw new InsufficientRightsException("You are not authorized to reject this application");
-    }
+  public Application rejectApplication(RegistrarAuthenticationToken sess, int applicationId, String message)  {
+    Application app = applicationRepository.findById(applicationId).orElseThrow(() -> new EntityNotExistsException("Application", applicationId));
 
     makeDecision(sess.getPrincipal(), app, message, Decision.DecisionType.REJECTED);
 
@@ -186,7 +176,7 @@ public class ApplicationServiceImpl implements ApplicationService {
 
     // TODO how do we handle auto-submitted applications related to this one?
 
-    List<AssignedFormModule> modules = formService.getAssignedFormModules(app.getForm());
+    List<AssignedFormModule> modules = formService.getAssignedFormModules(app.getFormSpecification());
     for (AssignedFormModule module : modules) {
       module.getFormModule().onRejection(app);
     }
@@ -198,11 +188,12 @@ public class ApplicationServiceImpl implements ApplicationService {
   }
 
   @Override
-  public Application requestChanges(RegistrarAuthenticationToken sess, int applicationId, String message) throws InsufficientRightsException {
+  public Application requestChanges(RegistrarAuthenticationToken sess, int applicationId, String message) {
     Application app = applicationRepository.findById(applicationId)
-                          .orElseThrow(() -> new IllegalArgumentException("Application not found"));
+                          .orElseThrow(() -> new EntityNotExistsException("Application", applicationId));
 
     if (StringUtils.isEmpty(message)) {
+      // TODO move validation to controller
       throw new IllegalArgumentException("Cannot request changes without a message");
     }
 
@@ -303,18 +294,18 @@ public class ApplicationServiceImpl implements ApplicationService {
 
   @Override
   public Application applyForMembership(ApplicationForm applicationForm, Submission submission, String redirectUrl) {
-    FormSpecification formSpecification = formRepository.findById(applicationForm.getForm().getId()).orElseThrow(() -> new IllegalArgumentException("Form not found"));
+    FormSpecification formSpecification = formRepository.findById(applicationForm.getFormSpecification().getId()).orElseThrow(() -> new EntityNotExistsException("FormSpecification", applicationForm.getFormSpecification().getId()));
     RegistrarAuthenticationToken sess = sessionProvider.getCurrentSession();
 
-    if (applicationForm.getType() == FormSpecification.FormType.EXTENSION && !canExtendMembership(applicationForm.getForm()
+    if (applicationForm.getType() == FormSpecification.FormType.EXTENSION && !canExtendMembership(applicationForm.getFormSpecification()
                                                                                             .getGroupId())) {
-      throw new IllegalArgumentException("User cannot extend membership in group: " + applicationForm.getForm()
+      throw new IllegalArgumentException("User cannot extend membership in group: " + applicationForm.getFormSpecification()
                                                                                           .getGroupId());
     }
 
     if (checkOpenApplications(sess, formSpecification) != null && applicationForm.getType() != FormSpecification.FormType.UPDATE) {
       // user has applied for membership since loading the form
-      throw new IllegalArgumentException("User already has an open application in group: " + applicationForm.getForm()
+      throw new IllegalArgumentException("User already has an open application in group: " + applicationForm.getFormSpecification()
                                                                                                  .getGroupId());
     }
 
@@ -353,7 +344,8 @@ public class ApplicationServiceImpl implements ApplicationService {
 
   @Override
   public Application getApplicationById(int id) {
-    return applicationRepository.findById(id).orElse(null);
+    return applicationRepository.findById(id)
+        .orElseThrow(() -> new EntityNotExistsException("Application", id));
   }
 
   @Override
@@ -380,14 +372,14 @@ public class ApplicationServiceImpl implements ApplicationService {
    */
   private void validateFilledFormData(ApplicationForm data) {
     // TODO consider checking whether DISABLED/HIDDEN items were not filled (or simply skip them)
-    List<FormItem> items = formService.getFormItems(data.getForm(), data.getType());
+    List<FormItem> items = formService.getFormItems(data.getFormSpecification(), data.getType());
 
     Set<Integer> itemIds = items.stream().map(FormItem::getId).collect(Collectors.toSet());
     List<FormItemData> foreignItems = data.getFormItemData().stream()
                                           .filter((itemData) -> !itemIds.contains(itemData.getFormItem().getId()))
                                           .toList();
     if (!foreignItems.isEmpty()) {
-      throw new DataInconsistencyException("Submitted form: " + data.getForm().getId() + " contains data for items" +
+      throw new DataInconsistencyException("Submitted form: " + data.getFormSpecification().getId() + " contains data for items" +
                                                " not currently in that form: " + foreignItems);
     }
 
@@ -465,7 +457,7 @@ public class ApplicationServiceImpl implements ApplicationService {
   @Override
   //@Transactional
   public void updateApplicationData(int applicationId, List<FormItemData> itemData) {
-    Application application = applicationRepository.findById(applicationId).orElseThrow(() -> new IllegalArgumentException("Application not found"));
+    Application application = applicationRepository.findById(applicationId).orElseThrow(() -> new EntityNotExistsException("Application", applicationId));
 
     List<FormItemData> existingData = application.getFormItemData();
     // todo this will likely change with data persistence
@@ -1039,7 +1031,7 @@ public class ApplicationServiceImpl implements ApplicationService {
     Map<FormSpecification, FormSpecification.FormType> requiredForms = new HashMap<>();
     for (Requirement requirement : requirements) {
       FormSpecification formSpecification = formRepository.findByGroupId(requirement.getGroupId())
-                      .orElseThrow(() -> new IllegalArgumentException("Form for group " + requirement.getGroupId() + " not found"));
+                      .orElseThrow(() -> new EntityNotExistsException("FormSpecification", -1, "Form for group " + requirement.getGroupId() + " not found"));
       // TODO do we always display EXTENSION forms if user is already member of some groups?
 
       FormSpecification.FormType type = selectFormType(requirement);
@@ -1062,7 +1054,7 @@ public class ApplicationServiceImpl implements ApplicationService {
   private List<Requirement> getPrerequisiteRequirements(Requirement requirement, List<Requirement> requirements) {
     // TODO do we want prerequisites of GROUP MEMBERSHIP or FORM SUBMISSION?
     FormSpecification formSpecification = formRepository.findByGroupId(requirement.getGroupId())
-                      .orElseThrow(() -> new IllegalArgumentException("Form for group " + requirement.getGroupId() + " not found"));
+                      .orElseThrow(() -> new EntityNotExistsException("FormSpecification", -1, "Form for group " + requirement.getGroupId() + " not found"));
 
     List<FormTransition> prerequisiteTransitions = formService.getPrerequisiteTransitions(formSpecification,
         requirement.getTargetState());

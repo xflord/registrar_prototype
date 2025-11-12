@@ -51,7 +51,7 @@ public class ApplicationRepositoryDummy implements ApplicationRepository {
                                                     .filter(application -> application.getId() == id)
                                                     .findFirst();
     optionalApplication.ifPresent(
-        application -> application.setForm(formRepository.findById(application.getForm().getId())
+        application -> application.setFormSpecification(formRepository.findById(application.getFormSpecification().getId())
                                                .orElseThrow(() -> new DataInconsistencyException("Application: " + id +
                                                                                                      " has no form."))));
     return optionalApplication;
@@ -59,7 +59,7 @@ public class ApplicationRepositoryDummy implements ApplicationRepository {
 
   @Override
   public List<Application> findByFormId(int formId) {
-    return applications.stream().filter(application -> application.getForm().getId() == formId).toList();
+    return applications.stream().filter(application -> application.getFormSpecification().getId() == formId).toList();
   }
 
   @Override

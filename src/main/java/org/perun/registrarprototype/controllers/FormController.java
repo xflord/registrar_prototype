@@ -12,7 +12,6 @@ import org.perun.registrarprototype.controllers.dto.ItemDefinitionDTO;
 import org.perun.registrarprototype.controllers.dto.ItemTextsDTO;
 import org.perun.registrarprototype.controllers.dto.PrefillStrategyEntryDTO;
 import org.perun.registrarprototype.controllers.dto.PrincipalInfoDTO;
-import org.perun.registrarprototype.exceptions.FormItemRegexNotValid;
 import org.perun.registrarprototype.exceptions.InsufficientRightsException;
 import org.perun.registrarprototype.models.AssignedFormModule;
 import org.perun.registrarprototype.models.FormSpecification;
@@ -52,41 +51,43 @@ public class FormController {
   }
 
   @PostMapping("/create")
-  public ResponseEntity<FormSpecification> createForm(@RequestParam int groupId, @RequestBody List<FormItemDTO> itemsDTO) {
-      try {
-        List<FormItem> items = itemsDTO.stream()
-            .map(this::toFormItem)
-            .collect(Collectors.toList());
-        formService.createForm(groupId, items);
-      } catch (FormItemRegexNotValid e) {
-        throw new RuntimeException(e);
-      } catch (InsufficientRightsException e) {
-        return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
-      }
-      return ResponseEntity.ok().build();
+  public ResponseEntity<FormSpecification> createForm(@RequestParam int groupId) {
+    RegistrarAuthenticationToken session = sessionProvider.getCurrentSession();
+    if (!authorizationService.canManage(session, groupId)) {
+      return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+    }
+
+    formService.createForm(groupId);
+
+    return ResponseEntity.ok().build();
   }
 
-  // TODO probably do not mix request params and body
   @PostMapping("/setModule")
   public ResponseEntity<List<AssignedFormModule>> setModules(@RequestParam int formId, @RequestBody List<AssignedFormModuleDTO> modulesDTO) {
-    RegistrarAuthenticationToken user = sessionProvider.getCurrentSession();
+    RegistrarAuthenticationToken session = sessionProvider.getCurrentSession();
+    FormSpecification formSpec = formService.getFormById(formId);
+
+    // Authorization check
+    if (!authorizationService.canManage(session, formSpec.getGroupId())) {
+      return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+    }
+
     List<AssignedFormModule> modules = modulesDTO.stream()
         .map(this::toAssignedFormModule)
         .collect(Collectors.toList());
-    List<AssignedFormModule> setModules;
     try {
-      setModules = formService.setModules(user, formId, modules);
+      List<AssignedFormModule> setModules = formService.setModules(session, formId, modules);
+      return ResponseEntity.ok(setModules);
     } catch (InsufficientRightsException e) {
       return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
     }
-    return ResponseEntity.ok(setModules);
   }
 
   /**
    * Updates form items. Existing items missing from the array will be removed, new items are expected to have negative id
    * , all ids still have to be unique though
    * @param formId
-   * @param items
+   * @param itemsDTO
    * @return
    */
   @PostMapping("/updateFormItems")
@@ -126,7 +127,10 @@ public class FormController {
         throw new IllegalArgumentException("Form specification is null");
       }
       FormSpecification formSpec = formService.getFormById(prefillStrategyEntry.getFormSpecification().getId());
-      authorizationService.canManage(session, formSpec.getGroupId());
+      // Authorization check
+      if (!authorizationService.canManage(session, formSpec.getGroupId())) {
+        return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+      }
     }
     return ResponseEntity.ok(formService.createPrefillStrategy(prefillStrategyEntry));
   }
@@ -170,7 +174,10 @@ public class FormController {
         throw new IllegalArgumentException("Form specification is null");
       }
       FormSpecification formSpec = formService.getFormById(itemDefinition.getFormSpecification().getId());
-      authorizationService.canManage(session, formSpec.getGroupId());
+      // Authorization check
+      if (!authorizationService.canManage(session, formSpec.getGroupId())) {
+        return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+      }
     }
 
     validatePrefillStrategyScoping(itemDefinition, isSystemAdmin);
@@ -202,8 +209,14 @@ public class FormController {
                                                             @RequestParam int targetFormId,
                                                             @RequestBody List<Requirement.TargetState> sourceFormStates,
                                                             @RequestParam Requirement.TargetState targetState) {
+    RegistrarAuthenticationToken session = sessionProvider.getCurrentSession();
     FormSpecification sourceForm = formService.getFormById(sourceFormId);
-    authorizationService.canManage(sessionProvider.getCurrentSession(), sourceForm.getGroupId());
+    
+    // Authorization check
+    if (!authorizationService.canManage(session, sourceForm.getGroupId())) {
+      return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+    }
+    
     FormSpecification targetForm = formService.getFormById(targetFormId);
 
     return ResponseEntity.ok(formService.addPrerequisiteToForm(sourceForm, targetForm, sourceFormStates, targetState));
@@ -211,10 +224,14 @@ public class FormController {
 
   @PostMapping("/removePrerequisiteForm")
   public ResponseEntity<Void> removePrerequisiteForm(@RequestBody FormTransitionDTO transitionDTO) {
+    RegistrarAuthenticationToken session = sessionProvider.getCurrentSession();
     FormTransition transition = toFormTransition(transitionDTO);
     FormSpecification form = formService.getFormById(transition.getSourceFormSpecification().getId());
-    // prolly do authorization in controllers, add ControllerAdvice that will translate the exceptions
-    authorizationService.canManage(sessionProvider.getCurrentSession(), form.getGroupId());
+    
+    // Authorization check
+    if (!authorizationService.canManage(session, form.getGroupId())) {
+      return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+    }
 
     formService.removePrerequisiteFromForm(transition);
     return ResponseEntity.ok().build();
@@ -222,8 +239,13 @@ public class FormController {
 
   @GetMapping("/prerequisiteForms")
   public ResponseEntity<List<FormTransition>> getPrerequisiteForms(@RequestParam int formId) {
+    RegistrarAuthenticationToken session = sessionProvider.getCurrentSession();
     FormSpecification form = formService.getFormById(formId);
-    authorizationService.canManage(sessionProvider.getCurrentSession(), form.getGroupId());
+    
+    // Authorization check
+    if (!authorizationService.canManage(session, form.getGroupId())) {
+      return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+    }
 
     return ResponseEntity.ok(formService.getPrerequisiteTransitionsForForm(form));
   }

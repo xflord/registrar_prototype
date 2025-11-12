@@ -27,7 +27,7 @@ public interface FormService {
    * @throws FormItemRegexNotValid if any form item regex is invalid
    * @throws InsufficientRightsException if the user is not authorized to create a form
    */
-  FormSpecification createForm(int groupId) throws FormItemRegexNotValid, InsufficientRightsException;
+  FormSpecification createForm(int groupId);
 
   /**
    * Creates a new form for the group and other properties specified in the form object and assigns the specified modules.

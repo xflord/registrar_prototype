@@ -12,7 +12,6 @@ import org.perun.registrarprototype.controllers.dto.SubmissionContextDTO;
 import org.perun.registrarprototype.controllers.dto.SubmissionDTO;
 import org.perun.registrarprototype.controllers.dto.SubmissionResultDTO;
 import org.perun.registrarprototype.exceptions.IdmObjectNotExistsException;
-import org.perun.registrarprototype.exceptions.InsufficientRightsException;
 import org.perun.registrarprototype.models.Application;
 import org.perun.registrarprototype.models.ApplicationForm;
 import org.perun.registrarprototype.models.Decision;
@@ -23,8 +22,10 @@ import org.perun.registrarprototype.models.Requirement;
 import org.perun.registrarprototype.models.Submission;
 import org.perun.registrarprototype.models.SubmissionContext;
 import org.perun.registrarprototype.models.SubmissionResult;
+import org.perun.registrarprototype.security.RegistrarAuthenticationToken;
 import org.perun.registrarprototype.security.SessionProvider;
 import org.perun.registrarprototype.services.ApplicationService;
+import org.perun.registrarprototype.services.AuthorizationService;
 import org.perun.registrarprototype.services.FormService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -37,32 +38,42 @@ public class ApplicationController {
   private final ApplicationService applicationService;
   private final SessionProvider sessionProvider;
   private final FormService formService;
+  private final AuthorizationService authorizationService;
 
-  public ApplicationController(ApplicationService applicationService, SessionProvider sessionProvider, FormService formService) {
+  public ApplicationController(ApplicationService applicationService, SessionProvider sessionProvider, FormService formService, AuthorizationService authorizationService) {
       this.applicationService = applicationService;
       this.sessionProvider = sessionProvider;
       this.formService = formService;
+      this.authorizationService = authorizationService;
   }
 
   // --- Manager approves an application ---
   @PostMapping("/{applicationId}/approve")
   public ResponseEntity<Void> approveApplication(@PathVariable int applicationId, @RequestBody String message) {
-    try {
-      applicationService.approveApplication(sessionProvider.getCurrentSession(), applicationId, message);
-    } catch (InsufficientRightsException e) {
+    RegistrarAuthenticationToken session = sessionProvider.getCurrentSession();
+    Application app = applicationService.getApplicationById(applicationId);
+
+    // Authorization check
+    if (!authorizationService.canDecide(session, app.getFormSpecification().getGroupId())) {
       return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
     }
+
+    applicationService.approveApplication(session, applicationId, message);
     return ResponseEntity.ok().build();
   }
 
   // --- Manager rejects an application ---
   @PostMapping("/{applicationId}/reject")
   public ResponseEntity<Void> rejectApplication(@PathVariable int applicationId, @RequestBody String message) {
-    try {
-      applicationService.rejectApplication(sessionProvider.getCurrentSession(), applicationId, message);
-    } catch (InsufficientRightsException e) {
+    RegistrarAuthenticationToken session = sessionProvider.getCurrentSession();
+    Application app = applicationService.getApplicationById(applicationId);
+
+    // Authorization check
+    if (!authorizationService.canDecide(session, app.getFormSpecification().getGroupId())) {
       return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
     }
+
+    applicationService.rejectApplication(session, applicationId, message);
     return ResponseEntity.ok().build();
   }
 
@@ -85,10 +96,6 @@ public class ApplicationController {
   @GetMapping("/{id}")
   public ResponseEntity<ApplicationDetailDTO> getApplication(@PathVariable int id) {
     Application app = applicationService.getApplicationById(id);
-    if (app == null) {
-      return ResponseEntity.notFound().build();
-    }
-
     ApplicationDetailDTO dto = toApplicationDetailDTO(app);
     return ResponseEntity.ok(dto);
   }
@@ -111,7 +118,7 @@ public class ApplicationController {
   private ApplicationDTO toApplicationDTO(Application app) {
     return new ApplicationDTO(
         app.getId(),
-        app.getForm() != null ? app.getForm().getId() : null,
+        app.getFormSpecification() != null ? app.getFormSpecification().getId() : null,
         app.getState(),
         app.getSubmission() != null ? app.getSubmission().getSubmitterName() : null,
         app.getSubmission() != null ? app.getSubmission().getId() : null,
@@ -132,7 +139,7 @@ public class ApplicationController {
 
     return new ApplicationDetailDTO(
         app.getId(),
-        app.getForm() != null ? app.getForm().getId() : null,
+        app.getFormSpecification() != null ? app.getFormSpecification().getId() : null,
         app.getState(),
         app.getSubmission() != null ? app.getSubmission().getSubmitterName() : null,
         app.getSubmission() != null ? app.getSubmission().getId() : null,

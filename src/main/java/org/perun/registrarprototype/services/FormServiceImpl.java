@@ -11,6 +11,7 @@ import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import org.perun.registrarprototype.exceptions.DataInconsistencyException;
+import org.perun.registrarprototype.exceptions.EntityNotExistsException;
 import org.perun.registrarprototype.exceptions.FormItemRegexNotValid;
 import org.perun.registrarprototype.exceptions.FormModuleNotExistsException;
 import org.perun.registrarprototype.exceptions.InsufficientRightsException;
@@ -71,8 +72,7 @@ public class FormServiceImpl implements FormService {
   }
 
   @Override
-  public FormSpecification createForm(int groupId)
-      throws FormItemRegexNotValid, InsufficientRightsException {
+  public FormSpecification createForm(int groupId) {
 
     return formRepository.save(new FormSpecification(-1, groupId, new ArrayList<>()));
   }
@@ -97,14 +97,14 @@ public class FormServiceImpl implements FormService {
 
   @Override
   public void deleteForm(int formId) {
-    FormSpecification formSpecification = formRepository.findById(formId).orElseThrow(() -> new IllegalArgumentException("Form with ID " + formId + " not found"));
+    FormSpecification formSpecification = formRepository.findById(formId).orElseThrow(() -> new EntityNotExistsException("FormSpecification", formId));
 
     formRepository.delete(formSpecification);
   }
 
   @Override
   public FormItem setFormItem(int formId, FormItem formItem) throws FormItemRegexNotValid {
-    FormSpecification formSpecification = formRepository.findById(formId).orElseThrow(() -> new IllegalArgumentException("Form with ID " + formId + " not found"));
+    FormSpecification formSpecification = formRepository.findById(formId).orElseThrow(() -> new EntityNotExistsException("FormSpecification", formId));
 
     // Validate regex if present
     if (formItem.getItemDefinition() != null && formItem.getItemDefinition().getValidator() != null && !formItem.getItemDefinition().getValidator().isEmpty()) {
@@ -128,7 +128,7 @@ public class FormServiceImpl implements FormService {
 
   @Override
   public void setFormItems(int formId, List<FormItem> items) throws FormItemRegexNotValid {
-    FormSpecification formSpecification = formRepository.findById(formId).orElseThrow(() -> new IllegalArgumentException("Form with ID " + formId + " not found"));
+    FormSpecification formSpecification = formRepository.findById(formId).orElseThrow(() -> new EntityNotExistsException("FormSpecification", formId));
 
     items.forEach(item -> {
                       item.setFormId(formSpecification.getId());
@@ -160,7 +160,7 @@ public class FormServiceImpl implements FormService {
   @Override
   public List<AssignedFormModule> setModules(RegistrarAuthenticationToken sess, int formId, List<AssignedFormModule> modulesToAssign)
       throws InsufficientRightsException {
-    FormSpecification formSpecification = formRepository.findById(formId).orElseThrow(() -> new IllegalArgumentException("Form with ID " + formId + " not found"));
+    FormSpecification formSpecification = formRepository.findById(formId).orElseThrow(() -> new EntityNotExistsException("FormSpecification", formId));
 
     if (!authorizationService.canManage(sess, formSpecification.getGroupId())) {
       // 403
@@ -202,7 +202,8 @@ public class FormServiceImpl implements FormService {
 
   @Override
   public FormSpecification getFormById(int formId) {
-    return formRepository.findById(formId).orElseThrow(() -> new DataInconsistencyException("Form with ID " + formId + " not found. "));
+    return formRepository.findById(formId)
+        .orElseThrow(() -> new EntityNotExistsException("FormSpecification", formId));
   }
 
   @Override
@@ -370,7 +371,7 @@ public class FormServiceImpl implements FormService {
     Set<Integer> presentGlobalDefinitions = new HashSet<>();
     updatedItems.forEach(item -> {
       ItemDefinition itemDefinition = itemDefinitionRepository.findById(item.getItemDefinition().getId())
-                                          .orElseThrow(() -> new IllegalArgumentException("Item definition with ID " + item.getItemDefinition().getId() + " not found"));
+                                          .orElseThrow(() -> new EntityNotExistsException("Item definition", item.getItemDefinition().getId()));
       item.setItemDefinition(itemDefinition);
       if (itemDefinition.isGlobal()) {
         presentGlobalDefinitions.add(itemDefinition.getId());

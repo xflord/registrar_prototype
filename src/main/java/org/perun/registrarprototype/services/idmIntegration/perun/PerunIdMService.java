@@ -32,7 +32,6 @@ import org.perun.registrarprototype.events.MemberCreatedEvent;
 import org.perun.registrarprototype.exceptions.DataInconsistencyException;
 import org.perun.registrarprototype.exceptions.IdmAttributeNotExistsException;
 import org.perun.registrarprototype.models.Application;
-import org.perun.registrarprototype.models.FormItem;
 import org.perun.registrarprototype.models.FormItemData;
 import org.perun.registrarprototype.models.Identity;
 import org.perun.registrarprototype.models.ItemType;
@@ -408,7 +407,7 @@ public class PerunIdMService implements IdMService {
 
   @Override
   public Integer createMemberForCandidate(Application application) {
-    Group group = retrieveGroup(application.getForm().getGroupId());
+    Group group = retrieveGroup(application.getFormSpecification().getGroupId());
     if (group == null) {
       return null;
     }
@@ -451,7 +450,7 @@ public class PerunIdMService implements IdMService {
 
   @Override
   public Integer createMemberForUser(Application application) {
-    Group group = retrieveGroup(application.getForm().getGroupId());
+    Group group = retrieveGroup(application.getFormSpecification().getGroupId());
     if (group == null) {
       return null;
     }
@@ -492,7 +491,7 @@ public class PerunIdMService implements IdMService {
 
   @Override
   public Integer extendMembership(Application application) {
-    Group group = retrieveGroup(application.getForm().getGroupId());
+    Group group = retrieveGroup(application.getFormSpecification().getGroupId());
     if (group == null) {
       return null;
     }

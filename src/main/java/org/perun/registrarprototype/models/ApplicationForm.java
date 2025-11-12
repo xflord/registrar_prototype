@@ -13,14 +13,6 @@ public class ApplicationForm {
     this.type = type;
   }
 
-  public FormSpecification getForm() {
-    return formSpecification;
-  }
-
-  public void setForm(FormSpecification formSpecification) {
-    this.formSpecification = formSpecification;
-  }
-
   public void setFormItemData(List<FormItemData> formItemData) {
     this.formItemData = formItemData;
   }
