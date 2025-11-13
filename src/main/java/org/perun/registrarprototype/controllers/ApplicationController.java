@@ -87,6 +87,7 @@ public class ApplicationController {
 
   @GetMapping()
   public ResponseEntity<List<ApplicationDTO>> getApplications() {
+    // test/admin endpoint
     List<ApplicationDTO> dtos = applicationService.getAllApplications().stream()
         .map(this::toApplicationDTO)
         .collect(Collectors.toList());
@@ -95,7 +96,14 @@ public class ApplicationController {
 
   @GetMapping("/{id}")
   public ResponseEntity<ApplicationDetailDTO> getApplication(@PathVariable int id) {
+    RegistrarAuthenticationToken session = sessionProvider.getCurrentSession();
     Application app = applicationService.getApplicationById(id);
+
+    if (!authorizationService.canDecide(session, app.getFormSpecification().getGroupId()) &&
+        !authorizationService.canManage(session, app)) {
+      return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+    }
+
     ApplicationDetailDTO dto = toApplicationDetailDTO(app);
     return ResponseEntity.ok(dto);
   }

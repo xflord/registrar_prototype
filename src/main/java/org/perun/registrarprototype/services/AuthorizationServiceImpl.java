@@ -1,8 +1,7 @@
 package org.perun.registrarprototype.services;
 
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Set;
+import java.util.Objects;
+import org.perun.registrarprototype.models.Application;
 import org.perun.registrarprototype.models.Role;
 import org.perun.registrarprototype.security.RegistrarAuthenticationToken;
 import org.perun.registrarprototype.services.idmIntegration.IdMService;
@@ -31,6 +30,25 @@ public class AuthorizationServiceImpl implements AuthorizationService {
     }
 
     return sess.getPrincipal().getRoles().get(Role.FORM_MANAGER).contains(groupId);
+  }
+
+  @Override
+  public boolean canManage(RegistrarAuthenticationToken sess, Application app) {
+    // TODO verify this is all the applicable conditions
+    if (!sess.isAuthenticated()) {
+      return false;
+    }
+
+    if (sess.getPrincipal().getRoles().containsKey(Role.ADMIN)) {
+      return true;
+    }
+
+    if (app.getIdmUserId() != null && Objects.equals(app.getIdmUserId(), sess.getPrincipal().id())) {
+      return true;
+    }
+
+    return Objects.equals(app.getSubmission().getIdentityIssuer(), sess.getPrincipal().attribute("iss")) &&
+               Objects.equals(app.getSubmission().getIdentityIdentifier(), sess.getPrincipal().attribute("sub"));
   }
 
   @Override
