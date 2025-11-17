@@ -19,7 +19,7 @@ public class ApplicationServiceFailTests extends GenericRegistrarServiceTests {
 
   @Test
   void applyMissingRequiredItems() throws Exception {
-    int groupId = getGroupId();
+    String groupId = String.valueOf(getGroupId());
     FormSpecification formSpecification = formService.createForm(groupId);
 
     ItemDefinition itemDef1 = createItemDefinition(ItemType.VERIFIED_EMAIL, "email", true, "");
@@ -41,7 +41,7 @@ public class ApplicationServiceFailTests extends GenericRegistrarServiceTests {
 
   @Test
   void applyMissingRequiredItemsIncorrectConstraints() throws Exception {
-    int groupId = getGroupId();
+    String groupId = String.valueOf(getGroupId());
 
     FormSpecification formSpecification = formService.createForm(groupId);
 
@@ -65,7 +65,7 @@ public class ApplicationServiceFailTests extends GenericRegistrarServiceTests {
 
   @Test
   void applyWithIncorrectItemConstraints() throws Exception {
-    int groupId = getGroupId();
+    String groupId = String.valueOf(getGroupId());
 
     FormSpecification formSpecification = formService.createForm(groupId);
 

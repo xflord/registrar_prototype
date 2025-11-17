@@ -17,7 +17,7 @@ public class FormSpecificationServiceFailTests extends GenericRegistrarServiceTe
 
   @Test
   void createFormIncorrectConstraints() throws Exception {
-    int groupId = getGroupId();
+    String groupId = String.valueOf(getGroupId());
 
     FormSpecification formSpecification = formService.createForm(groupId);
 
@@ -30,7 +30,7 @@ public class FormSpecificationServiceFailTests extends GenericRegistrarServiceTe
 
   @Test
   void setModuleMissingRequiredOptions() throws Exception {
-    int groupId = getGroupId();
+    String groupId = String.valueOf(getGroupId());
 
     FormSpecification formSpecification = formService.createForm(groupId);
 
@@ -46,7 +46,7 @@ public class FormSpecificationServiceFailTests extends GenericRegistrarServiceTe
 
   @Test
   void setModuleWrongRequiredOptions() throws Exception {
-    int groupId = getGroupId();
+    String groupId = String.valueOf(getGroupId());
 
     FormSpecification formSpecification = formService.createForm(groupId);
 

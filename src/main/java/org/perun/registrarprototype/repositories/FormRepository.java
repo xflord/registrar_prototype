@@ -8,7 +8,7 @@ public interface FormRepository {
   Optional<FormSpecification> findById(int formId);
 
   // dependent on whether we want more forms per group (not meant by EXTENSION/INITIAL)
-  Optional<FormSpecification> findByGroupId(int groupId);
+  Optional<FormSpecification> findByGroupId(String groupId);
 
   int getNextId();
   FormSpecification save(FormSpecification formSpecification);

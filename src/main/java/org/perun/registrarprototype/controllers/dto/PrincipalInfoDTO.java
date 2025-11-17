@@ -8,13 +8,13 @@ import org.perun.registrarprototype.models.Role;
 
 public class PrincipalInfoDTO {
   private boolean authenticated;
-  private Integer userId;
+  private String userId;
   private String userName;
   private Map<String, Object> attributes;
   private Map<String, Set<Integer>> roles; // String key for JSON serialization
 
   // Full constructor
-  public PrincipalInfoDTO(boolean authenticated, Integer userId, String userName,
+  public PrincipalInfoDTO(boolean authenticated, String userId, String userName,
                          Map<String, Object> attributes, Map<Role, Set<Integer>> roles) {
     this.authenticated = authenticated;
     this.userId = userId;
@@ -41,11 +41,11 @@ public class PrincipalInfoDTO {
     this.authenticated = authenticated;
   }
 
-  public Integer getUserId() {
+  public String getUserId() {
     return userId;
   }
 
-  public void setUserId(Integer userId) {
+  public void setUserId(String userId) {
     this.userId = userId;
   }
 

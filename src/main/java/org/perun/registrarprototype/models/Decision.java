@@ -5,7 +5,7 @@ import java.time.LocalDateTime;
 public class Decision {
   private int id;
   private Application application;
-  private Integer approverId;
+  private String approverId;
   private String approverName;
   private String message;
   private LocalDateTime timestamp;
@@ -13,7 +13,7 @@ public class Decision {
 
   public Decision() {}
 
-  public Decision(int id, Application application, Integer approverId, String approverName, String message, LocalDateTime timestamp,
+  public Decision(int id, Application application, String approverId, String approverName, String message, LocalDateTime timestamp,
                   DecisionType decisionType) {
     this.id = id;
     this.application = application;
@@ -40,11 +40,11 @@ public class Decision {
     this.application = application;
   }
 
-  public Integer getApproverId() {
+  public String getApproverId() {
     return approverId;
   }
 
-  public void setApproverId(Integer approverId) {
+  public void setApproverId(String approverId) {
     this.approverId = approverId;
   }
 

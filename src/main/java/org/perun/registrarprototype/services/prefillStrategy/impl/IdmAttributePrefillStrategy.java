@@ -39,22 +39,8 @@ public class IdmAttributePrefillStrategy implements PrefillStrategy {
     String sourceAttr = entry.getSourceAttribute();
     // TODO warn if vo/group not present but required for the attribute
     try {
-      if (sourceAttr.startsWith(idmService.getUserAttributeUrn())) {
-        return Optional.ofNullable(
-            idmService.getUserAttribute(sessionProvider.getCurrentSession().getPrincipal().id(), sourceAttr));
-      } else if (sourceAttr.startsWith(idmService.getVoAttributeUrn())) {
-        return Optional.ofNullable(idmService.getVoAttribute(sourceAttr, formSpecification.getVoId()));
-      } else if (sourceAttr.startsWith(idmService.getMemberAttributeUrn()) &&
-                     formSpecification.getGroupId() != null) { // TODO can get member attr just from voId
-        return Optional.ofNullable(
-            idmService.getMemberAttribute(sessionProvider.getCurrentSession().getPrincipal().id(), sourceAttr,
-                formSpecification.getGroupId()));
-      } else if (sourceAttr.startsWith(idmService.getGroupAttributeUrn()) &&
-                     formSpecification.getGroupId() != null) { // TODO better check if group is present
-        return Optional.ofNullable(idmService.getGroupAttribute(sourceAttr, formSpecification.getGroupId()));
-      } else {
-        throw new IllegalArgumentException("Unsupported attribute source: " + sourceAttr);
-      }
+      return Optional.ofNullable(idmService.getAttribute(sourceAttr, sessionProvider.getCurrentSession().getPrincipal().id(),
+          formSpecification.getGroupId(), formSpecification.getVoId()));
     } catch (IdmAttributeNotExistsException e) {
       // TODO login attribute definition was removed in IdM between submission and approval, alert admins?
       throw new IllegalStateException("Login item attribute has been deleted in the underlying IdM system, " +

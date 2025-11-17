@@ -50,8 +50,8 @@ public class UserLookupService {
       key = "#jwt.subject",
       unless = "#result == null " // do not cache for users not in Perun, we want to check every request in case they consolidated
   )
-  public Integer perunUserData(Jwt jwt) {
-    return idmService.getUserIdByIdentifier(jwt.getSubject());
+  public String perunUserData(Jwt jwt) {
+    return idmService.getUserIdByIdentifier(jwt.getIssuer().toString(), jwt.getSubject());
   }
 
   // TODO refactor the MEMBERSHIP role (remove probs)

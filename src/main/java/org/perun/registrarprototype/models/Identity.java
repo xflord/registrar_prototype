@@ -20,4 +20,24 @@ public class Identity {
     this.type = type;
     this.attributes = attributes;
   }
+
+  public String getName() {
+    return name;
+  }
+
+  public String getOrganization() {
+    return organization;
+  }
+
+  public String getEmail() {
+    return email;
+  }
+
+  public String getType() {
+    return type;
+  }
+
+  public Map<String, String> getAttributes() {
+    return attributes;
+  }
 }

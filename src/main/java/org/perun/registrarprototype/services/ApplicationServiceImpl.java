@@ -106,13 +106,14 @@ public class ApplicationServiceImpl implements ApplicationService {
     if (app.getIdmUserId() == null) {
       // TODO use ISSUER here to retrieve user instead of a hardcoded ext source name. Also find out how the naming in perun
       //  works, e.g. iss `https://login.e-infra.cz/oidc/` maps to `https://login.e-infra.cz/idp/`
-      Integer perunUserId = idmService.getUserIdByIdentifier(app.getSubmission().getIdentityIdentifier());
+      String perunUserId = idmService.getUserIdByIdentifier(app.getSubmission().getIdentityIssuer(),
+          app.getSubmission().getIdentityIdentifier());
       app.setIdmUserId(perunUserId);
     }
 
     app = applicationRepository.save(app);
 
-    Integer idmUserId = propagateApprovalToIdm(app);
+    String idmUserId = propagateApprovalToIdm(app);
     // consolidate all applications with the potentially newly created idmUserId
     consolidateSubmissions(idmUserId, app.getSubmission().getIdentityIdentifier(), app.getSubmission().getIdentityIssuer());
 
@@ -129,11 +130,11 @@ public class ApplicationServiceImpl implements ApplicationService {
    * @param application
    * @return
    */
-  private Integer propagateApprovalToIdm(Application application) {
+  private String propagateApprovalToIdm(Application application) {
     releaseLogins(application.getFormItemData());
     dropExistingLogins(application);
 
-    Integer perunUserId = null;
+    String perunUserId = null;
 
     if (application.getType().equals(FormSpecification.FormType.INITIAL)) {
       if (application.getIdmUserId() == null) {
@@ -150,7 +151,7 @@ public class ApplicationServiceImpl implements ApplicationService {
   /**
    * Set newly retrieved attributes from application acceptance to existing open applications
    */
-  private void consolidateSubmissions(Integer idmUserId, String identityIdentifier, String identityIssuer) {
+  private void consolidateSubmissions(String idmUserId, String identityIdentifier, String identityIssuer) {
     List<Submission> submissions = submissionRepository.findAllByIdentifierAndIssuer(identityIdentifier, identityIssuer);
     submissions.forEach(submission -> {
       submission.setSubmitterId(idmUserId);
@@ -880,9 +881,11 @@ public class ApplicationServiceImpl implements ApplicationService {
           .forEach(loginItem -> {
             String perunLogin;
             try {
-              perunLogin =
-                  idmService.getUserAttribute(application.getIdmUserId(), loginItem.getFormItem().getItemDefinition().
-                                                                              getDestinationAttributeUrn());
+              // TODO overall the reserved logins logic might be too `perun-specific`
+              perunLogin = idmService.getAttribute(loginItem.getFormItem().getItemDefinition().
+                                                                              getDestinationAttributeUrn(),
+                  application.getIdmUserId(), application.getFormSpecification().getGroupId(),
+                  application.getFormSpecification().getVoId());
             } catch (IdmAttributeNotExistsException e) {
               // TODO login attribute definition was removed in IdM between submission and approval, alert admins?
               throw new IllegalStateException("Login item attribute has been deleted in the underlying IdM system, " +
@@ -996,7 +999,7 @@ public class ApplicationServiceImpl implements ApplicationService {
    * FormType (e.g if user is member and is can extend, use EXTENSION form type) TODO UPDATE and CANCELLATION form types via different endpoint?
    * @param groupId
    */
-  private boolean checkUserMembership(int groupId) {
+  private boolean checkUserMembership(String groupId) {
     RegistrarAuthenticationToken sess = sessionProvider.getCurrentSession();
     if (sess.isAuthenticated()) {
       // TODO remove once we have IdM methods to check membership
@@ -1013,7 +1016,7 @@ public class ApplicationServiceImpl implements ApplicationService {
    * @param groupId
    * @return
    */
-  private boolean canExtendMembership(int groupId) {
+  private boolean canExtendMembership(String groupId) {
     RegistrarAuthenticationToken sess = sessionProvider.getCurrentSession();
     if (sess.isAuthenticated() && checkUserMembership(groupId)) {
       return idmService.canExtendMembership(sess.getPrincipal().id(), groupId);

@@ -29,7 +29,7 @@ public class TestData {
   @Bean
   CommandLineRunner initDatabase(FormService formService, ApplicationService applicationService) {
     return args -> {
-      FormSpecification formSpecification = formService.createForm(20644);
+      FormSpecification formSpecification = formService.createForm("20644");
 
       ItemTexts itemTexts1 = new ItemTexts("Address", "Enter your address", "Address is required");
       PrefillStrategyEntry prefillStrat = new PrefillStrategyEntry(-1,

@@ -27,7 +27,7 @@ public interface FormService {
    * @throws FormItemRegexNotValid if any form item regex is invalid
    * @throws InsufficientRightsException if the user is not authorized to create a form
    */
-  FormSpecification createForm(int groupId);
+  FormSpecification createForm(String groupId);
 
   /**
    * Creates a new form for the group and other properties specified in the form object and assigns the specified modules.
@@ -46,7 +46,7 @@ public interface FormService {
    * @throws FormItemRegexNotValid if any form item regex is invalid
    * @throws InsufficientRightsException if the user is not authorized to create a form
    */
-  FormSpecification createForm(int groupId, List<FormItem> items) throws FormItemRegexNotValid, InsufficientRightsException;
+  FormSpecification createForm(String groupId, List<FormItem> items) throws FormItemRegexNotValid, InsufficientRightsException;
 
   void deleteForm(int formId);
 

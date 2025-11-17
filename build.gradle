@@ -22,6 +22,7 @@ repositories {
 
 dependencies {
     implementation 'cz.metacentrum.perun:perun-openapi:0.0.0-development'
+    implementation 'org.keycloak:keycloak-admin-client:26.0.0'
     implementation 'org.springframework.boot:spring-boot-starter-security'
     implementation 'org.springframework.boot:spring-boot-starter-oauth2-resource-server'
     implementation 'org.springframework.boot:spring-boot-starter-webflux'

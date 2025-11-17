@@ -7,12 +7,12 @@ import org.perun.registrarprototype.exceptions.InvalidApplicationStateTransition
 
 public class Application extends ApplicationForm {
   private int id;
-  private Integer idmUserId;
+  private String idmUserId;
   private ApplicationState state = ApplicationState.PENDING;
   private String redirectUrl;
   private Submission submission = new Submission();
 
-  public Application(int id, Integer idmUserId, FormSpecification formSpecification, List<FormItemData> formItemData, String redirectUrl, FormSpecification.FormType type) {
+  public Application(int id, String idmUserId, FormSpecification formSpecification, List<FormItemData> formItemData, String redirectUrl, FormSpecification.FormType type) {
     super(formSpecification, formItemData, type);
     this.id = id;
     this.idmUserId = idmUserId;
@@ -26,10 +26,10 @@ public class Application extends ApplicationForm {
     this.id = id;
   }
 
-  public Integer getIdmUserId() {
+  public String getIdmUserId() {
     return idmUserId;
   }
-  public void setIdmUserId(Integer idmUserId) {
+  public void setIdmUserId(String idmUserId) {
     this.idmUserId = idmUserId;
   }
 

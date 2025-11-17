@@ -16,7 +16,7 @@ public class FormSpecificationServiceTests extends GenericRegistrarServiceTests 
 
   @Test
   void createFormWithoutConstraints() throws Exception {
-    int groupId = getGroupId();
+    String groupId = String.valueOf(getGroupId());
 
     FormSpecification formSpecification = formService.createForm(groupId);
 
@@ -30,7 +30,7 @@ public class FormSpecificationServiceTests extends GenericRegistrarServiceTests 
 
     FormSpecification createdFormSpecification = formRepository.findById(formSpecification.getId()).orElse(null);
     assert createdFormSpecification == formSpecification;
-    assert createdFormSpecification.getGroupId() == groupId;
+    assert createdFormSpecification.getGroupId().equals(groupId);
     assert createdFormSpecification.getItems().size() == 2;
     assert createdFormSpecification.getItems().contains(item1);
     assert createdFormSpecification.getItems().contains(item2);
@@ -38,7 +38,7 @@ public class FormSpecificationServiceTests extends GenericRegistrarServiceTests 
 
   @Test
   void createFormCorrectConstraints() throws Exception {
-    int groupId = getGroupId();
+    String groupId = String.valueOf(getGroupId());
 
     FormSpecification formSpecification = formService.createForm(groupId);
 
@@ -48,14 +48,14 @@ public class FormSpecificationServiceTests extends GenericRegistrarServiceTests 
 
     FormSpecification createdFormSpecification = formRepository.findById(formSpecification.getId()).orElse(null);
     assert createdFormSpecification == formSpecification;
-    assert createdFormSpecification.getGroupId() == groupId;
+    assert createdFormSpecification.getGroupId().equals(groupId);
     assert createdFormSpecification.getItems().size() == 1;
     assert createdFormSpecification.getItems().contains(item1);
   }
 
   @Test
   void setModulesWithoutOptions() throws Exception {
-    int groupId = getGroupId();
+    String groupId = String.valueOf(getGroupId());
 
     FormSpecification formSpecification = formService.createForm(groupId);
 
@@ -80,7 +80,7 @@ public class FormSpecificationServiceTests extends GenericRegistrarServiceTests 
 
   @Test
   void setModulesWithOptions() throws Exception {
-    int groupId = getGroupId();
+    String groupId = String.valueOf(getGroupId());
 
     FormSpecification formSpecification = formService.createForm(groupId);
 

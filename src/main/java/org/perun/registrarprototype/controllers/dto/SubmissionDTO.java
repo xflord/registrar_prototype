@@ -6,7 +6,7 @@ import java.util.Map;
 public class SubmissionDTO {
   private int id;
   private LocalDateTime timestamp;
-  private Integer submitterId;
+  private String submitterId;
   private String submitterName;
   private String identityIdentifier;
   private String identityIssuer;
@@ -14,7 +14,7 @@ public class SubmissionDTO {
 
   public SubmissionDTO() {}
 
-  public SubmissionDTO(int id, LocalDateTime timestamp, Integer submitterId, String submitterName,
+  public SubmissionDTO(int id, LocalDateTime timestamp, String submitterId, String submitterName,
                        String identityIdentifier, String identityIssuer, Map<String, String> identityAttributes) {
     this.id = id;
     this.timestamp = timestamp;
@@ -31,8 +31,8 @@ public class SubmissionDTO {
   public LocalDateTime getTimestamp() { return timestamp; }
   public void setTimestamp(LocalDateTime timestamp) { this.timestamp = timestamp; }
   
-  public Integer getSubmitterId() { return submitterId; }
-  public void setSubmitterId(Integer submitterId) { this.submitterId = submitterId; }
+  public String getSubmitterId() { return submitterId; }
+  public void setSubmitterId(String submitterId) { this.submitterId = submitterId; }
   
   public String getSubmitterName() { return submitterName; }
   public void setSubmitterName(String submitterName) { this.submitterName = submitterName; }

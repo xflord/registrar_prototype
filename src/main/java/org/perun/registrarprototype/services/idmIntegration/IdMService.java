@@ -1,6 +1,5 @@
 package org.perun.registrarprototype.services.idmIntegration;
 
-import cz.metacentrum.perun.openapi.model.AttributeDefinition;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -32,7 +31,7 @@ public interface IdMService {
    * @param identifier oauth identifier (e.g. sub in oidc)
    * @return either Perun User or custom User object
    */
-  Integer getUserIdByIdentifier(String identifier);
+  String getUserIdByIdentifier(String issuer, String identifier);
 
   List<Integer> getGroupIdsWhereUserIsMember(Integer userId);
 
@@ -43,55 +42,30 @@ public interface IdMService {
    */
   Map<String, List<Integer>> getAuthorizedObjects(Integer userId);
 
-  Map<Role, Set<Integer>> getRolesByUserId(Integer userId);
+  Map<Role, Set<Integer>> getRolesByUserId(String userId);
 
-  String getUserAttribute(Integer userId, String attributeName) throws IdmAttributeNotExistsException;
+  String getAttribute(String attributeName, String userId, String groupId, String voId) throws IdmAttributeNotExistsException;
 
-  String getMemberAttribute(Integer userId, String attributeName, Integer groupId) throws IdmAttributeNotExistsException;
+  String getLoginAttributeUrn();
 
-  String getMemberGroupAttribute(Integer userId, String attributeName, Integer groupId) throws IdmAttributeNotExistsException;
+  boolean checkGroupExists(String groupId);
 
-  boolean checkGroupExists(Integer groupId);
-
-  boolean canExtendMembership(Integer userId, Integer groupId);
-
-  String getVoAttribute(String attributeName, int voId) throws IdmAttributeNotExistsException;
-
-  String getGroupAttribute(String attributeName, Integer groupId) throws IdmAttributeNotExistsException;
-
-  AttributeDefinition getAttributeDefinition(String attributeName);
+  boolean canExtendMembership(String userId, String groupId);
 
   boolean isLoginAvailable(String namespace, String login);
 
   void reserveLogin(String namespace, String login);
   void releaseLogin(String namespace, String login);
 
-  // TODO is this necessary, or can we omit this as we assume `LOGIN` items and their values of application represent
-  //  the reserved logins? `reserveLogin`
-  Map<String, String> getReservedLoginsForApplication(Application application);
-
-  // TODO is this necessary? If we have the login attribute urn, we can simply use `getUserAttribute`
-  boolean doesUserHaveExistingLoginSet(Integer userId, String namespace);
-
   void reservePassword(String namespace, String login, String password);
   void validatePassword(Integer userId, String namespace);
   void deletePassword(String namespace, String login);
 
-  String getLoginAttributeUrn();
+  String createMemberForCandidate(Application application);
 
-  String getUserAttributeUrn();
+  String createMemberForUser(Application application);
 
-  String getMemberAttributeUrn();
-
-  String getGroupAttributeUrn();
-
-  String getVoAttributeUrn();
-
-  Integer createMemberForCandidate(Application application);
-
-  Integer createMemberForUser(Application application);
-
-  Integer extendMembership(Application application);
+  String extendMembership(Application application);
 
   /**
    * Retrieves User objects that match the attributes of the oauth principal (e.g. sub in oidc, email. etc.).

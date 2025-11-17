@@ -44,7 +44,7 @@ class ApplicationServiceTests extends GenericRegistrarServiceTests {
 
   @Test
   void applyWithCorrectItemConstraints() throws Exception {
-    int groupId = getGroupId();
+    String groupId = String.valueOf(getGroupId());
     FormSpecification formSpecification = formService.createForm(groupId);
 
     ItemDefinition itemDef1 = createItemDefinition(ItemType.VERIFIED_EMAIL, "email", false, "^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$");
@@ -63,7 +63,7 @@ class ApplicationServiceTests extends GenericRegistrarServiceTests {
 
   @Test
   void approveApplication() throws Exception {
-    int groupId = getGroupId();
+    String groupId = String.valueOf(getGroupId());
 
     FormSpecification formSpecification = formService.createForm(groupId);
 
@@ -89,7 +89,7 @@ class ApplicationServiceTests extends GenericRegistrarServiceTests {
 
   @Test
   void loadForm() throws Exception {
-    int groupId = getGroupId();
+    String groupId = String.valueOf(getGroupId());
 
     FormSpecification formSpecification = formService.createForm(groupId);
 
@@ -106,7 +106,7 @@ class ApplicationServiceTests extends GenericRegistrarServiceTests {
 
   @Test
   void loadFormCallsAfterFormItemsPrefilledHook() throws Exception {
-    int groupId = getGroupId();
+    String groupId = String.valueOf(getGroupId());
 
     FormSpecification formSpecification = formService.createForm(groupId);
 
@@ -128,7 +128,7 @@ class ApplicationServiceTests extends GenericRegistrarServiceTests {
 
   @Test
   void loadFormPrefillsValues() throws Exception {
-    int groupId = getGroupId();
+    String groupId = String.valueOf(getGroupId());
     FormSpecification formSpecification = formService.createForm(groupId);
 
     // Create ItemDefinition with prefill strategy from the start

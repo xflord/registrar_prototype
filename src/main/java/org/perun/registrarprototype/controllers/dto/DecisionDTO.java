@@ -6,7 +6,7 @@ import org.perun.registrarprototype.models.Decision.DecisionType;
 public class DecisionDTO {
   private int id;
   private Integer applicationId;
-  private Integer approverId;
+  private String approverId;
   private String approverName;
   private String message;
   private LocalDateTime timestamp;
@@ -14,7 +14,7 @@ public class DecisionDTO {
 
   public DecisionDTO() {}
 
-  public DecisionDTO(int id, Integer applicationId, Integer approverId, String approverName, String message,
+  public DecisionDTO(int id, Integer applicationId, String approverId, String approverName, String message,
                      LocalDateTime timestamp, DecisionType decisionType) {
     this.id = id;
     this.applicationId = applicationId;
@@ -31,8 +31,8 @@ public class DecisionDTO {
   public Integer getApplicationId() { return applicationId; }
   public void setApplicationId(Integer applicationId) { this.applicationId = applicationId; }
   
-  public Integer getApproverId() { return approverId; }
-  public void setApproverId(Integer approverId) { this.approverId = approverId; }
+  public String getApproverId() { return approverId; }
+  public void setApproverId(String approverId) { this.approverId = approverId; }
   
   public String getApproverName() { return approverName; }
   public void setApproverName(String approverName) { this.approverName = approverName; }

@@ -4,8 +4,8 @@ import java.util.List;
 
 public class FormSpecification {
   private int id;
-  private int voId;
-  private Integer groupId;
+  private String voId;
+  private String groupId;
   private List<FormItem> items;
   private boolean autoApprove = false;
   private boolean autoApproveExtension = false;
@@ -15,13 +15,13 @@ public class FormSpecification {
   public FormSpecification() {
   }
 
-  public FormSpecification(int id, Integer groupId, List<FormItem> items) {
+  public FormSpecification(int id, String groupId, List<FormItem> items) {
     this.id = id;
     this.groupId = groupId;
     this.items = items;
   }
 
-  public FormSpecification(int id, int voId, Integer groupId, List<FormItem> items, boolean autoApprove, boolean autoApproveExtension) {
+  public FormSpecification(int id, String voId, String groupId, List<FormItem> items, boolean autoApprove, boolean autoApproveExtension) {
     this.id = id;
     this.voId = voId;
     this.groupId = groupId;
@@ -37,11 +37,11 @@ public class FormSpecification {
     this.id = id;
   }
 
-  public int getVoId() {
+  public String getVoId() {
     return voId;
   }
 
-  public Integer getGroupId() {
+  public String getGroupId() {
     return groupId;
   }
 
@@ -60,11 +60,11 @@ public class FormSpecification {
     UPDATE; // update attribute value
   }
 
-  public void setVoId(int voId) {
+  public void setVoId(String voId) {
     this.voId = voId;
   }
 
-  public void setGroupId(Integer groupId) {
+  public void setGroupId(String groupId) {
     this.groupId = groupId;
   }
 

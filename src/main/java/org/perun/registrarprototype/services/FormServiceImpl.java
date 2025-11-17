@@ -72,7 +72,7 @@ public class FormServiceImpl implements FormService {
   }
 
   @Override
-  public FormSpecification createForm(int groupId) {
+  public FormSpecification createForm(String groupId) {
 
     return formRepository.save(new FormSpecification(-1, groupId, new ArrayList<>()));
   }
@@ -86,7 +86,7 @@ public class FormServiceImpl implements FormService {
   }
 
   @Override
-  public FormSpecification createForm(int groupId, List<FormItem> items)
+  public FormSpecification createForm(String groupId, List<FormItem> items)
       throws FormItemRegexNotValid, InsufficientRightsException {
     FormSpecification formSpecification = createForm(groupId);
 

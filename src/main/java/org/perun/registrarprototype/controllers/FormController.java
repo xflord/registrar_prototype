@@ -7,6 +7,7 @@ import java.util.Map;
 import java.util.stream.Collectors;
 import org.perun.registrarprototype.controllers.dto.AssignedFormModuleDTO;
 import org.perun.registrarprototype.controllers.dto.FormItemDTO;
+import org.perun.registrarprototype.controllers.dto.FormSpecificationDTO;
 import org.perun.registrarprototype.controllers.dto.FormTransitionDTO;
 import org.perun.registrarprototype.controllers.dto.ItemDefinitionDTO;
 import org.perun.registrarprototype.controllers.dto.ItemTextsDTO;
@@ -51,19 +52,18 @@ public class FormController {
   }
 
   @PostMapping("/create")
-  public ResponseEntity<FormSpecification> createForm(@RequestParam int groupId) {
+  public ResponseEntity<FormSpecificationDTO> createForm(@RequestParam String groupId) {
     RegistrarAuthenticationToken session = sessionProvider.getCurrentSession();
     if (!authorizationService.canManage(session, groupId)) {
       return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
     }
 
-    formService.createForm(groupId);
-
-    return ResponseEntity.ok().build();
+    FormSpecification form = formService.createForm(groupId);
+    return ResponseEntity.ok(toFormSpecificationDTO(form));
   }
 
   @PostMapping("/setModule")
-  public ResponseEntity<List<AssignedFormModule>> setModules(@RequestParam int formId, @RequestBody List<AssignedFormModuleDTO> modulesDTO) {
+  public ResponseEntity<List<AssignedFormModuleDTO>> setModules(@RequestParam int formId, @RequestBody List<AssignedFormModuleDTO> modulesDTO) {
     RegistrarAuthenticationToken session = sessionProvider.getCurrentSession();
     FormSpecification formSpec = formService.getFormById(formId);
 
@@ -77,7 +77,9 @@ public class FormController {
         .collect(Collectors.toList());
     try {
       List<AssignedFormModule> setModules = formService.setModules(session, formId, modules);
-      return ResponseEntity.ok(setModules);
+      return ResponseEntity.ok(setModules.stream()
+          .map(this::toAssignedFormModuleDTO)
+          .collect(Collectors.toList()));
     } catch (InsufficientRightsException e) {
       return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
     }
@@ -114,7 +116,7 @@ public class FormController {
   }
 
   @PostMapping("/createPrefillStrategyEntry")
-  public ResponseEntity<PrefillStrategyEntry> createPrefillStrategyEntry(@RequestBody PrefillStrategyEntryDTO prefillStrategyEntryDTO) {
+  public ResponseEntity<PrefillStrategyEntryDTO> createPrefillStrategyEntry(@RequestBody PrefillStrategyEntryDTO prefillStrategyEntryDTO) {
     RegistrarAuthenticationToken session = sessionProvider.getCurrentSession();
     PrefillStrategyEntry prefillStrategyEntry = toPrefillStrategyEntry(prefillStrategyEntryDTO);
     
@@ -132,11 +134,12 @@ public class FormController {
         return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
       }
     }
-    return ResponseEntity.ok(formService.createPrefillStrategy(prefillStrategyEntry));
+    PrefillStrategyEntry created = formService.createPrefillStrategy(prefillStrategyEntry);
+    return ResponseEntity.ok(toPrefillStrategyEntryDTO(created));
   }
 
   @GetMapping("/getPrefillStrategyEntries/forForm")
-  public ResponseEntity<List<PrefillStrategyEntry>> getPrefillStrategyEntries(@RequestParam int formId) {
+  public ResponseEntity<List<PrefillStrategyEntryDTO>> getPrefillStrategyEntries(@RequestParam int formId) {
     RegistrarAuthenticationToken session = sessionProvider.getCurrentSession();
     FormSpecification formSpec = formService.getFormById(formId);
     if (!authorizationService.canManage(session, formSpec.getGroupId())) {
@@ -146,21 +149,25 @@ public class FormController {
     if (authorizationService.isAdmin(session)) {
       prefillStrategyEntries.addAll(formService.getGlobalPrefillStrategies());
     }
-    return ResponseEntity.ok(prefillStrategyEntries);
+    return ResponseEntity.ok(prefillStrategyEntries.stream()
+        .map(this::toPrefillStrategyEntryDTO)
+        .collect(Collectors.toList()));
   }
 
   @GetMapping("/getPrefillStrategyEntries/global")
-  public ResponseEntity<List<PrefillStrategyEntry>> getPrefillStrategyEntriesGlobal() {
+  public ResponseEntity<List<PrefillStrategyEntryDTO>> getPrefillStrategyEntriesGlobal() {
     RegistrarAuthenticationToken session = sessionProvider.getCurrentSession();
     if (!authorizationService.isAdmin(session)) {
       return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
     }
 
-    return ResponseEntity.ok(formService.getGlobalPrefillStrategies());
+    return ResponseEntity.ok(formService.getGlobalPrefillStrategies().stream()
+        .map(this::toPrefillStrategyEntryDTO)
+        .collect(Collectors.toList()));
   }
 
   @PostMapping("/createItemDefinition")
-  public ResponseEntity<ItemDefinition> createItemDefinition(@RequestBody ItemDefinitionDTO itemDefinitionDTO) {
+  public ResponseEntity<ItemDefinitionDTO> createItemDefinition(@RequestBody ItemDefinitionDTO itemDefinitionDTO) {
     RegistrarAuthenticationToken session = sessionProvider.getCurrentSession();
     boolean isSystemAdmin = authorizationService.isAdmin(session);
     ItemDefinition itemDefinition = toItemDefinition(itemDefinitionDTO);
@@ -182,30 +189,35 @@ public class FormController {
 
     validatePrefillStrategyScoping(itemDefinition, isSystemAdmin);
 
-    return ResponseEntity.ok(formService.createItemDefinition(itemDefinition));
+    ItemDefinition created = formService.createItemDefinition(itemDefinition);
+    return ResponseEntity.ok(toItemDefinitionDTO(created));
   }
 
   @GetMapping("/getItemDefinitions/forForm")
-  public ResponseEntity<List<ItemDefinition>> getItemDefinitions(@RequestParam int formId) {
+  public ResponseEntity<List<ItemDefinitionDTO>> getItemDefinitions(@RequestParam int formId) {
     RegistrarAuthenticationToken session = sessionProvider.getCurrentSession();
     FormSpecification formSpec = formService.getFormById(formId);
     if (!authorizationService.canManage(session, formSpec.getGroupId())) {
       return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
     }
-    return ResponseEntity.ok(formService.getItemDefinitionsForForm(formSpec));
+    return ResponseEntity.ok(formService.getItemDefinitionsForForm(formSpec).stream()
+        .map(this::toItemDefinitionDTO)
+        .collect(Collectors.toList()));
   }
 
   @GetMapping("/getItemDefinitions/global")
-  public ResponseEntity<List<ItemDefinition>> getItemDefinitionsGlobal() {
+  public ResponseEntity<List<ItemDefinitionDTO>> getItemDefinitionsGlobal() {
     RegistrarAuthenticationToken session = sessionProvider.getCurrentSession();
     if (!authorizationService.isAdmin(session)) {
       return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
     }
-    return ResponseEntity.ok(formService.getGlobalItemDefinitions());
+    return ResponseEntity.ok(formService.getGlobalItemDefinitions().stream()
+        .map(this::toItemDefinitionDTO)
+        .collect(Collectors.toList()));
   }
 
   @PostMapping("/addPrerequisiteForm")
-  public ResponseEntity<FormTransition> addPrerequisiteForm(@RequestParam int sourceFormId,
+  public ResponseEntity<FormTransitionDTO> addPrerequisiteForm(@RequestParam int sourceFormId,
                                                             @RequestParam int targetFormId,
                                                             @RequestBody List<Requirement.TargetState> sourceFormStates,
                                                             @RequestParam Requirement.TargetState targetState) {
@@ -219,7 +231,8 @@ public class FormController {
     
     FormSpecification targetForm = formService.getFormById(targetFormId);
 
-    return ResponseEntity.ok(formService.addPrerequisiteToForm(sourceForm, targetForm, sourceFormStates, targetState));
+    FormTransition transition = formService.addPrerequisiteToForm(sourceForm, targetForm, sourceFormStates, targetState);
+    return ResponseEntity.ok(toFormTransitionDTO(transition));
   }
 
   @PostMapping("/removePrerequisiteForm")
@@ -238,7 +251,7 @@ public class FormController {
   }
 
   @GetMapping("/prerequisiteForms")
-  public ResponseEntity<List<FormTransition>> getPrerequisiteForms(@RequestParam int formId) {
+  public ResponseEntity<List<FormTransitionDTO>> getPrerequisiteForms(@RequestParam int formId) {
     RegistrarAuthenticationToken session = sessionProvider.getCurrentSession();
     FormSpecification form = formService.getFormById(formId);
     
@@ -247,12 +260,16 @@ public class FormController {
       return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
     }
 
-    return ResponseEntity.ok(formService.getPrerequisiteTransitionsForForm(form));
+    return ResponseEntity.ok(formService.getPrerequisiteTransitionsForForm(form).stream()
+        .map(this::toFormTransitionDTO)
+        .collect(Collectors.toList()));
   }
 
   @GetMapping
-  public ResponseEntity<List<FormSpecification>> getForms() {
-    return ResponseEntity.ok(formService.getAllFormsWithItems());
+  public ResponseEntity<List<FormSpecificationDTO>> getForms() {
+    return ResponseEntity.ok(formService.getAllFormsWithItems().stream()
+        .map(this::toFormSpecificationDTO)
+        .collect(Collectors.toList()));
   }
 
   @GetMapping("/modules")
@@ -479,5 +496,127 @@ public class FormController {
         dto.getTargetFormState(),
         dto.getType()
     );
+  }
+
+  // Mapper methods to convert domain objects to DTOs
+
+  private FormSpecificationDTO toFormSpecificationDTO(FormSpecification form) {
+    if (form == null) {
+      return null;
+    }
+    List<FormItemDTO> itemsDTO = null;
+    if (form.getItems() != null) {
+      itemsDTO = form.getItems().stream()
+          .map(this::toFormItemDTO)
+          .collect(Collectors.toList());
+    }
+    return new FormSpecificationDTO(
+        form.getId(),
+        form.getVoId(),
+        form.getGroupId(),
+        itemsDTO,
+        form.isAutoApprove(),
+        form.isAutoApproveExtension()
+    );
+  }
+
+  private FormItemDTO toFormItemDTO(FormItem item) {
+    if (item == null) {
+      return null;
+    }
+    FormItemDTO dto = new FormItemDTO();
+    dto.setId(item.getId());
+    dto.setFormId(item.getFormId());
+    dto.setShortName(item.getShortName());
+    dto.setParentId(item.getParentId());
+    dto.setOrdNum(item.getOrdNum());
+    dto.setHiddenDependencyItemId(item.getHiddenDependencyItemId());
+    dto.setDisabledDependencyItemId(item.getDisabledDependencyItemId());
+    if (item.getItemDefinition() != null) {
+      dto.setItemDefinition(toItemDefinitionDTO(item.getItemDefinition()));
+    }
+    return dto;
+  }
+
+  private AssignedFormModuleDTO toAssignedFormModuleDTO(AssignedFormModule module) {
+    if (module == null) {
+      return null;
+    }
+    return new AssignedFormModuleDTO(
+        module.getModuleName(),
+        module.getOptions()
+    );
+  }
+
+  private PrefillStrategyEntryDTO toPrefillStrategyEntryDTO(PrefillStrategyEntry entry) {
+    if (entry == null) {
+      return null;
+    }
+    return new PrefillStrategyEntryDTO(
+        entry.getId(),
+        entry.getType(),
+        entry.getOptions(),
+        entry.getSourceAttribute(),
+        entry.getFormSpecification() != null ? entry.getFormSpecification().getId() : null,
+        entry.isGlobal()
+    );
+  }
+
+  private ItemDefinitionDTO toItemDefinitionDTO(ItemDefinition itemDef) {
+    if (itemDef == null) {
+      return null;
+    }
+    
+    ItemDefinitionDTO dto = new ItemDefinitionDTO();
+    dto.setId(itemDef.getId());
+    dto.setFormSpecificationId(itemDef.getFormSpecification() != null ? itemDef.getFormSpecification().getId() : null);
+    dto.setDisplayName(itemDef.getDisplayName());
+    dto.setType(itemDef.getType());
+    dto.setUpdatable(itemDef.getUpdatable());
+    dto.setRequired(itemDef.getRequired());
+    dto.setValidator(itemDef.getValidator());
+    
+    // Convert PrefillStrategyEntry objects to DTOs
+    if (itemDef.getPrefillStrategies() != null) {
+      dto.setPrefillStrategies(itemDef.getPrefillStrategies().stream()
+          .map(this::toPrefillStrategyEntryDTO)
+          .collect(Collectors.toList()));
+    }
+
+    // Convert texts map from Map<Locale, ItemTexts> to Map<String, ItemTextsDTO>
+    if (itemDef.getTexts() != null && !itemDef.getTexts().isEmpty()) {
+      Map<String, ItemTextsDTO> textsDTO = new HashMap<>();
+      for (Map.Entry<Locale, ItemTexts> entry : itemDef.getTexts().entrySet()) {
+        Locale locale = entry.getKey();
+        ItemTexts texts = entry.getValue();
+        if (texts != null) {
+          textsDTO.put(locale.toLanguageTag(), new ItemTextsDTO(texts.getLabel(), texts.getHelp(), texts.getError()));
+        }
+      }
+      dto.setTexts(textsDTO);
+    }
+
+    dto.setDestinationAttributeUrn(itemDef.getDestinationAttributeUrn());
+    dto.setFormTypes(itemDef.getFormTypes());
+    dto.setHidden(itemDef.getHidden());
+    dto.setDisabled(itemDef.getDisabled());
+    dto.setDefaultValue(itemDef.getDefaultValue());
+    dto.setGlobal(itemDef.isGlobal());
+    
+    return dto;
+  }
+
+  private FormTransitionDTO toFormTransitionDTO(FormTransition transition) {
+    if (transition == null) {
+      return null;
+    }
+    FormTransitionDTO dto = new FormTransitionDTO();
+    dto.setId(transition.getId());
+    dto.setSourceFormSpecificationId(transition.getSourceFormSpecification() != null ? transition.getSourceFormSpecification().getId() : null);
+    dto.setTargetFormSpecificationId(transition.getTargetFormSpecification() != null ? transition.getTargetFormSpecification().getId() : null);
+    dto.setSourceFormStates(transition.getSourceFormStates());
+    dto.setTargetFormState(transition.getTargetFormState());
+    dto.setType(transition.getType());
+    return dto;
   }
 }

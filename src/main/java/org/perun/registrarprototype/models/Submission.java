@@ -14,7 +14,7 @@ public class Submission {
   private int id;
   private List<Application> applications;
   private LocalDateTime timestamp;
-  private Integer submitterId;
+  private String submitterId;
   private String submitterName;
   private String identityIdentifier;
   private String identityIssuer;
@@ -23,7 +23,7 @@ public class Submission {
   public Submission() {
   }
 
-  public Submission(List<Application> applications, LocalDateTime timestamp, Integer submitterId, String submitterName, Map<String, String> identityAttributes) {
+  public Submission(List<Application> applications, LocalDateTime timestamp, String submitterId, String submitterName, Map<String, String> identityAttributes) {
     this.applications = applications;
     this.timestamp = timestamp;
     this.submitterId = submitterId;
@@ -47,11 +47,11 @@ public class Submission {
     this.timestamp = timestamp;
   }
 
-  public Integer getSubmitterId() {
+  public String getSubmitterId() {
     return submitterId;
   }
 
-  public void setSubmitterId(Integer submitterId) {
+  public void setSubmitterId(String submitterId) {
     this.submitterId = submitterId;
   }
 

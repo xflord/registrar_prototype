@@ -1,13 +1,13 @@
 package org.perun.registrarprototype.exceptions;
 
 public class IdmObjectNotExistsException extends Exception {
-  private Integer objectId;
-  public IdmObjectNotExistsException(String message, Integer objectId) {
+  private String objectId;
+  public IdmObjectNotExistsException(String message, String objectId) {
     super(message);
     this.objectId = objectId;
   }
 
-  public Integer getObjectId() {
+  public String getObjectId() {
     return objectId;
   }
 }

@@ -39,6 +39,7 @@ import org.perun.registrarprototype.models.Role;
 import org.perun.registrarprototype.services.EventService;
 import org.perun.registrarprototype.services.idmIntegration.IdMService;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.annotation.Profile;
 import org.springframework.http.client.HttpComponentsClientHttpRequestFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.HttpClientErrorException;
@@ -47,12 +48,11 @@ import org.springframework.web.client.RestTemplate;
 
 
 @Service
+@Profile("perun")
 public class PerunIdMService implements IdMService {
   private static final String DISPLAY_NAME = "urn:perun:user:attribute-def:core:displayName";
   private final List<String> GROUP_MANAGER_ROLES = List.of("GROUPADMIN", "GROUPMEMBERSHIPMANAGER");
   private final List<String> VO_MANAGER_ROLES = List.of("VOADMIN", "ORGANIZATIONMEMBERSHIPMANAGER");
-  @Value( "${perun.einfra.ext-source}")
-  private String idmExtSourceName = "test-ext-source";
 
   private final PerunRPC rpc;
   private final EventService eventService;
@@ -64,11 +64,12 @@ public class PerunIdMService implements IdMService {
   }
 
   @Override
-  public Integer getUserIdByIdentifier(String identifier) {
+  public String getUserIdByIdentifier(String issuer, String identifier) {
+    // TODO ask about way to make sure `iss` equals ext source name
     System.out.println("Calling getUserIdByIdentifier with parameter " + identifier);
     User user;
     try {
-      user = rpc.getUsersManager().getUserByExtSourceNameAndExtLogin(identifier, idmExtSourceName);
+      user = rpc.getUsersManager().getUserByExtSourceNameAndExtLogin(identifier, issuer);
     } catch (HttpClientErrorException ex) {
       // another way of handling this - logging and returning null?
       System.out.println(ex);
@@ -82,7 +83,7 @@ public class PerunIdMService implements IdMService {
       return null;
     }
 
-    return user.getId();
+    return user.getId().toString();
   }
 
   @Override
@@ -117,7 +118,7 @@ public class PerunIdMService implements IdMService {
   }
 
   @Override
-  public Map<Role, Set<Integer>> getRolesByUserId(Integer userId) {
+  public Map<Role, Set<Integer>> getRolesByUserId(String userId) {
     System.out.println("Calling getRegistrarRolesByUserId with parameter " + userId);
     Map<Role, Set<Integer>> regRoles = new HashMap<>();
     if (userId == null) {
@@ -128,7 +129,7 @@ public class PerunIdMService implements IdMService {
     regRoles.put(Role.MEMBERSHIP, new HashSet<>());
 
     Map<String, Map<String, List<Integer>>> perunRoles;
-    perunRoles = rpc.getAuthzResolver().getUserRoles(userId);
+    perunRoles = rpc.getAuthzResolver().getUserRoles(Integer.valueOf(userId));
 
     for (String role : perunRoles.keySet()) {
       switch (role) {
@@ -163,8 +164,24 @@ public class PerunIdMService implements IdMService {
     return regRoles;
   }
 
-  @Override
-  public String getUserAttribute(Integer userId, String attributeName) throws IdmAttributeNotExistsException {
+  public String getAttribute(String attributeName, String userId, String groupId, String voId)
+      throws IdmAttributeNotExistsException {
+    if (attributeName.startsWith(getUserAttributeUrn())) {
+        return getUserAttribute(Integer.valueOf(userId), attributeName);
+      } else if (attributeName.startsWith(getVoAttributeUrn())) {
+        return getVoAttribute(attributeName, Integer.parseInt(voId));
+      } else if (attributeName.startsWith(getMemberAttributeUrn()) &&
+                     groupId != null) { // TODO can get member attr just from voId
+        return getMemberAttribute(Integer.parseInt(userId), attributeName, groupId);
+      } else if (attributeName.startsWith(getGroupAttributeUrn()) &&
+                     groupId != null) { // TODO better check if group is present
+        return getGroupAttribute(attributeName, Integer.parseInt(groupId));
+      } else {
+        throw new IllegalArgumentException("Unsupported attribute source: " + attributeName);
+      }
+  }
+
+  private String getUserAttribute(Integer userId, String attributeName) throws IdmAttributeNotExistsException {
     System.out.println("Calling getRegistrarRolesByUserId with parameter " + userId + " and attribute " + attributeName);
 
     if (userId == null) {
@@ -184,8 +201,7 @@ public class PerunIdMService implements IdMService {
     }
   }
 
-  @Override
-  public String getMemberAttribute(Integer userId, String attributeName, Integer groupId)
+  private String getMemberAttribute(Integer userId, String attributeName, String groupId)
       throws IdmAttributeNotExistsException {
     System.out.println("Calling getRegistrarRolesByUserId with parameter " + userId + " and attribute " + attributeName);
 
@@ -217,39 +233,9 @@ public class PerunIdMService implements IdMService {
   }
 
   @Override
-  public String getMemberGroupAttribute(Integer userId, String attributeName, Integer groupId)
-      throws IdmAttributeNotExistsException {
-    if (userId == null) {
-      return null;
-    }
-
-    Group group = retrieveGroup(groupId);
-    if (group == null) {
-      return null;
-    }
-
-    Member member = retrieveMember(userId, group);
-    if (member == null) {
-      return null;
-    }
-
+  public boolean checkGroupExists(String groupId) {
     try {
-      Attribute attr = rpc.getAttributesManager().getMemberGroupAttributeByName(member.getId(), groupId, attributeName);
-      return attr.getValue() == null ? null : attr.getValue().toString();
-    } catch (PerunRuntimeException ex) {
-      if (ex.getName().equals("AttributeNotExistsException")) {
-        // TODO log these (missing source attributes) as misconfigured forms
-        throw new IdmAttributeNotExistsException(ex.getMessage(), attributeName);
-      } else {
-        throw ex;
-      }
-    }
-  }
-
-  @Override
-  public boolean checkGroupExists(Integer groupId) {
-    try {
-      rpc.getGroupsManager().getGroupById(groupId);
+      rpc.getGroupsManager().getGroupById(Integer.parseInt(groupId));
     } catch (PerunRuntimeException ex) {
       if (ex.getName().equals("GroupNotExistsException")) {
         return false;
@@ -275,13 +261,13 @@ public class PerunIdMService implements IdMService {
   }
 
   @Override
-  public boolean canExtendMembership(Integer userId, Integer groupId) {
+  public boolean canExtendMembership(String userId, String groupId) {
     if (userId == null) {
       return false;
     }
     Group group = retrieveGroup(groupId);
 
-    Member member = retrieveMember(userId, group);
+    Member member = retrieveMember(Integer.valueOf(userId), group);
     if (member == null) {
       return false;
     }
@@ -289,8 +275,7 @@ public class PerunIdMService implements IdMService {
     return rpc.getGroupsManager().canExtendMembershipInGroup(member.getId(), group.getId());
   }
 
-  @Override
-  public String getVoAttribute(String attributeName, int voId) throws IdmAttributeNotExistsException {
+  private String getVoAttribute(String attributeName, int voId) throws IdmAttributeNotExistsException {
     try {
       Attribute attr = rpc.getAttributesManager().getVoAttributeByName(voId, attributeName);
       return attr.getValue() == null ? null : attr.getValue().toString();
@@ -303,8 +288,7 @@ public class PerunIdMService implements IdMService {
     }
   }
 
-  @Override
-  public String getGroupAttribute(String attributeName, Integer groupId) throws IdmAttributeNotExistsException {
+  private String getGroupAttribute(String attributeName, Integer groupId) throws IdmAttributeNotExistsException {
     try {
       Attribute attr = rpc.getAttributesManager().getGroupAttributeByName(groupId, attributeName);
       return attr.getValue() == null ? null : attr.getValue().toString();
@@ -312,19 +296,6 @@ public class PerunIdMService implements IdMService {
       if (ex.getName().equals("AttributeNotExistsException")) {
         // TODO log these (missing source attributes) as misconfigured forms
         throw new IdmAttributeNotExistsException(ex.getMessage(), attributeName);
-      } else {
-        throw ex;
-      }
-    }
-  }
-
-  @Override
-  public AttributeDefinition getAttributeDefinition(String attributeName) {
-    try {
-      return rpc.getAttributesManager().getAttributeDefinitionByName(attributeName);
-    } catch (PerunRuntimeException ex) {
-      if (ex.getName().equals("AttributeNotExistsException")) {
-        return null;
       } else {
         throw ex;
       }
@@ -356,16 +327,6 @@ public class PerunIdMService implements IdMService {
   }
 
   @Override
-  public Map<String, String> getReservedLoginsForApplication(Application application) {
-    return Map.of();
-  }
-
-  @Override
-  public boolean doesUserHaveExistingLoginSet(Integer userId, String namespace) {
-    return false;
-  }
-
-  @Override
   public void reservePassword(String namespace, String login, String password) {
 
   }
@@ -385,28 +346,24 @@ public class PerunIdMService implements IdMService {
     return "urn:perun:user:attribute-def:def:login-namespace:";
   }
 
-  @Override
-  public String getUserAttributeUrn() {
+  private String getUserAttributeUrn() {
     return "urn:perun:user";
   }
 
-  @Override
-  public String getMemberAttributeUrn() {
+  private String getMemberAttributeUrn() {
     return "urn:perun:member";
   }
 
-  @Override
-  public String getGroupAttributeUrn() {
+  private String getGroupAttributeUrn() {
     return "urn:perun:group";
   }
 
-  @Override
-  public String getVoAttributeUrn() {
+  private String getVoAttributeUrn() {
     return "urn:perun:vo";
   }
 
   @Override
-  public Integer createMemberForCandidate(Application application) {
+  public String createMemberForCandidate(Application application) {
     Group group = retrieveGroup(application.getFormSpecification().getGroupId());
     if (group == null) {
       return null;
@@ -430,13 +387,13 @@ public class PerunIdMService implements IdMService {
     eventService.emitEvent(new IdMUserCreatedEvent(createdMember.getUserId()));
     eventService.emitEvent(new MemberCreatedEvent(createdMember.getUserId(), group.getId(), createdMember.getId()));
 
-    return createdMember.getUserId();
+    return createdMember.getUserId().toString();
   }
 
-  private Group retrieveGroup(int groupId) {
+  private Group retrieveGroup(String groupId) {
     Group group;
     try {
-      group = rpc.getGroupsManager().getGroupById(groupId);
+      group = rpc.getGroupsManager().getGroupById(Integer.valueOf(groupId));
     } catch (PerunRuntimeException ex) {
       if (ex.getName().equals("GroupNotExistsException")) {
         throw new DataInconsistencyException("Group with id " + groupId + " not found in Perun");
@@ -449,14 +406,14 @@ public class PerunIdMService implements IdMService {
   }
 
   @Override
-  public Integer createMemberForUser(Application application) {
+  public String createMemberForUser(Application application) {
     Group group = retrieveGroup(application.getFormSpecification().getGroupId());
     if (group == null) {
       return null;
     }
     Member member;
     try {
-      member = rpc.getMembersManager().getMemberByUser(group.getVoId(), application.getIdmUserId());
+      member = rpc.getMembersManager().getMemberByUser(group.getVoId(), Integer.parseInt(application.getIdmUserId()));
     } catch (PerunRuntimeException ex) {
       if (ex.getName().equals("MemberNotExistsException")) {
         member = null;
@@ -469,7 +426,7 @@ public class PerunIdMService implements IdMService {
       InputCreateMemberForUser input = new InputCreateMemberForUser();
       input.setVo(group.getVoId());
       input.addGroupsItem(group);
-      input.setUser(application.getIdmUserId());
+      input.setUser(Integer.parseInt(application.getIdmUserId()));
       member = rpc.getMembersManager().createMemberForUser(input);
       updateMemberAttributesFromAppData(application, member, group);
 
@@ -477,7 +434,7 @@ public class PerunIdMService implements IdMService {
 
       eventService.emitEvent(new MemberCreatedEvent(member.getUserId(), group.getId(), member.getId()));
 
-      return member.getUserId();
+      return member.getUserId().toString();
     }
 
     // Already VO member
@@ -486,21 +443,21 @@ public class PerunIdMService implements IdMService {
     rpc.getGroupsManager().addMembers(group.getId(), members);
     updateMemberAttributesFromAppData(application, member, group);
 
-    return member.getUserId();
+    return member.getUserId().toString();
   }
 
   @Override
-  public Integer extendMembership(Application application) {
+  public String extendMembership(Application application) {
     Group group = retrieveGroup(application.getFormSpecification().getGroupId());
     if (group == null) {
       return null;
     }
 
-    Member member = rpc.getMembersManager().getMemberByUser(group.getVoId(), application.getIdmUserId());
+    Member member = rpc.getMembersManager().getMemberByUser(group.getVoId(), Integer.parseInt(application.getIdmUserId()));
     rpc.getMembersManager().extendMembership(member.getId());
     updateMemberAttributesFromAppData(application, member, group);
 
-    return member.getUserId();
+    return member.getUserId().toString();
   }
 
   @Override

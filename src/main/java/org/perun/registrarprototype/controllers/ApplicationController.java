@@ -8,6 +8,7 @@ import org.perun.registrarprototype.controllers.dto.ApplicationDetailDTO;
 import org.perun.registrarprototype.controllers.dto.ApplicationFormDTO;
 import org.perun.registrarprototype.controllers.dto.DecisionDTO;
 import org.perun.registrarprototype.controllers.dto.FormItemDataDTO;
+import org.perun.registrarprototype.controllers.dto.IdentityDTO;
 import org.perun.registrarprototype.controllers.dto.SubmissionContextDTO;
 import org.perun.registrarprototype.controllers.dto.SubmissionDTO;
 import org.perun.registrarprototype.controllers.dto.SubmissionResultDTO;
@@ -78,11 +79,13 @@ public class ApplicationController {
   }
 
   @GetMapping("/similarIdentities")
-  public ResponseEntity<List<Identity>> getSimilarIdentitiesForPossibleConsolidation(@RequestBody List<FormItemDataDTO> itemDataDTO) {
+  public ResponseEntity<List<IdentityDTO>> getSimilarIdentitiesForPossibleConsolidation(@RequestBody List<FormItemDataDTO> itemDataDTO) {
     List<FormItemData> itemData = itemDataDTO.stream()
         .map(this::toFormItemData)
         .collect(Collectors.toList());
-    return ResponseEntity.ok(applicationService.checkForSimilarIdentities(itemData));
+    return ResponseEntity.ok(applicationService.checkForSimilarIdentities(itemData).stream()
+        .map(this::toIdentityDTO)
+        .collect(Collectors.toList()));
   }
 
   @GetMapping()
@@ -109,7 +112,7 @@ public class ApplicationController {
   }
 
   @GetMapping("/loadForms")
-  public ResponseEntity<SubmissionContextDTO> getSubmissionContext(@RequestParam int groupId)
+  public ResponseEntity<SubmissionContextDTO> getSubmissionContext(@RequestParam String groupId)
       throws IdmObjectNotExistsException {
     SubmissionContext context = applicationService.loadForms(new ArrayList<>(List.of(new Requirement(groupId, Requirement.TargetState.MEMBER))), "", false);
     return ResponseEntity.ok(toSubmissionContextDTO(context));
@@ -295,6 +298,19 @@ public class ApplicationController {
           .collect(Collectors.toList()));
     }
     return dto;
+  }
+
+  private IdentityDTO toIdentityDTO(Identity identity) {
+    if (identity == null) {
+      return null;
+    }
+    return new IdentityDTO(
+        identity.getName(),
+        identity.getOrganization(),
+        identity.getEmail(),
+        identity.getType(),
+        identity.getAttributes()
+    );
   }
 
 }

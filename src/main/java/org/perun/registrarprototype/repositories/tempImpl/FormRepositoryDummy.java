@@ -2,6 +2,7 @@ package org.perun.registrarprototype.repositories.tempImpl;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 import org.perun.registrarprototype.models.FormSpecification;
 import org.perun.registrarprototype.repositories.FormRepository;
@@ -20,8 +21,8 @@ public class FormRepositoryDummy implements FormRepository {
   }
 
   @Override
-  public Optional<FormSpecification> findByGroupId(int groupId) {
-    return formSpecifications.stream().filter(form -> form.getGroupId() == groupId).findFirst();
+  public Optional<FormSpecification> findByGroupId(String groupId) {
+    return formSpecifications.stream().filter(form -> Objects.equals(form.getGroupId(), groupId)).findFirst();
   }
 
   @Override

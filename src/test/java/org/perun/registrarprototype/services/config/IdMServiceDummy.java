@@ -1,9 +1,9 @@
 package org.perun.registrarprototype.services.config;
 
-import cz.metacentrum.perun.openapi.model.AttributeDefinition;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import org.perun.registrarprototype.exceptions.IdmAttributeNotExistsException;
 import org.perun.registrarprototype.models.Application;
 import org.perun.registrarprototype.models.FormItemData;
 import org.perun.registrarprototype.models.Identity;
@@ -12,8 +12,8 @@ import org.perun.registrarprototype.services.idmIntegration.IdMService;
 
 public class IdMServiceDummy implements IdMService {
   @Override
-  public Integer getUserIdByIdentifier(String identifier) {
-    return 0;
+  public String getUserIdByIdentifier(String issuer, String identifier) {
+    return "";
   }
 
   @Override
@@ -27,48 +27,29 @@ public class IdMServiceDummy implements IdMService {
   }
 
   @Override
-  public Map<Role, Set<Integer>> getRolesByUserId(Integer userId) {
+  public Map<Role, Set<Integer>> getRolesByUserId(String userId) {
     return Map.of();
   }
 
   @Override
-  public String getUserAttribute(Integer userId, String attributeName) {
+  public String getAttribute(String attributeName, String userId, String groupId, String voId)
+      throws IdmAttributeNotExistsException {
     return "";
   }
 
   @Override
-  public String getMemberAttribute(Integer userId, String attributeName, Integer groupId) {
+  public String getLoginAttributeUrn() {
     return "";
   }
 
   @Override
-  public String getMemberGroupAttribute(Integer userId, String attributeName, Integer groupId) {
-    return "";
-  }
-
-  @Override
-  public boolean checkGroupExists(Integer groupId) {
+  public boolean checkGroupExists(String groupId) {
     return false;
   }
 
   @Override
-  public boolean canExtendMembership(Integer userId, Integer groupId) {
+  public boolean canExtendMembership(String userId, String groupId) {
     return false;
-  }
-
-  @Override
-  public String getVoAttribute(String attributeName, int voId) {
-    return "";
-  }
-
-  @Override
-  public String getGroupAttribute(String attributeName, Integer groupId) {
-    return "";
-  }
-
-  @Override
-  public AttributeDefinition getAttributeDefinition(String attributeName) {
-    return null;
   }
 
   @Override
@@ -87,16 +68,6 @@ public class IdMServiceDummy implements IdMService {
   }
 
   @Override
-  public Map<String, String> getReservedLoginsForApplication(Application application) {
-    return Map.of();
-  }
-
-  @Override
-  public boolean doesUserHaveExistingLoginSet(Integer userId, String namespace) {
-    return false;
-  }
-
-  @Override
   public void reservePassword(String namespace, String login, String password) {
 
   }
@@ -112,43 +83,18 @@ public class IdMServiceDummy implements IdMService {
   }
 
   @Override
-  public String getLoginAttributeUrn() {
+  public String createMemberForCandidate(Application application) {
     return "";
   }
 
   @Override
-  public String getUserAttributeUrn() {
+  public String createMemberForUser(Application application) {
     return "";
   }
 
   @Override
-  public String getMemberAttributeUrn() {
+  public String extendMembership(Application application) {
     return "";
-  }
-
-  @Override
-  public String getGroupAttributeUrn() {
-    return "";
-  }
-
-  @Override
-  public String getVoAttributeUrn() {
-    return "";
-  }
-
-  @Override
-  public Integer createMemberForCandidate(Application application) {
-    return 0;
-  }
-
-  @Override
-  public Integer createMemberForUser(Application application) {
-    return 0;
-  }
-
-  @Override
-  public Integer extendMembership(Application application) {
-    return 0;
   }
 
   @Override

@@ -1,21 +1,21 @@
 package org.perun.registrarprototype.models;
 
 public class Requirement {
-  private int groupId;
+  private String groupId;
   private TargetState targetState;
 
   public Requirement() {}
 
-  public Requirement(int groupId, TargetState targetState) {
+  public Requirement(String groupId, TargetState targetState) {
     this.groupId = groupId;
     this.targetState = targetState;
   }
 
-  public int getGroupId() {
+  public String getGroupId() {
     return groupId;
   }
 
-  public void setGroupId(int groupId) {
+  public void setGroupId(String groupId) {
     this.groupId = groupId;
   }
 

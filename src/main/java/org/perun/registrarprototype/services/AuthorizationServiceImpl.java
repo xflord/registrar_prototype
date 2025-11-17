@@ -20,7 +20,7 @@ public class AuthorizationServiceImpl implements AuthorizationService {
   }
 
   @Override
-  public boolean canManage(RegistrarAuthenticationToken sess, int groupId) {
+  public boolean canManage(RegistrarAuthenticationToken sess, String groupId) {
     if (!sess.isAuthenticated()) {
       return false;
     }
@@ -52,7 +52,7 @@ public class AuthorizationServiceImpl implements AuthorizationService {
   }
 
   @Override
-  public boolean canDecide(RegistrarAuthenticationToken sess, int groupId) {
+  public boolean canDecide(RegistrarAuthenticationToken sess, String groupId) {
     if (!sess.isAuthenticated()) {
       return false;
     }

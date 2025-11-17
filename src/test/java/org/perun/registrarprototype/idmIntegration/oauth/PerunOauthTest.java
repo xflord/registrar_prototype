@@ -52,7 +52,7 @@ public class PerunOauthTest {
           .andRespond(MockRestResponseCreators.withSuccess());
 
     PerunIdMService perunIdMService = new PerunIdMService(perunRpc, new EventServiceImpl());
-    perunIdMService.getUserIdByIdentifier("test-id");
+    perunIdMService.getUserIdByIdentifier("test-ext-source", "test-id");
 
     mockServer.verify();
   }

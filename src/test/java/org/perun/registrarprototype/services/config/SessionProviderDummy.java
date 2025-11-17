@@ -14,12 +14,12 @@ import org.springframework.security.core.GrantedAuthority;
 public class SessionProviderDummy extends SessionProvider {
   @Override
   public RegistrarAuthenticationToken getCurrentSession() {
-    int id = -1;
+    String id = "-1";
 
-    Set<Integer> managedGroups = new HashSet<>();
+    Set<String> managedGroups = new HashSet<>();
 
     Map<String, Object> attributes = new HashMap<>();
-    attributes.put("sub", String.valueOf(id));
+    attributes.put("sub", id);
     attributes.put("testAttribute", "testValue");
 
     List<GrantedAuthority> roles = new ArrayList<>();
