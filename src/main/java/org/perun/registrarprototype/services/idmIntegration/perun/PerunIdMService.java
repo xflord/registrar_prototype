@@ -38,7 +38,6 @@ import org.perun.registrarprototype.models.ItemType;
 import org.perun.registrarprototype.models.Role;
 import org.perun.registrarprototype.services.EventService;
 import org.perun.registrarprototype.services.idmIntegration.IdMService;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Profile;
 import org.springframework.http.client.HttpComponentsClientHttpRequestFactory;
 import org.springframework.stereotype.Service;
@@ -118,9 +117,9 @@ public class PerunIdMService implements IdMService {
   }
 
   @Override
-  public Map<Role, Set<Integer>> getRolesByUserId(String userId) {
+  public Map<Role, Set<String>> getRolesByUserId(String userId) {
     System.out.println("Calling getRegistrarRolesByUserId with parameter " + userId);
-    Map<Role, Set<Integer>> regRoles = new HashMap<>();
+    Map<Role, Set<String>> regRoles = new HashMap<>();
     if (userId == null) {
       return regRoles;
     }
@@ -137,26 +136,32 @@ public class PerunIdMService implements IdMService {
           regRoles.get(Role.FORM_MANAGER).addAll(perunRoles.get(role).get("Vo").stream()
                                                      .flatMap(
                                                          voId -> rpc.getGroupsManager().getAllGroups(voId).stream())
-                                                     .map(Group::getId).collect(Collectors.toSet()));
+                                                     .map(Group::getId).map(String::valueOf).collect(Collectors.toSet()));
           break;
         case "ORGANIZATIONMEMBERSHIPMANAGER":
           regRoles.get(Role.FORM_APPROVER).addAll(perunRoles.get(role).get("Vo").stream()
                                                       .flatMap(
                                                           voId -> rpc.getGroupsManager().getAllGroups(voId).stream())
-                                                      .map(Group::getId).collect(Collectors.toSet()));
+                                                      .map(Group::getId).map(String::valueOf).collect(Collectors.toSet()));
           break;
         case "GROUPADMIN":
-          regRoles.get(Role.FORM_MANAGER).addAll(perunRoles.get(role).get("Group"));
+          regRoles.get(Role.FORM_MANAGER).addAll(perunRoles.get(role).get("Group").stream()
+                                                     .map(String::valueOf)
+                                                     .toList());
           break;
         case "GROUPMEMBERSHIPMANAGER":
-          regRoles.get(Role.FORM_APPROVER).addAll(perunRoles.get(role).get("Group"));
+          regRoles.get(Role.FORM_APPROVER).addAll(perunRoles.get(role).get("Group").stream()
+                                                      .map(String::valueOf)
+                                                     .toList());
           break;
         case "PERUNADMIN":
           regRoles.putIfAbsent(Role.ADMIN, Set.of());
           break;
         case "MEMBERSHIP":
           // TODO probably not ideal way to store membership (retrieve on demand)
-          regRoles.get(Role.MEMBERSHIP).addAll(perunRoles.get(role).get("Group"));
+          regRoles.get(Role.MEMBERSHIP).addAll(perunRoles.get(role).get("Group").stream()
+                                                      .map(String::valueOf)
+                                                     .toList());
         default:
           break;
       }

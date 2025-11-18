@@ -1,0 +1,37 @@
+destinations:
+  - address
+
+strategies:
+  - type: IDM_ATTRIBUTE
+    sourceAttribute: address
+
+definitions:
+  First name:
+    type: TEXTFIELD
+    updatable: true
+    required: true
+    prefillStrategies:
+      - type: IDM_ATTRIBUTE
+        sourceAttribute: firstName
+      - type: IDENTITY_ATTRIBUTE
+        sourceAttribute: name
+    destinationAttributeUrn: firstName
+    formTypes:
+      - INITIAL
+    hidden: NEVER
+    disabled: IF_PREFILLED
+
+  Last name:
+    type: TEXTFIELD
+    updatable: true
+    required: true
+    prefillStrategies:
+      - type: IDM_ATTRIBUTE
+        sourceAttribute: lastName
+      - type: IDENTITY_ATTRIBUTE
+        sourceAttribute: name
+    destinationAttributeUrn: lastName
+    formTypes:
+      - INITIAL
+    hidden: NEVER
+    disabled: IF_PREFILLED

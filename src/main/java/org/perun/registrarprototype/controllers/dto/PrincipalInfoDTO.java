@@ -11,11 +11,11 @@ public class PrincipalInfoDTO {
   private String userId;
   private String userName;
   private Map<String, Object> attributes;
-  private Map<String, Set<Integer>> roles; // String key for JSON serialization
+  private Map<String, Set<String>> roles; // String key for JSON serialization
 
   // Full constructor
   public PrincipalInfoDTO(boolean authenticated, String userId, String userName,
-                         Map<String, Object> attributes, Map<Role, Set<Integer>> roles) {
+                         Map<String, Object> attributes, Map<Role, Set<String>> roles) {
     this.authenticated = authenticated;
     this.userId = userId;
     this.userName = userName;
@@ -65,11 +65,11 @@ public class PrincipalInfoDTO {
     this.attributes = attributes;
   }
 
-  public Map<String, Set<Integer>> getRoles() {
+  public Map<String, Set<String>> getRoles() {
     return roles;
   }
 
-  public void setRoles(Map<String, Set<Integer>> roles) {
+  public void setRoles(Map<String, Set<String>> roles) {
     this.roles = roles;
   }
 }

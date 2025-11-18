@@ -6,5 +6,5 @@ import org.perun.registrarprototype.models.Role;
 
 public interface RoleRepository {
 
-  Map<Role, Set<Integer>> getRolesByUserId(String userId);
+  Map<Role, Set<String>> getRolesByUserId(String userId);
 }

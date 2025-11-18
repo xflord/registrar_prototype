@@ -42,7 +42,7 @@ public interface IdMService {
    */
   Map<String, List<Integer>> getAuthorizedObjects(Integer userId);
 
-  Map<Role, Set<Integer>> getRolesByUserId(String userId);
+  Map<Role, Set<String>> getRolesByUserId(String userId);
 
   String getAttribute(String attributeName, String userId, String groupId, String voId) throws IdmAttributeNotExistsException;
 

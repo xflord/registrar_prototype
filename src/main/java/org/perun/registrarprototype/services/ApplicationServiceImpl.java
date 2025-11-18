@@ -389,6 +389,7 @@ public class ApplicationServiceImpl implements ApplicationService {
         data.getFormItemData().stream()
             .filter(itemData -> itemData.getFormItem().getId() == item.getId())
             .map(FormItemData::getValue)
+            .filter(Objects::nonNull)
             .findFirst()
             .orElse(null))
         )
@@ -713,7 +714,7 @@ public class ApplicationServiceImpl implements ApplicationService {
       throw new IllegalStateException("Layout item required: " + this);
     }
 
-    if (itemDef.getType().isLayoutItem() && !value.isEmpty()) {
+    if (itemDef.getType().isLayoutItem() && value != null && !value.isEmpty()) {
       return new ValidationError(item.getId(), "Layout item " + itemDef.getTexts() + " cannot hold value");
     }
 

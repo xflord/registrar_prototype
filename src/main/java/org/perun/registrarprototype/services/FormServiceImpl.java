@@ -32,6 +32,7 @@ import org.perun.registrarprototype.repositories.ItemDefinitionRepository;
 import org.perun.registrarprototype.repositories.PrefillStrategyEntryRepository;
 import org.perun.registrarprototype.security.RegistrarAuthenticationToken;
 import org.perun.registrarprototype.security.SessionProvider;
+import org.perun.registrarprototype.services.idmIntegration.IdMService;
 import org.perun.registrarprototype.services.modules.FormModule;
 import org.springframework.beans.BeansException;
 import org.springframework.context.ApplicationContext;
@@ -50,6 +51,7 @@ public class FormServiceImpl implements FormService {
   private final ItemDefinitionRepository itemDefinitionRepository;
   private final PrefillStrategyEntryRepository prefillStrategyEntryRepository;
   private final DestinationRepository destinationRepository;
+  private final IdMService idmService;
 
   public FormServiceImpl(FormRepository formRepository, AuthorizationService authorizationService,
                          FormModuleRepository formModuleRepository, ApplicationContext context,
@@ -57,7 +59,8 @@ public class FormServiceImpl implements FormService {
                          ApplicationRepository applicationRepository, SessionProvider sessionProvider,
                          ItemDefinitionRepository itemDefinitionRepository,
                          PrefillStrategyEntryRepository prefillStrategyEntryRepository,
-                         DestinationRepository destinationRepository) {
+                         DestinationRepository destinationRepository,
+                         IdMService idmService) {
     this.formRepository = formRepository;
     this.authorizationService = authorizationService;
     this.formModuleRepository = formModuleRepository;
@@ -69,10 +72,14 @@ public class FormServiceImpl implements FormService {
     this.itemDefinitionRepository = itemDefinitionRepository;
     this.prefillStrategyEntryRepository = prefillStrategyEntryRepository;
     this.destinationRepository = destinationRepository;
+    this.idmService = idmService;
   }
 
   @Override
   public FormSpecification createForm(String groupId) {
+    if (!this.idmService.checkGroupExists(groupId)) {
+      throw new IllegalArgumentException("Group not found in underlying IdM system");
+    }
 
     return formRepository.save(new FormSpecification(-1, groupId, new ArrayList<>()));
   }

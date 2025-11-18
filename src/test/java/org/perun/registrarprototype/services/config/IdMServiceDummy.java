@@ -27,7 +27,7 @@ public class IdMServiceDummy implements IdMService {
   }
 
   @Override
-  public Map<Role, Set<Integer>> getRolesByUserId(String userId) {
+  public Map<Role, Set<String>> getRolesByUserId(String userId) {
     return Map.of();
   }
 

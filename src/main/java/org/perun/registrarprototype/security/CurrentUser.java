@@ -14,7 +14,7 @@ public class CurrentUser {
   private final String id; // TODO do we want to have a separate id for registrar users / perun users?
   private final Set<String> groups;
   private Map<String, Object> attributes = new HashMap<>();
-  private Map<Role, Set<Integer>> roles = new HashMap<>();
+  private Map<Role, Set<String>> roles = new HashMap<>();
 
   public CurrentUser(String id, Set<String> groups, Map<String, Object> attributes) {
     this.id = id;
@@ -40,11 +40,11 @@ public class CurrentUser {
     return name == null ? (String) this.getAttributes().get("sub") : (String) name;
   }
 
-  public Map<Role, Set<Integer>> getRoles() {
+  public Map<Role, Set<String>> getRoles() {
     return roles;
   }
 
-  public void setRoles(Map<Role, Set<Integer>> roles) {
+  public void setRoles(Map<Role, Set<String>> roles) {
     this.roles = roles;
   }
 }

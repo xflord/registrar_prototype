@@ -16,7 +16,7 @@ public class RoleServiceImpl implements RoleService {
   }
 
   @Override
-  public Map<Role, Set<Integer>> getRolesByUserId(String userId) {
+  public Map<Role, Set<String>> getRolesByUserId(String userId) {
     return roleRepository.getRolesByUserId(userId);
   }
 }

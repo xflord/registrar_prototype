@@ -56,13 +56,13 @@ public class UserLookupService {
 
   // TODO refactor the MEMBERSHIP role (remove probs)
 //  @Cacheable(value = "roles", key = "#sess.principal.attribute('sub')")
-  public Map<Role, Set<Integer>> refreshAuthz(RegistrarAuthenticationToken sess) {
+  public Map<Role, Set<String>> refreshAuthz(RegistrarAuthenticationToken sess) {
     if (!sess.isAuthenticated()) {
       return new HashMap<>(Map.of(Role.MEMBERSHIP, Set.of(), Role.FORM_MANAGER, Set.of(), Role.FORM_APPROVER, Set.of()));
     }
-    Map<Role, Set<Integer>> roles = roleService.getRolesByUserId(sess.getPrincipal().id());
+    Map<Role, Set<String>> roles = roleService.getRolesByUserId(sess.getPrincipal().id());
     roles.putIfAbsent(Role.MEMBERSHIP, new HashSet<>());
-    Map<Role, Set<Integer>> rolesFromIdM = new HashMap<>();
+    Map<Role, Set<String>> rolesFromIdM = new HashMap<>();
     try {
       rolesFromIdM = idmService.getRolesByUserId(sess.getPrincipal().id());
     } catch (Exception e) {

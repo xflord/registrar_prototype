@@ -10,7 +10,7 @@ public enum ApplicationState {
   REJECTED,
   CHANGES_REQUESTED; // e.g. when some form is not up to standard, admin can request changes
 
-  public static final Set<ApplicationState> OPEN_STATES = Set.of(SUBMITTED, CHANGES_REQUESTED);
+  public static final Set<ApplicationState> OPEN_STATES = Set.of(SUBMITTED, CHANGES_REQUESTED, VERIFIED);
 
   public boolean isOpenState() {
     return OPEN_STATES.contains(this);

@@ -50,7 +50,7 @@ public class ApplicationController {
 
   // --- Manager approves an application ---
   @PostMapping("/{applicationId}/approve")
-  public ResponseEntity<Void> approveApplication(@PathVariable int applicationId, @RequestBody String message) {
+  public ResponseEntity<Void> approveApplication(@PathVariable int applicationId, @RequestBody(required = false) String message) {
     RegistrarAuthenticationToken session = sessionProvider.getCurrentSession();
     Application app = applicationService.getApplicationById(applicationId);
 

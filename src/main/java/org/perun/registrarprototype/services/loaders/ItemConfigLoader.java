@@ -64,6 +64,10 @@ public class ItemConfigLoader implements CommandLineRunner {
   }
 
   public void loadItemDefinitions(Map<String, Map<String, Object>> itemDefinitionMap) {
+    if (itemDefinitionMap == null) {
+      return;
+    }
+
     List<ItemDefinition> itemDefinitions = new ArrayList<>();
     for (Map.Entry<String, Map<String, Object>> entry : itemDefinitionMap.entrySet()) {
       Map<String, Object> definitionMap = entry.getValue();
@@ -122,7 +126,7 @@ public class ItemConfigLoader implements CommandLineRunner {
     for (Map<String, Object> prefillStrategyRaw : prefillStrategiesRaw) {
       PrefillStrategyEntry.PrefillStrategyType type = getEnum(prefillStrategyRaw.get("type"), PrefillStrategyEntry.PrefillStrategyType.class);
       String sourceAttr = (String) prefillStrategyRaw.get("sourceAttribute");
-      Map<String, String> options = (prefillStrategyRaw.containsKey("options") ? (Map<String, String>)  prefillStrategyRaw.get("options") : null);
+      Map<String, String> options = (prefillStrategyRaw.containsKey("options") ? (Map<String, String>)  prefillStrategyRaw.get("options") : new HashMap<>());
       PrefillStrategyEntry prefillStrategy = new PrefillStrategyEntry(-1, type, options, sourceAttr, null, true);
 
       Optional<PrefillStrategyEntry> existing = prefillStrategyEntryRepository.exists(prefillStrategy);
@@ -141,10 +145,18 @@ public class ItemConfigLoader implements CommandLineRunner {
   }
 
   public void loadPrefillStrategies(List<Map<String, Object>> prefillStrategiesMap) {
+    if (prefillStrategiesMap == null) {
+      return;
+    }
+
     getPrefillStrategyEntries(prefillStrategiesMap);
   }
 
   public void loadDestinations(List<String> destinations) {
+    if (destinations == null) {
+      return;
+    }
+
     Map<FormSpecification, Set<String>> destMap = new HashMap<>();
     destinations.forEach(destination -> {
       if (!destinationRepository.exists(null, destination)) {
