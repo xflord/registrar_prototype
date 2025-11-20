@@ -1,4 +1,4 @@
-package org.perun.registrarprototype.services;
+package org.perun.registrarprototype.services.impl;
 
 import io.micrometer.common.util.StringUtils;
 import java.util.ArrayList;
@@ -13,7 +13,6 @@ import java.util.stream.Collectors;
 import org.perun.registrarprototype.exceptions.DataInconsistencyException;
 import org.perun.registrarprototype.exceptions.EntityNotExistsException;
 import org.perun.registrarprototype.exceptions.FormItemRegexNotValid;
-import org.perun.registrarprototype.exceptions.FormModuleNotExistsException;
 import org.perun.registrarprototype.exceptions.InsufficientRightsException;
 import org.perun.registrarprototype.models.AssignedFormModule;
 import org.perun.registrarprototype.models.Destination;
@@ -33,10 +32,11 @@ import org.perun.registrarprototype.repositories.ItemDefinitionRepository;
 import org.perun.registrarprototype.repositories.PrefillStrategyEntryRepository;
 import org.perun.registrarprototype.security.RegistrarAuthenticationToken;
 import org.perun.registrarprototype.security.SessionProvider;
+import org.perun.registrarprototype.services.AuthorizationService;
+import org.perun.registrarprototype.services.FormService;
 import org.perun.registrarprototype.services.idmIntegration.IdMService;
 import org.perun.registrarprototype.services.modules.FormModule;
 import org.perun.registrarprototype.services.modules.ModulesManager;
-import org.springframework.beans.BeansException;
 import org.springframework.context.ApplicationContext;
 import org.springframework.stereotype.Service;
 

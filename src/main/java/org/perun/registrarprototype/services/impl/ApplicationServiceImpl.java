@@ -1,4 +1,4 @@
-package org.perun.registrarprototype.services;
+package org.perun.registrarprototype.services.impl;
 
 import io.micrometer.common.util.StringUtils;
 import java.time.LocalDateTime;
@@ -48,6 +48,10 @@ import org.perun.registrarprototype.repositories.SubmissionRepository;
 import org.perun.registrarprototype.security.CurrentUser;
 import org.perun.registrarprototype.security.RegistrarAuthenticationToken;
 import org.perun.registrarprototype.security.SessionProvider;
+import org.perun.registrarprototype.services.ApplicationService;
+import org.perun.registrarprototype.services.AuthorizationService;
+import org.perun.registrarprototype.services.EventService;
+import org.perun.registrarprototype.services.FormService;
 import org.perun.registrarprototype.services.idmIntegration.IdMService;
 import org.perun.registrarprototype.services.prefillStrategy.impl.PrefillStrategyResolver;
 import org.springframework.stereotype.Service;

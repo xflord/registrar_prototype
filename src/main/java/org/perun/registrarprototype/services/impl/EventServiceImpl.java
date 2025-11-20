@@ -1,6 +1,9 @@
-package org.perun.registrarprototype.services;
+package org.perun.registrarprototype.services.impl;
 
 import org.perun.registrarprototype.events.Event;
+import org.perun.registrarprototype.services.AuditingService;
+import org.perun.registrarprototype.services.EventService;
+import org.perun.registrarprototype.services.NotificationService;
 import org.perun.registrarprototype.services.tempImpl.AuditingServiceDummy;
 import org.perun.registrarprototype.services.tempImpl.NotificationServiceDummy;
 import org.springframework.stereotype.Component;

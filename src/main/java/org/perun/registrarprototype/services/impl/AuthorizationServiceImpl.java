@@ -1,4 +1,4 @@
-package org.perun.registrarprototype.services;
+package org.perun.registrarprototype.services.impl;
 
 import java.util.Objects;
 import org.perun.registrarprototype.models.Application;
@@ -6,6 +6,8 @@ import org.perun.registrarprototype.models.ItemDefinition;
 import org.perun.registrarprototype.models.PrefillStrategyEntry;
 import org.perun.registrarprototype.models.Role;
 import org.perun.registrarprototype.security.RegistrarAuthenticationToken;
+import org.perun.registrarprototype.services.AuthorizationService;
+import org.perun.registrarprototype.services.RoleService;
 import org.perun.registrarprototype.services.idmIntegration.IdMService;
 import org.springframework.stereotype.Service;
 

@@ -3,7 +3,7 @@ package org.perun.registrarprototype.idmIntegration.oauth;
 import cz.metacentrum.perun.openapi.PerunRPC;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.perun.registrarprototype.services.EventServiceImpl;
+import org.perun.registrarprototype.services.impl.EventServiceImpl;
 import org.perun.registrarprototype.services.idmIntegration.perun.PerunIdMService;
 import org.perun.registrarprototype.services.idmIntegration.perun.oauth.BearerTokenInterceptor;
 import org.perun.registrarprototype.services.idmIntegration.perun.oauth.ClientAccessTokenService;
