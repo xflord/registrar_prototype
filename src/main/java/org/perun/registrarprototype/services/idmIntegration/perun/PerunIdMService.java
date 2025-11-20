@@ -40,8 +40,6 @@ import org.perun.registrarprototype.services.idmIntegration.IdMService;
 import org.springframework.context.annotation.Profile;
 import org.springframework.http.client.HttpComponentsClientHttpRequestFactory;
 import org.springframework.stereotype.Service;
-import org.springframework.web.client.HttpClientErrorException;
-import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;
 
 
@@ -55,6 +53,9 @@ public class PerunIdMService implements IdMService {
   private final PerunRPC rpc;
   private final EventService eventService;
 
+  // TODO ExtSource name in Perun does not match the `iss` field in this case, is a custom mapper required?
+  private final String extSourceName = "https://login.e-infra.cz/idp/";
+
 
   public PerunIdMService(PerunRPC rpc, EventService eventService) {
     this.rpc = rpc;
@@ -67,7 +68,7 @@ public class PerunIdMService implements IdMService {
     System.out.println("Calling getUserIdByIdentifier with parameter " + identifier);
     User user;
     try {
-      user = rpc.getUsersManager().getUserByExtSourceNameAndExtLogin(identifier, "testNEeexitsExt");
+      user = rpc.getUsersManager().getUserByExtSourceNameAndExtLogin(identifier, extSourceName);
     } catch (PerunRuntimeException ex) {
      if (ex.getName().equals("UserExtSourceNotExistsException")) {
        return null;
