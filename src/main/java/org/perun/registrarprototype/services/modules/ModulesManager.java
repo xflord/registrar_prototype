@@ -2,13 +2,12 @@ package org.perun.registrarprototype.services.modules;
 
 
 import groovy.lang.GroovyClassLoader;
-import jakarta.annotation.PostConstruct;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import org.codehaus.groovy.control.MultipleCompilationErrorsException;
 import org.perun.registrarprototype.models.ScriptModule;
-import org.perun.registrarprototype.repositories.ScriptModuleRepository;
+import org.perun.registrarprototype.persistance.ScriptModuleRepository;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.event.EventListener;

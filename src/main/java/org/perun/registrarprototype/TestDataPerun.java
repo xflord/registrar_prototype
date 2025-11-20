@@ -33,7 +33,7 @@ public class TestDataPerun {
       FormSpecification formSpecification = formService.createForm("20644");
 
       ItemTexts itemTexts1 = new ItemTexts("Address", "Enter your address", "Address is required");
-      Destination destination = new Destination(ADDRESS_ATTR_DEF_M, null, true);
+      Destination destination = new Destination(0, ADDRESS_ATTR_DEF_M, null, true);
       destination = formService.createDestination(destination);
       PrefillStrategyEntry prefillStrat = new PrefillStrategyEntry(-1,
           PrefillStrategyEntry.PrefillStrategyType.IDM_ATTRIBUTE, new HashMap<>(Map.of("test", "test")), ADDRESS_ATTR_DEF_U, formSpecification, false);
@@ -46,7 +46,7 @@ public class TestDataPerun {
 
 
       ItemTexts itemTexts2 = new ItemTexts("Full name", "Enter your full name", "Name is required");
-      destination = new Destination(DISPLAY_NAME_ATTR_DEF_U, null, true);
+      destination = new Destination(0, DISPLAY_NAME_ATTR_DEF_U, null, true);
       destination = formService.createDestination(destination);
       PrefillStrategyEntry prefillStrat2 = new PrefillStrategyEntry(-2, PrefillStrategyEntry.PrefillStrategyType.IDENTITY_ATTRIBUTE, new HashMap<>(), "name", formSpecification, false);
       ItemDefinition itemDef2 = new ItemDefinition(-2, formSpecification, "full name", ItemType.TEXTFIELD, false, true, null,

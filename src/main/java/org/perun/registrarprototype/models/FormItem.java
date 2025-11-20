@@ -30,7 +30,7 @@ public class FormItem {
   private int formId; // TODO this probably does not belong to the domain
   private String shortName;
   private Integer parentId; // null for root, ID of parent element in the form, allows for hierarchical tree structure
-  private int ordNum;
+  private int ordNum; // TODO rework domain to work without this (position in list should be enough)
   private Integer hiddenDependencyItemId;
   private Integer disabledDependencyItemId;
   private ItemDefinition itemDefinition;

@@ -31,7 +31,7 @@ public class TestDataKeycloak {
       ItemTexts itemTexts2 = new ItemTexts("Full name", "Enter your full name", "Name is required");
       PrefillStrategyEntry
           prefillStrat22 = new PrefillStrategyEntry(-2, PrefillStrategyEntry.PrefillStrategyType.IDM_ATTRIBUTE, new HashMap<>(), "firstName", formSpecification2, false);
-      Destination destination = new Destination("firstName", null, true);
+      Destination destination = new Destination(0, "firstName", null, true);
       destination = formService.createDestination(destination);
       ItemDefinition
           itemDef22 = new ItemDefinition(-2, formSpecification2, "full name", ItemType.TEXTFIELD, false, true, null,
@@ -43,7 +43,7 @@ public class TestDataKeycloak {
 
 
       ItemTexts itemTexts23 = new ItemTexts("Address", "Enter your address", "Address is required");
-      destination = new Destination("address", null, true);
+      destination = new Destination(0, "address", null, true);
       destination = formService.createDestination(destination);
       PrefillStrategyEntry prefillStrat23 = new PrefillStrategyEntry(-2, PrefillStrategyEntry.PrefillStrategyType.IDM_ATTRIBUTE, new HashMap<>(), "address", formSpecification2, false);
       ItemDefinition itemDef23 = new ItemDefinition(-3, formSpecification2, "address", ItemType.TEXTFIELD, false, true, null,

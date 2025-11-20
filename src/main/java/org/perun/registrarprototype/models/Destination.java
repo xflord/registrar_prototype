@@ -3,13 +3,14 @@ package org.perun.registrarprototype.models;
 import java.util.Objects;
 
 public class Destination {
+  private int id;
   private String urn;
   private FormSpecification formSpecification;
   private boolean global;
 
   public Destination() {}
 
-  public Destination(String urn, FormSpecification formSpecification, boolean global) {
+  public Destination(int id, String urn, FormSpecification formSpecification, boolean global) {
     if (global) {
       if (formSpecification != null) {
         throw new IllegalArgumentException("Form specification must be null for global destinations");
@@ -19,10 +20,17 @@ public class Destination {
         throw new IllegalArgumentException("Form specification must not be null");
       }
     }
-
+    this.id = id;
     this.global = global;
     this.formSpecification = formSpecification;
     this.urn = urn;
+  }
+
+  public int getId() {
+    return id;
+  }
+  public void setId(int id) {
+    this.id = id;
   }
 
   public String getUrn() {

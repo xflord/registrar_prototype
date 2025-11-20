@@ -416,7 +416,8 @@ public class FormController {
       return null;
     }
 
-    return new Destination(dto.getUrn(), dto.getFormSpecificationId() == null ? null : formService.getFormById(dto.getFormSpecificationId()), dto.isGlobal());
+    int id = dto.getId() != null ? dto.getId() : 0;
+    return new Destination(id, dto.getUrn(), dto.getFormSpecificationId() == null ? null : formService.getFormById(dto.getFormSpecificationId()), dto.isGlobal());
   }
 
   private DestinationDTO toDestinationDTO(Destination destination) {
@@ -424,7 +425,7 @@ public class FormController {
       return null;
     }
 
-    return new DestinationDTO(destination.getUrn(), destination.getFormSpecification() == null ? null : destination.getFormSpecification().getId(), destination.isGlobal());
+    return new DestinationDTO(destination.getId(), destination.getUrn(), destination.getFormSpecification() == null ? null : destination.getFormSpecification().getId(), destination.isGlobal());
   }
 
   // Mapper methods to convert DTOs to domain objects using constructors with validation

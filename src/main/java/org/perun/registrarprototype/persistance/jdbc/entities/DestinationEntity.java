@@ -1,23 +1,26 @@
-package org.perun.registrarprototype.controllers.dto;
+package org.perun.registrarprototype.persistance.jdbc.entities;
 
-public class DestinationDTO {
+import org.springframework.data.annotation.Id;
+import org.springframework.data.relational.core.mapping.Table;
+
+@Table("destination")
+public class DestinationEntity {
+  @Id
   private Integer id;
+
   private String urn;
+
   private Integer formSpecificationId;
-  private boolean global;
 
-  public DestinationDTO() {}
+  private Boolean global;
 
-  public DestinationDTO(Integer id, String urn, Integer formSpecificationId, boolean global) {
-    this.id = id;
-    this.urn = urn;
-    this.formSpecificationId = formSpecificationId;
-    this.global = global;
+  public DestinationEntity() {
   }
 
   public Integer getId() {
     return id;
   }
+
   public void setId(Integer id) {
     this.id = id;
   }
@@ -38,11 +41,12 @@ public class DestinationDTO {
     this.formSpecificationId = formSpecificationId;
   }
 
-  public boolean isGlobal() {
+  public Boolean getGlobal() {
     return global;
   }
 
-  public void setGlobal(boolean global) {
+  public void setGlobal(Boolean global) {
     this.global = global;
   }
 }
+

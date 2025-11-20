@@ -30,11 +30,15 @@ dependencies {
     implementation 'org.springframework:spring-context-support'
     implementation 'com.github.ben-manes.caffeine:caffeine'
     implementation 'org.apache.groovy:groovy'
+    implementation 'org.flywaydb:flyway-core'
+    implementation 'org.flywaydb:flyway-database-h2'
+    implementation 'org.springframework.boot:spring-boot-starter-data-jdbc'
     testImplementation 'org.springframework.security:spring-security-test'
     implementation 'org.springframework.boot:spring-boot-starter-web'
     testImplementation 'io.projectreactor:reactor-test'
     providedRuntime 'org.springframework.boot:spring-boot-starter-tomcat'
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
+    runtimeOnly 'com.h2database:h2'
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 }
 

@@ -16,9 +16,9 @@ import org.perun.registrarprototype.models.ItemDefinition;
 import org.perun.registrarprototype.models.ItemTexts;
 import org.perun.registrarprototype.models.ItemType;
 import org.perun.registrarprototype.models.PrefillStrategyEntry;
-import org.perun.registrarprototype.repositories.DestinationRepository;
-import org.perun.registrarprototype.repositories.ItemDefinitionRepository;
-import org.perun.registrarprototype.repositories.PrefillStrategyEntryRepository;
+import org.perun.registrarprototype.persistance.DestinationRepository;
+import org.perun.registrarprototype.persistance.ItemDefinitionRepository;
+import org.perun.registrarprototype.persistance.PrefillStrategyEntryRepository;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.core.io.ResourceLoader;
@@ -86,7 +86,7 @@ public class ItemConfigLoader implements CommandLineRunner {
       String destinationUrn = (String) definitionMap.get("destinationAttributeUrn");
       Destination destination = null;
       if (destinationUrn != null) {
-        destination = new Destination(destinationUrn, null, true);
+        destination = new Destination(0, destinationUrn, null, true);
         if (!destinationRepository.exists(destination)) {
           destinationRepository.createDestination(destination);
         }
@@ -161,7 +161,7 @@ public class ItemConfigLoader implements CommandLineRunner {
 
     List<Destination> destinationList = new ArrayList<>();
     destinations.forEach(destinationUrn -> {
-      Destination destination = new Destination(destinationUrn, null, true);
+      Destination destination = new Destination(0, destinationUrn, null, true);
       if (!destinationRepository.exists(destination)) {
         destinationList.add(destination);
       }
