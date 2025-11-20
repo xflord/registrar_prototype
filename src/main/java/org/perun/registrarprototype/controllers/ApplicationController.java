@@ -78,14 +78,21 @@ public class ApplicationController {
     return ResponseEntity.ok().build();
   }
 
-  @GetMapping("/similarIdentities")
-  public ResponseEntity<List<IdentityDTO>> getSimilarIdentitiesForPossibleConsolidation(@RequestBody List<FormItemDataDTO> itemDataDTO) {
+  @PostMapping("/similarIdentities/forItems")
+  public ResponseEntity<List<IdentityDTO>> getSimilarIdentitiesForItems(@RequestBody List<FormItemDataDTO> itemDataDTO) {
     List<FormItemData> itemData = itemDataDTO.stream()
         .map(this::toFormItemData)
         .collect(Collectors.toList());
-    return ResponseEntity.ok(applicationService.checkForSimilarIdentities(itemData).stream()
+    return ResponseEntity.ok(applicationService.checkForSimilarIdentities(sessionProvider.getCurrentSession(), itemData).stream()
         .map(this::toIdentityDTO)
         .collect(Collectors.toList()));
+  }
+
+  @GetMapping("/similarIdentities")
+  public ResponseEntity<List<IdentityDTO>> getSimilarIdentities() {
+    return ResponseEntity.ok(applicationService.checkForSimilarIdentities(sessionProvider.getCurrentSession()).stream()
+                                 .map(this::toIdentityDTO)
+                                 .toList());
   }
 
   @GetMapping()
@@ -114,7 +121,7 @@ public class ApplicationController {
   @GetMapping("/loadForms")
   public ResponseEntity<SubmissionContextDTO> getSubmissionContext(@RequestParam String groupId)
       throws IdmObjectNotExistsException {
-    SubmissionContext context = applicationService.loadForms(new ArrayList<>(List.of(new Requirement(groupId, Requirement.TargetState.MEMBER))), "", false);
+    SubmissionContext context = applicationService.loadForms(new ArrayList<>(List.of(new Requirement(groupId, Requirement.TargetState.MEMBER))), "");
     return ResponseEntity.ok(toSubmissionContextDTO(context));
   }
 

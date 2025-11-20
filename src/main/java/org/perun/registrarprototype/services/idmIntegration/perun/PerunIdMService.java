@@ -68,12 +68,14 @@ public class PerunIdMService implements IdMService {
     System.out.println("Calling getUserIdByIdentifier with parameter " + identifier);
     User user;
     try {
-      user = rpc.getUsersManager().getUserByExtSourceNameAndExtLogin(identifier, extSourceName);
+      user = rpc.getUsersManager().getUserByExtSourceNameAndExtLogin(identifier, issuer);
     } catch (PerunRuntimeException ex) {
      if (ex.getName().equals("UserExtSourceNotExistsException")) {
+       System.out.println(ex.getMessage());
        return null;
      }
      if (ex.getName().equals("ExtSourceNotExistsException")) {
+       System.out.println(ex.getMessage());
        // are these cases really the same?
        return null;
      }
@@ -469,6 +471,11 @@ public class PerunIdMService implements IdMService {
 
   @Override
   public List<Identity> checkForSimilarUsers(String accessToken) {
+    // TODO access token will be null for unauthenticated users, is there a way to call this and return anything for unauthenticated?
+    //  on the other hand, currently proxy creates perun users for idps defined on devel, so this cannot be tested right now
+    if (accessToken == null) {
+      return new ArrayList<>();
+    }
     // hacky way to call Perun with user session
     RestTemplate restTemplate = new RestTemplate(new HttpComponentsClientHttpRequestFactory());
     restTemplate.setErrorHandler(new RpcErrorHandler());
@@ -487,8 +494,8 @@ public class PerunIdMService implements IdMService {
     RestTemplate restTemplate = new RestTemplate(new HttpComponentsClientHttpRequestFactory());
     restTemplate.setErrorHandler(new RpcErrorHandler());
     PerunRPC tempRpc = new PerunRPC(restTemplate);
-    tempRpc.getApiClient().setBasePath(rpc.getApiClient().getBasePath());
-    tempRpc.getApiClient().setBearerToken(accessToken);
+    // way to extract non
+    tempRpc.getApiClient().setBasePath(getNonPerunUrl(rpc.getApiClient().getBasePath()));
     // TODO consider placing `FormItemData` in the external api package and importing it in perun (once old Registrar gets removed)
     List<ApplicationFormItemData> perunFormItems = new ArrayList<>();
 
@@ -502,6 +509,9 @@ public class PerunIdMService implements IdMService {
           perunAppItem.setPerunDestinationAttribute(item.getFormItem().getItemDefinition().getDestination().getUrn());
           if (item.getFormItem().getItemDefinition().getType().equals(ItemType.VERIFIED_EMAIL)) {
             perunAppItem.setType(Type.VALIDATED_EMAIL);
+          } else {
+            // should be fine to set default as textfield
+            perunAppItem.setType(Type.TEXTFIELD);
           }
           perunAppData.setFormItem(perunAppItem);
           return perunAppData;
@@ -511,6 +521,10 @@ public class PerunIdMService implements IdMService {
     input.setFormItems(perunFormItems);
     List<cz.metacentrum.perun.openapi.model.Identity> perunIdentities = tempRpc.getRegistrarManager().checkForSimilarUsersWithFormItemData(input);
     return convertToDomainIdentities(perunIdentities);
+  }
+
+  private String getNonPerunUrl(String url) {
+    return url.replaceAll("^(https?://[^/]+/)([^/]+)(/rpc/.*)$", "$1non$3");
   }
 
   private List<Identity> convertRichToDomainIdentities(List<EnrichedIdentity> perunIdentities) {
@@ -539,6 +553,7 @@ public class PerunIdMService implements IdMService {
         // this should never be returned from Perun BE
         throw new IllegalStateException("Null identity array returned from Perun.");
       }
+      // TODO do we want to include all the identities like so? Might be too many, redudant info
       identity.getIdentities().forEach(extSource -> {
         domainIdentities.add(new Identity(identity.getName(), identity.getOrganization(),
             identity.getEmail(), extSource.getType(), new HashMap<>()));

@@ -131,7 +131,7 @@ public interface ApplicationService {
    * @param checkSimilarUsers if true, checks for similar identities and throws exception if found; set to false after user decides on consolidation
    * @return prefilled submission context with redirect URL and individual prefilled form data
    */
-  SubmissionContext loadForms(List<Requirement> requirements, String redirectUrl, boolean checkSimilarUsers)
+  SubmissionContext loadForms(List<Requirement> requirements, String redirectUrl)
       throws IdmObjectNotExistsException;
 
   /**
@@ -152,7 +152,10 @@ public interface ApplicationService {
    * @param itemData form item data to check for similar identities
    * @return list of similar identities found in the IdM system
    */
-  List<Identity> checkForSimilarIdentities(List<FormItemData> itemData);
+  List<Identity> checkForSimilarIdentities(RegistrarAuthenticationToken sess, List<FormItemData> itemData);
+
+
+  List<Identity> checkForSimilarIdentities(RegistrarAuthenticationToken sess);
 
   List<Application> getApplicationsForForm(int formId, List<ApplicationState> states);
 }

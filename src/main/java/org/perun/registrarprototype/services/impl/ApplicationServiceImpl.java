@@ -564,7 +564,7 @@ public class ApplicationServiceImpl implements ApplicationService {
                                            .map(transition -> new Requirement(transition.getTargetFormSpecification().getGroupId(),
                                                transition.getTargetFormState())).toList();
       try {
-        submissionResult.setRedirectForms(loadForms(requirements, submissionResult.getRedirectUrl(), false));
+        submissionResult.setRedirectForms(loadForms(requirements, submissionResult.getRedirectUrl()));
         // theoretically just the set of ids (or whatever the API will take as the entrypoint of registration flow) is enough and just redirect user to that endpoint
       } catch (Exception e) {
         System.out.println("Error assembling redirect forms: " + e.getMessage()); // TODO log properly
@@ -577,17 +577,8 @@ public class ApplicationServiceImpl implements ApplicationService {
 
   //TODO should be enough to build the whole form page? or do we need more info?
   @Override
-  public SubmissionContext loadForms(List<Requirement> requirements, String redirectUrl, boolean checkSimilarUsers)
+  public SubmissionContext loadForms(List<Requirement> requirements, String redirectUrl)
       throws IdmObjectNotExistsException {
-    if (checkSimilarUsers) { // potentially enable/disable with config
-      // Check this once when loading registrar for the first time -> offer user the option to consolidate, do not check again afterwards
-      List<Identity> similarIdentities =
-          idmService.checkForSimilarUsers((String) sessionProvider.getCurrentSession().getCredentials());
-      if (!similarIdentities.isEmpty()) {
-        // handle this in gui to display message and offer consolidator redirect
-        throw new SimilarIdentitiesFoundException("Found similar identities: " + similarIdentities);
-      }
-    }
 
     List<Requirement> prerequisites = new ArrayList<>();
 
@@ -696,8 +687,13 @@ public class ApplicationServiceImpl implements ApplicationService {
   }
 
   @Override
-  public List<Identity> checkForSimilarIdentities(List<FormItemData> itemData) {
-    return idmService.checkForSimilarUsers((String) sessionProvider.getCurrentSession().getCredentials(), itemData);
+  public List<Identity> checkForSimilarIdentities(RegistrarAuthenticationToken sess, List<FormItemData> itemData) {
+    return idmService.checkForSimilarUsers((String) sess.getCredentials(), itemData);
+  }
+
+  @Override
+  public List<Identity> checkForSimilarIdentities(RegistrarAuthenticationToken sess) {
+    return idmService.checkForSimilarUsers((String) sess.getCredentials());
   }
 
   @Override

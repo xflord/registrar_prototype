@@ -32,6 +32,7 @@ public class SecurityConfigurationJwt {
             .requestMatchers("/forms").permitAll()
             .requestMatchers("/applications/loadForms/**").permitAll()
             .requestMatchers("/applications/applyForMembership/**").permitAll()
+            .requestMatchers("/applications/similarIdentities/**").permitAll()
              .requestMatchers("/modules/**").permitAll()
             .anyRequest().authenticated()
         )
