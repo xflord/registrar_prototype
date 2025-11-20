@@ -6,9 +6,11 @@ import java.util.Objects;
 import java.util.Optional;
 import org.perun.registrarprototype.models.FormSpecification;
 import org.perun.registrarprototype.persistance.FormRepository;
+import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
 
 // in-memory dummy implementation of persistent storage
+@Profile("!jdbc")
 @Component
 public class FormRepositoryDummy implements FormRepository {
   private static List<FormSpecification> formSpecifications = new ArrayList<>();

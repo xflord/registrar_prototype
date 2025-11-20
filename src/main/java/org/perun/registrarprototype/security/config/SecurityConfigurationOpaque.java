@@ -19,6 +19,7 @@ public class SecurityConfigurationOpaque {
     // very basic security configuration, potentially expand with more filters to add unauthorized access handling
     httpSecurity.
         authorizeHttpRequests(authorize -> authorize
+                                               .requestMatchers("/h2-console/**").permitAll()
                                                .anyRequest().authenticated())
         .oauth2ResourceServer(oauth2 -> oauth2
                                             .opaqueToken(opaque -> opaque.introspector(introspector())));

@@ -28,6 +28,7 @@ public class SecurityConfigurationJwt {
     http
         .anonymous(AbstractHttpConfigurer::disable) // <-- CRITICAL: Prevents AnonymousAuthenticationToken so that anonymous RegistrarAuthenticationToken can be created
         .authorizeHttpRequests(auth -> auth
+            .requestMatchers("/h2-console/**").permitAll()
             .requestMatchers("/forms/me").permitAll()
             .requestMatchers("/forms").permitAll()
             .requestMatchers("/applications/loadForms/**").permitAll()

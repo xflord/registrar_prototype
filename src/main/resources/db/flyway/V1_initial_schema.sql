@@ -4,7 +4,7 @@ CREATE TABLE form_specification (
     vo_id VARCHAR(255),
     group_id VARCHAR(255) NOT NULL,
     auto_approve BOOLEAN DEFAULT FALSE,
-    auto_approve_extension BOOLEAN DEFAULT FALSE,
+    auto_approve_extension BOOLEAN DEFAULT FALSE
 );
 
 -- Form Items
@@ -29,7 +29,7 @@ CREATE TABLE destination (
     urn VARCHAR(255),
     form_specification_id INT,
     global BOOLEAN DEFAULT FALSE,
-    FOREIGN KEY (form_specification_id) REFERENCES form_specification(id) ON DELETE CASCADE,
+    FOREIGN KEY (form_specification_id) REFERENCES form_specification(id) ON DELETE CASCADE
 )
 
 -- Item Definitions
@@ -47,7 +47,7 @@ CREATE TABLE item_definition (
     default_value VARCHAR(500),
     global BOOLEAN DEFAULT FALSE,
     FOREIGN KEY (form_specification_id) REFERENCES form_specification(id) ON DELETE CASCADE,
-    FOREIGN KEY (destination_id) REFERENCES destination(id) ON DELETE RESTRICT,
+    FOREIGN KEY (destination_id) REFERENCES destination(id) ON DELETE RESTRICT
 );
 
 -- Item Definition Form Types (many-to-many)
@@ -115,8 +115,10 @@ CREATE TABLE form_transition (
 CREATE TABLE form_transition_source_states (
     form_transition_id INT NOT NULL,
     source_state VARCHAR(50) NOT NULL,
+    position INT NOT NULL,
     PRIMARY KEY (form_transition_id, source_state),
-    FOREIGN KEY (form_transition_id) REFERENCES form_transition(id) ON DELETE CASCADE
+    FOREIGN KEY (form_transition_id) REFERENCES form_transition(id) ON DELETE CASCADE,
+    UNIQUE KEY unique_transition_state_position (form_transition_id, position)
 );
 
 -- Assigned Form Modules
