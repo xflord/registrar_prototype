@@ -777,10 +777,11 @@ public class ApplicationServiceImpl implements ApplicationService {
     }
     if (!itemsWithMissingData.isEmpty()) {
       System.out.println("ERROR: Could not prefill the following disabled/hidden attributes: " + itemsWithMissingData);
-      if (sess.isAuthenticated()) {
-        // user is authenticated, hence source attribute values should exist?
-        throw new RuntimeException("Could not prefill the following disabled/hidden attributes: " + itemsWithMissingData);
-      }
+//      if (sess.getPrincipal().id() != null) {
+//        // user exists in underlying IdM , hence source attribute values should exist?
+//        // TODO this does not necessarily apply to all prefill strategies
+//        throw new RuntimeException("Could not prefill the following disabled/hidden attributes: " + itemsWithMissingData);
+//      }
     }
   }
 
@@ -884,7 +885,7 @@ public class ApplicationServiceImpl implements ApplicationService {
             try {
               // TODO overall the reserved logins logic might be too `perun-specific`
               perunLogin = idmService.getAttribute(loginItem.getFormItem().getItemDefinition().
-                                                                              getDestinationAttributeUrn(),
+                                                       getDestination().getUrn(),
                   application.getIdmUserId(), application.getFormSpecification().getGroupId(),
                   application.getFormSpecification().getVoId());
             } catch (IdmAttributeNotExistsException e) {
@@ -894,7 +895,7 @@ public class ApplicationServiceImpl implements ApplicationService {
             }
             String itemLogin = loginItem.getValue();
             String namespace = extractNamespaceFromLoginAttrName(loginItem.getFormItem().getItemDefinition().
-                                                                     getDestinationAttributeUrn());
+                                                                     getDestination().getUrn());
             if (!StringUtils.isEmpty(perunLogin)) {
               loginItemsToLeaveOut.add(loginItem);
               idmService.deletePassword(namespace, itemLogin);
@@ -911,7 +912,7 @@ public class ApplicationServiceImpl implements ApplicationService {
         .filter(item -> item.getFormItem().getItemDefinition().getType().equals(ItemType.LOGIN))
         .forEach(loginItem -> {
           String namespace = extractNamespaceFromLoginAttrName(loginItem.getFormItem().getItemDefinition().
-                                                                   getDestinationAttributeUrn());
+                                                                   getDestination().getUrn());
           if (namespace == null) {
             throw new IllegalStateException("Destination attribute of " + loginItem + " is not a login-namespace attribute.");
           }
@@ -937,7 +938,7 @@ public class ApplicationServiceImpl implements ApplicationService {
         // could be a lot of calls, at the same time this checks that the attribute actually exists
         // AttributeDefinition attrDef = idmService.getAttributeDefinition(formItemData.getFormItem().getDestinationIdmAttribute());
         String namespace = extractNamespaceFromLoginAttrName(formItemData.getFormItem().getItemDefinition().
-                                                                 getDestinationAttributeUrn());
+                                                                 getDestination().getUrn());
         if (namespace == null) {
           throw new IllegalStateException("Destination attribute of " + formItemData + " is not a login-namespace attribute.");
         }

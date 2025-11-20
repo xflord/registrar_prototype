@@ -1,6 +1,5 @@
 package org.perun.registrarprototype.services.idmIntegration.keycloak;
 
-import io.micrometer.common.util.StringUtils;
 import jakarta.ws.rs.core.Response;
 import java.time.Duration;
 import java.time.Instant;
@@ -9,6 +8,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import org.keycloak.OAuth2Constants;
 import org.keycloak.admin.client.CreatedResponseUtil;
@@ -233,10 +233,10 @@ public class KeycloakIdMService implements IdMService {
     Map<String, List<String>> attributes = new HashMap<>();
 
     application.getFormItemData().stream()
-        .filter(item -> StringUtils.isNotEmpty(item.getFormItem().getItemDefinition().getDestinationAttributeUrn()))
+        .filter(item -> Objects.nonNull(item.getFormItem().getItemDefinition().getDestination()))
         // TODO some necessary filtering/processing might be done here, see `createCandidateFromApplicationData` in Perun
         .forEach(item -> {
-          String attributeName = item.getFormItem().getItemDefinition().getDestinationAttributeUrn();
+          String attributeName = item.getFormItem().getItemDefinition().getDestination().getUrn();
           UPAttribute attrDef = keycloak.realm(this.realmName).users().userProfile().getConfiguration().getAttribute(attributeName);
           if (attrDef == null) {
             throw new IllegalStateException("Attribute " + attributeName + " not found in underlying IdM");
@@ -313,10 +313,10 @@ public class KeycloakIdMService implements IdMService {
 
     // once again, how to handle single/multivalued attributes
     application.getFormItemData().stream()
-        .filter(item -> StringUtils.isNotEmpty(item.getFormItem().getItemDefinition().getDestinationAttributeUrn()))
+        .filter(item -> Objects.nonNull(item.getFormItem().getItemDefinition().getDestination()))
         // TODO some necessary filtering/processing might be done here, see `createCandidateFromApplicationData` in Perun
         .forEach(item -> {
-          String attributeName = item.getFormItem().getItemDefinition().getDestinationAttributeUrn();
+          String attributeName = item.getFormItem().getItemDefinition().getDestination().getUrn();
           UPAttribute attrDef = keycloak.realm(this.realmName).users().userProfile().getConfiguration().getAttribute(attributeName);
           if (attrDef == null) {
             throw new IllegalStateException("Attribute " + attributeName + " not found in underlying IdM");
@@ -353,10 +353,10 @@ public class KeycloakIdMService implements IdMService {
 
     // once again, how to handle single/multivalued attributes
     application.getFormItemData().stream()
-        .filter(item -> StringUtils.isNotEmpty(item.getFormItem().getItemDefinition().getDestinationAttributeUrn()))
+        .filter(item -> Objects.nonNull(item.getFormItem().getItemDefinition().getDestination()))
         // TODO some necessary filtering/processing might be done here, see `createCandidateFromApplicationData` in Perun
         .forEach(item -> {
-          String attributeName = item.getFormItem().getItemDefinition().getDestinationAttributeUrn();
+          String attributeName = item.getFormItem().getItemDefinition().getDestination().getUrn();
           UPAttribute attrDef = keycloak.realm(this.realmName).users().userProfile().getConfiguration().getAttribute(attributeName);
           if (attrDef == null) {
             throw new IllegalStateException("Attribute " + attributeName + " not found in underlying IdM");
@@ -408,7 +408,7 @@ public class KeycloakIdMService implements IdMService {
         user.setEmail(itemData.getValue());
         user.setEmailVerified(true);
       }
-      if ("username".equals(itemData.getFormItem().getItemDefinition().getDestinationAttributeUrn())) {
+      if ("username".equals(itemData.getFormItem().getItemDefinition().getDestination())) {
         // TODO could also use `login` item type (or define new), not sure if there are namespaces in Keycloak
         user.setUsername(itemData.getValue());
       }

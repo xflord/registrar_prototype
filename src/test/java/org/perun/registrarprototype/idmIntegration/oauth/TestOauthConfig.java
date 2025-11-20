@@ -10,7 +10,7 @@ import org.springframework.context.annotation.Primary;
 import org.springframework.context.annotation.Profile;
 
 @Configuration
-@Profile({"test", "oauth"})
+@Profile({"test & oauth"})
 public class TestOauthConfig {
   @Bean
   @Primary

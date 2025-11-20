@@ -1,10 +1,10 @@
 package org.perun.registrarprototype.models;
 
-import io.micrometer.common.util.StringUtils;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 
 public class ItemDefinition {
@@ -17,7 +17,7 @@ public class ItemDefinition {
   private Boolean required;
   private String validator; // todo replace with validator abstraction
   private List<PrefillStrategyEntry> prefillStrategies;
-  private String destinationAttributeUrn;
+  private Destination destination;
   private Set<FormSpecification.FormType> formTypes = Set.of(FormSpecification.FormType.INITIAL, FormSpecification.FormType.EXTENSION);
   // potentially extract presentation fields into another class
   private Map<Locale, ItemTexts> texts = new HashMap<>();
@@ -33,14 +33,14 @@ public class ItemDefinition {
     this(itemDefinition.getId(), itemDefinition.getFormSpecification(), itemDefinition.getDisplayName(),
         itemDefinition.getType(), itemDefinition.getUpdatable(), itemDefinition.getRequired(),
         itemDefinition.getValidator(), itemDefinition.getPrefillStrategies(),
-        itemDefinition.getDestinationAttributeUrn(), itemDefinition.getFormTypes(),
+        itemDefinition.getDestination(), itemDefinition.getFormTypes(),
         itemDefinition.getTexts(), itemDefinition.getHidden(), itemDefinition.getDisabled(),
         itemDefinition.getDefaultValue(), itemDefinition.isGlobal());
   }
 
   public ItemDefinition(int id, FormSpecification formSpecification, String displayName, ItemType type, Boolean updatable, Boolean required,
                         String validator,
-                        List<PrefillStrategyEntry> prefillStrategies, String destinationAttributeUrn,
+                        List<PrefillStrategyEntry> prefillStrategies, Destination destination,
                         Set<FormSpecification.FormType> formTypes, Map<Locale, ItemTexts> texts, Condition hidden,
                         Condition disabled, String defaultValue, boolean global) {
     this.id = id;
@@ -51,14 +51,16 @@ public class ItemDefinition {
     this.required = required;
     this.validator = validator;
     this.prefillStrategies = prefillStrategies;
-    this.destinationAttributeUrn = destinationAttributeUrn;
+    this.destination = destination;
     this.formTypes = formTypes;
     this.texts = texts;
     this.hidden = hidden;
     this.disabled = disabled;
     this.defaultValue = defaultValue;
     this.global = global;
+
     this.performTypeSpecificChecks();
+    this.checkFormSpecificationConsistency();
   }
 
   public String getDisplayName() {
@@ -109,12 +111,12 @@ public class ItemDefinition {
     this.prefillStrategies = prefillStrategies;
   }
 
-  public String getDestinationAttributeUrn() {
-    return destinationAttributeUrn;
+  public Destination getDestination() {
+    return destination;
   }
 
-  public void setDestinationAttributeUrn(String destinationAttributeUrn) {
-    this.destinationAttributeUrn = destinationAttributeUrn;
+  public void setDestination(Destination destination) {
+    this.destination = destination;
   }
 
   public Set<FormSpecification.FormType> getFormTypes() {
@@ -203,6 +205,32 @@ public class ItemDefinition {
   }
 
   @Override
+  public boolean equals(Object o) {
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    ItemDefinition that = (ItemDefinition) o;
+    return getId() == that.getId() && isGlobal() == that.isGlobal() &&
+               Objects.equals(getFormSpecification(), that.getFormSpecification()) &&
+               Objects.equals(getDisplayName(), that.getDisplayName()) && getType() == that.getType() &&
+               Objects.equals(getUpdatable(), that.getUpdatable()) &&
+               Objects.equals(getRequired(), that.getRequired()) &&
+               Objects.equals(getValidator(), that.getValidator()) &&
+               Objects.equals(getPrefillStrategies(), that.getPrefillStrategies()) &&
+               Objects.equals(getDestination(), that.getDestination()) &&
+               Objects.equals(getFormTypes(), that.getFormTypes()) &&
+               Objects.equals(getTexts(), that.getTexts()) && getHidden() == that.getHidden() &&
+               getDisabled() == that.getDisabled() && Objects.equals(getDefaultValue(), that.getDefaultValue());
+  }
+
+  @Override
+  public int hashCode() {
+    return Objects.hash(getId(), getFormSpecification(), getDisplayName(), getType(), getUpdatable(), getRequired(),
+        getValidator(), getPrefillStrategies(), getDestination(), getFormTypes(), getTexts(), getHidden(),
+        getDisabled(), getDefaultValue(), isGlobal());
+  }
+
+  @Override
   public String toString() {
     return "ItemDefinition{" +
                "displayName='" + displayName + '\'' +
@@ -211,7 +239,7 @@ public class ItemDefinition {
                ", required=" + required +
                ", validator='" + validator + '\'' +
                ", prefillStrategies=" + prefillStrategies +
-               ", destinationAttributeUrn='" + destinationAttributeUrn + '\'' +
+               ", destinationAttributeUrn='" + destination + '\'' +
                ", formTypes=" + formTypes +
                ", texts=" + texts +
                ", hidden=" + hidden +
@@ -237,7 +265,7 @@ public class ItemDefinition {
       if (this.getDefaultValue() != null) {
         throw new IllegalArgumentException("Layout form item " + this + " cannot have a default value");
       }
-      if (this.getDestinationAttributeUrn() != null) {
+      if (this.getDestination() != null) {
         throw new IllegalArgumentException("Layout form item " + this + " cannot have a destination attribute");
       }
       if (this.getPrefillStrategies() != null && !this.getPrefillStrategies().isEmpty()) {
@@ -248,7 +276,7 @@ public class ItemDefinition {
 
     if (this.getType().equals(ItemType.PASSWORD)) {
       // TODO a form of enforcing certain rules (label format, allowed destination attributes, etc.) via yaml config?
-      if (this.getDestinationAttributeUrn() == null) {
+      if (this.getDestination() == null) {
         throw new IllegalArgumentException("Password item must have a destination IDM attribute");
       }
     }
@@ -257,5 +285,40 @@ public class ItemDefinition {
       // TODO validate/sanitize HTML content
     }
     // TODO check validators (e.g. valid regexes, etc.)
+  }
+
+  private void checkFormSpecificationConsistency() {
+    if (isGlobal()) {
+      if (getPrefillStrategies() != null) {
+        for (PrefillStrategyEntry prefillStrategyEntry : getPrefillStrategies()) {
+          if (!prefillStrategyEntry.isGlobal()) {
+            throw new IllegalArgumentException("Assigning non-global prefill strategy to global item definition");
+          }
+        }
+      }
+      if (getDestination() != null && !getDestination().isGlobal()) {
+        throw new IllegalArgumentException("Assigning non-global destination to global item definition");
+      }
+    } else {
+      if (getFormSpecification() == null) {
+        throw new IllegalArgumentException("Missing form specification for non-global item definition");
+      }
+      if (getPrefillStrategies() != null) {
+        for (PrefillStrategyEntry prefillStrategyEntry : getPrefillStrategies()) {
+          if (!prefillStrategyEntry.isGlobal()) {
+            if (prefillStrategyEntry.getFormSpecification() == null) {
+              throw new IllegalStateException("Missing form specification for non-global prefill strategy");
+            }
+            if (!prefillStrategyEntry.getFormSpecification().equals(getFormSpecification())) {
+              throw new IllegalArgumentException("Form specification of prefill strategy: " + prefillStrategyEntry + " does not match that of the item definition");
+            }
+          }
+        }
+      }
+      if (getDestination() != null && !getDestination().isGlobal() &&
+              !Objects.equals(getFormSpecification(), getDestination().getFormSpecification())) {
+        throw new IllegalArgumentException("Destination: " + getDestination() + " is not defined for the form specification of this item definition");
+      }
+    }
   }
 }

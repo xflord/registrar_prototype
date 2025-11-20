@@ -16,6 +16,7 @@ import org.perun.registrarprototype.exceptions.FormItemRegexNotValid;
 import org.perun.registrarprototype.exceptions.FormModuleNotExistsException;
 import org.perun.registrarprototype.exceptions.InsufficientRightsException;
 import org.perun.registrarprototype.models.AssignedFormModule;
+import org.perun.registrarprototype.models.Destination;
 import org.perun.registrarprototype.models.FormSpecification;
 import org.perun.registrarprototype.models.FormItem;
 import org.perun.registrarprototype.models.FormTransition;
@@ -305,16 +306,19 @@ public class FormServiceImpl implements FormService {
 
   @Override
   public PrefillStrategyEntry getPrefillStrategyById(int prefillStrategyId) {
-    return prefillStrategyEntryRepository.findById(prefillStrategyId).orElse(null);
+    return prefillStrategyEntryRepository.findById(prefillStrategyId)
+        .orElseThrow(() -> new EntityNotExistsException("PrefillStrategyEntry", prefillStrategyId));
   }
 
   @Override
   public PrefillStrategyEntry createPrefillStrategy(PrefillStrategyEntry prefillStrategyEntry) {
-    if (prefillStrategyEntryRepository.findById(prefillStrategyEntry.getId()).isPresent()) {
-      throw new IllegalArgumentException("Prefill strategy with ID " + prefillStrategyEntry.getId() + " already exists");
-    }
 
     return prefillStrategyEntryRepository.save(prefillStrategyEntry);
+  }
+
+  @Override
+  public void removePrefillStrategy(PrefillStrategyEntry prefillStrategy) {
+    prefillStrategyEntryRepository.delete(prefillStrategy);
   }
 
   @Override
@@ -330,32 +334,44 @@ public class FormServiceImpl implements FormService {
   }
 
   @Override
-  public Set<String> getGlobalDestinations() {
+  public ItemDefinition getItemDefinitionById(int itemDefinitionId) {
+    return itemDefinitionRepository.findById(itemDefinitionId)
+               .orElseThrow(() -> new EntityNotExistsException("ItemDefinition", itemDefinitionId));
+  }
+
+  @Override
+  public List<Destination> getGlobalDestinations() {
     return destinationRepository.getGlobalDestinations();
   }
 
   @Override
-  public Set<String> getDestinationsForForm(FormSpecification formSpecification) {
+  public List<Destination> getDestinationsForForm(FormSpecification formSpecification) {
     return destinationRepository.getDestinationsForForm(formSpecification);
   }
 
   @Override
-  public String createDestination(FormSpecification formSpecification, String destination) {
-    return destinationRepository.createDestination(formSpecification, destination);
+  public Destination createDestination(Destination destination) {
+    return destinationRepository.createDestination(destination);
   }
 
   @Override
-  public void removeDestination(FormSpecification formSpecification, String destination) {
-    destinationRepository.removeDestination(formSpecification, destination);
+  public void removeDestination(Destination destination) {
+    destinationRepository.removeDestination(destination);
   }
 
   @Override
   public ItemDefinition createItemDefinition(ItemDefinition itemDefinition) {
-    if (itemDefinitionRepository.findById(itemDefinition.getId()).isPresent()) {
-      throw new IllegalArgumentException("Item definition with ID " + itemDefinition.getId() + " already exists");
-    }
-
     return itemDefinitionRepository.save(itemDefinition);
+  }
+
+  @Override
+  public ItemDefinition updateItemDefinition(ItemDefinition itemDefinition) {
+    return itemDefinitionRepository.save(itemDefinition);
+  }
+
+  @Override
+  public void removeItemDefinition(ItemDefinition itemDefinition) {
+    itemDefinitionRepository.delete(itemDefinition);
   }
 
   @Override
@@ -438,9 +454,9 @@ public class FormServiceImpl implements FormService {
         // no need for checks if item definition is defined globally
         if (!existingItemDef.isGlobal()) {
           // check that updated items do not change destination, if so then warn/throw exception
-          String oldDestination = existingItemDef.getDestinationAttributeUrn();
+          Destination oldDestination = existingItemDef.getDestination();
           if (oldDestination != null) {
-            String newDestination = item.getItemDefinition().getDestinationAttributeUrn();
+            Destination newDestination = item.getItemDefinition().getDestination();
             boolean hasOpenApplications = applicationRepository.findByFormId(formId).stream()
                                               .anyMatch(app -> app.getState().isOpenState());
             if (!oldDestination.equals(newDestination) && hasOpenApplications) {

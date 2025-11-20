@@ -16,7 +16,7 @@ public class ItemDefinitionDTO {
   private Boolean required;
   private String validator;
   private List<PrefillStrategyEntryDTO> prefillStrategies;
-  private String destinationAttributeUrn;
+  private DestinationDTO destination;
   private Set<FormSpecification.FormType> formTypes;
   private Map<String, ItemTextsDTO> texts; // Map<LocaleString, ItemTextsDTO>
   private ItemDefinition.Condition hidden;
@@ -90,12 +90,12 @@ public class ItemDefinitionDTO {
     this.prefillStrategies = prefillStrategies;
   }
 
-  public String getDestinationAttributeUrn() {
-    return destinationAttributeUrn;
+  public DestinationDTO getDestination() {
+    return destination;
   }
 
-  public void setDestinationAttributeUrn(String destinationAttributeUrn) {
-    this.destinationAttributeUrn = destinationAttributeUrn;
+  public void setDestination(DestinationDTO destination) {
+    this.destination = destination;
   }
 
   public Set<FormSpecification.FormType> getFormTypes() {

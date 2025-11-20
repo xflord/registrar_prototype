@@ -19,7 +19,7 @@ public class FormItemRepositoryDummy implements FormItemRepository {
 
   @Override
   public List<FormItem> getFormItemsByDestinationAttribute(String urn) {
-    return formItems.stream().filter(item -> item.getItemDefinition().getDestinationAttributeUrn().equals(urn))
+    return formItems.stream().filter(item -> item.getItemDefinition().getDestination().equals(urn))
                .toList();
   }
 

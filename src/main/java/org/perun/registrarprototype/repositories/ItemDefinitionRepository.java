@@ -12,4 +12,5 @@ public interface ItemDefinitionRepository {
   List<ItemDefinition> findAllByForm(FormSpecification formSpecification);
   ItemDefinition save(ItemDefinition itemDefinition);
   List<ItemDefinition> saveAll(List<ItemDefinition> itemDefinitions);
+  void delete(ItemDefinition itemDefinition);
 }

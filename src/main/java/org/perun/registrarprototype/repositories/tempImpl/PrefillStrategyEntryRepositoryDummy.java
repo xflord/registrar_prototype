@@ -44,7 +44,7 @@ public class PrefillStrategyEntryRepositoryDummy implements PrefillStrategyEntry
   @Override
   public List<PrefillStrategyEntry> findByFormSpecification(FormSpecification formSpecification) {
     return prefillStrategyEntries.stream()
-               .filter(entry -> entry.getFormSpecification().equals(formSpecification))
+               .filter(entry -> formSpecification.equals(entry.getFormSpecification()))
                .toList();
   }
 
@@ -57,5 +57,10 @@ public class PrefillStrategyEntryRepositoryDummy implements PrefillStrategyEntry
                                                        Objects.equals(existing.getSourceAttribute(), entry.getSourceAttribute()) &&
                                                        existing.getOptions().equals(entry.getOptions()))
                .findFirst();
+  }
+
+  @Override
+  public void delete(PrefillStrategyEntry entry) {
+    prefillStrategyEntries.remove(entry);
   }
 }

@@ -2,10 +2,10 @@ package org.perun.registrarprototype.services;
 
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import org.perun.registrarprototype.exceptions.FormItemRegexNotValid;
 import org.perun.registrarprototype.exceptions.InsufficientRightsException;
 import org.perun.registrarprototype.models.AssignedFormModule;
+import org.perun.registrarprototype.models.Destination;
 import org.perun.registrarprototype.models.FormSpecification;
 import org.perun.registrarprototype.models.FormItem;
 import org.perun.registrarprototype.models.FormTransition;
@@ -161,19 +161,27 @@ public interface FormService {
 
   PrefillStrategyEntry createPrefillStrategy(PrefillStrategyEntry prefillStrategy);
 
+  void removePrefillStrategy(PrefillStrategyEntry prefillStrategy);
+
   List<ItemDefinition> getItemDefinitionsForForm(FormSpecification formSpecification);
 
   List<ItemDefinition> getGlobalItemDefinitions();
 
+  ItemDefinition getItemDefinitionById(int itemDefinitionId);
+
   ItemDefinition createItemDefinition(ItemDefinition itemDefinition);
 
-  Set<String> getGlobalDestinations();
+  ItemDefinition updateItemDefinition(ItemDefinition itemDefinition);
 
-  Set<String> getDestinationsForForm(FormSpecification formSpecification);
+  void removeItemDefinition(ItemDefinition itemDefinition);
 
-  String createDestination(FormSpecification formSpecification, String destination);
+  List<Destination> getGlobalDestinations();
 
-  void removeDestination(FormSpecification formSpecification, String destination);
+  List<Destination> getDestinationsForForm(FormSpecification formSpecification);
+
+  Destination createDestination(Destination destination);
+
+  void removeDestination(Destination destination);
 
   /**
    * Creates a new form item.

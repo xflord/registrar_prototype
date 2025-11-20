@@ -17,14 +17,13 @@ import cz.metacentrum.perun.openapi.model.InputSetMemberWithUserAttributes;
 import cz.metacentrum.perun.openapi.model.Member;
 import cz.metacentrum.perun.openapi.model.Type;
 import cz.metacentrum.perun.openapi.model.User;
-import cz.metacentrum.perun.openapi.PerunException;
 import cz.metacentrum.perun.openapi.model.UserExtSource;
-import io.micrometer.common.util.StringUtils;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
 import org.perun.registrarprototype.events.IdMUserCreatedEvent;
@@ -68,14 +67,16 @@ public class PerunIdMService implements IdMService {
     System.out.println("Calling getUserIdByIdentifier with parameter " + identifier);
     User user;
     try {
-      user = rpc.getUsersManager().getUserByExtSourceNameAndExtLogin(identifier, issuer);
-    } catch (HttpClientErrorException ex) {
-      // another way of handling this - logging and returning null?
-      System.out.println(ex);
-      System.out.println(PerunException.to(ex).getMessage());
-      return null;
-    } catch (RestClientException ex) {
-      throw new RuntimeException(ex);
+      user = rpc.getUsersManager().getUserByExtSourceNameAndExtLogin(identifier, "testNEeexitsExt");
+    } catch (PerunRuntimeException ex) {
+     if (ex.getName().equals("UserExtSourceNotExistsException")) {
+       return null;
+     }
+     if (ex.getName().equals("ExtSourceNotExistsException")) {
+       // are these cases really the same?
+       return null;
+     }
+     throw ex;
     }
 
     if (user == null) {
@@ -380,9 +381,9 @@ public class PerunIdMService implements IdMService {
     Candidate candidate = getCandidate(application);
     Map<String, String> attributes = new HashMap<>();
         application.getFormItemData().stream()
-            .filter(item -> StringUtils.isNotEmpty(item.getFormItem().getItemDefinition().getDestinationAttributeUrn()))
+            .filter(item -> Objects.nonNull(item.getFormItem().getItemDefinition().getDestination()))
             // TODO some necessary filtering/processing might be done here, see `createCandidateFromApplicationData` in Perun
-            .forEach(item -> attributes.put(item.getFormItem().getItemDefinition().getDestinationAttributeUrn(), item.getValue()));
+            .forEach(item -> attributes.put(item.getFormItem().getItemDefinition().getDestination().getUrn(), item.getValue()));
     candidate.setAttributes(attributes);
     input.setCandidate(candidate);
     Member createdMember = rpc.getMembersManager().createMemberForCandidate(input);
@@ -491,13 +492,13 @@ public class PerunIdMService implements IdMService {
     List<ApplicationFormItemData> perunFormItems = new ArrayList<>();
 
     itemData.stream()
-        .filter(item -> item.getFormItem().getItemDefinition().getDestinationAttributeUrn() != null ||
+        .filter(item -> item.getFormItem().getItemDefinition().getDestination() != null ||
                             item.getFormItem().getItemDefinition().getType().equals(ItemType.VERIFIED_EMAIL))
         .map(item -> {
           ApplicationFormItemData perunAppData = new ApplicationFormItemData();
           perunAppData.setValue(item.getValue());
           ApplicationFormItem perunAppItem = new ApplicationFormItem();
-          perunAppItem.setPerunDestinationAttribute(item.getFormItem().getItemDefinition().getDestinationAttributeUrn());
+          perunAppItem.setPerunDestinationAttribute(item.getFormItem().getItemDefinition().getDestination().getUrn());
           if (item.getFormItem().getItemDefinition().getType().equals(ItemType.VERIFIED_EMAIL)) {
             perunAppItem.setType(Type.VALIDATED_EMAIL);
           }
@@ -566,10 +567,10 @@ public class PerunIdMService implements IdMService {
 
   private List<Attribute> mapFormDataToAttributeObjects(List<FormItemData> itemData) {
     return itemData.stream()
-               .filter(item -> item.getFormItem().getItemDefinition().getDestinationAttributeUrn() != null)
+               .filter(item -> item.getFormItem().getItemDefinition().getDestination() != null)
                .map(item -> {
                  AttributeDefinition attrDef = rpc.getAttributesManager()
-                                                   .getAttributeDefinitionByName(item.getFormItem().getItemDefinition().getDestinationAttributeUrn());
+                                                   .getAttributeDefinitionByName(item.getFormItem().getItemDefinition().getDestination().getUrn());
                  Attribute attr = new Attribute();
                  attr.setId(attrDef.getId());
                  attr.setValue(item.getValue());
@@ -592,7 +593,7 @@ public class PerunIdMService implements IdMService {
 
     String nameFromDisplayNameAttr = application.getFormItemData()
                                                         .stream()
-                                                        .filter(formItemData -> formItemData.getFormItem().getItemDefinition().getDestinationAttributeUrn().equals(DISPLAY_NAME))
+                                                        .filter(formItemData -> formItemData.getFormItem().getItemDefinition().getDestination().equals(DISPLAY_NAME))
                                                         .map(FormItemData::getValue)
                                          .findFirst().orElse(null);
     NameParser.ParsedName parsedName = NameParser.parseDisplayName(nameFromDisplayNameAttr);

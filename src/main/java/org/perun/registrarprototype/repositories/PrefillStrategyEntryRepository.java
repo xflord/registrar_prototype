@@ -12,4 +12,5 @@ public interface PrefillStrategyEntryRepository {
   List<PrefillStrategyEntry> findAllGlobal();
   List<PrefillStrategyEntry> findByFormSpecification(FormSpecification formSpecification);
   Optional<PrefillStrategyEntry> exists(PrefillStrategyEntry entry);
+  void delete(PrefillStrategyEntry entry);
 }

@@ -4,7 +4,6 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
 import org.perun.registrarprototype.models.FormItem;
-import org.perun.registrarprototype.models.ItemDefinition;
 import org.perun.registrarprototype.models.ItemType;
 import org.perun.registrarprototype.models.PrefillStrategyEntry;
 import org.perun.registrarprototype.security.CurrentUser;
@@ -39,7 +38,7 @@ public class LoginItemPrefillStrategy implements PrefillStrategy {
 
     for (String reservedNamespace : reservedLogins.keySet()) {
       String loginAttributeDefinition = idmService.getLoginAttributeUrn() + reservedNamespace;
-      if (item.getItemDefinition().getDestinationAttributeUrn().equals(loginAttributeDefinition)) {
+      if (item.getItemDefinition().getDestination().getUrn().equals(loginAttributeDefinition)) {
         return Optional.of(reservedLogins.get(reservedNamespace));
       }
     }

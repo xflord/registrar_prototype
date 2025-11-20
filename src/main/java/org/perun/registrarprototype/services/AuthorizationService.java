@@ -1,7 +1,7 @@
 package org.perun.registrarprototype.services;
 
 import org.perun.registrarprototype.models.Application;
-import org.perun.registrarprototype.security.CurrentUser;
+import org.perun.registrarprototype.models.ItemDefinition;
 import org.perun.registrarprototype.security.RegistrarAuthenticationToken;
 
 public interface AuthorizationService {
@@ -9,6 +9,8 @@ public interface AuthorizationService {
   boolean canManage(RegistrarAuthenticationToken sess, String groupId);
 
   boolean canManage(RegistrarAuthenticationToken sess, Application app);
+
+  boolean canManage(RegistrarAuthenticationToken sess, ItemDefinition itemDefinition);
 
   boolean canDecide(RegistrarAuthenticationToken sess, String groupId);
 

@@ -1,14 +1,14 @@
 package org.perun.registrarprototype.repositories;
 
-import java.util.Map;
-import java.util.Set;
+import java.util.List;
+import org.perun.registrarprototype.models.Destination;
 import org.perun.registrarprototype.models.FormSpecification;
 
 public interface DestinationRepository {
-  Set<String> getDestinationsForForm(FormSpecification formSpecification);
-  Set<String> getGlobalDestinations();
-  String createDestination(FormSpecification formSpecification, String destination);
-  void removeDestination(FormSpecification formSpecification, String destination);
-  void saveAll(Map<FormSpecification, Set<String>> destinations);
-  boolean exists(FormSpecification formSpecification, String destination);
+  List<Destination> getDestinationsForForm(FormSpecification formSpecification);
+  List<Destination> getGlobalDestinations();
+  Destination createDestination(Destination destination);
+  void removeDestination(Destination destination);
+  void saveAll(List<Destination> destinations);
+  boolean exists(Destination destination);
 }

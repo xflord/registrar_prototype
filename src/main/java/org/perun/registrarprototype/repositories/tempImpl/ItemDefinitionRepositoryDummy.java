@@ -63,4 +63,9 @@ public class ItemDefinitionRepositoryDummy implements ItemDefinitionRepository {
     itemDefinitions.forEach(this::save);
     return itemDefinitions;
   }
+
+  @Override
+  public void delete(ItemDefinition itemDefinition) {
+    storedItemDefinitions.remove(itemDefinition);
+  }
 }

@@ -5,12 +5,12 @@ import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import org.perun.registrarprototype.models.Destination;
 import org.perun.registrarprototype.models.FormSpecification;
 import org.perun.registrarprototype.models.ItemDefinition;
 import org.perun.registrarprototype.models.ItemTexts;
@@ -83,10 +83,12 @@ public class ItemConfigLoader implements CommandLineRunner {
         prefillStrategies = getPrefillStrategyEntries(prefillStrategiesRaw);
       }
 
-      String destination = (String) definitionMap.get("destinationAttributeUrn");
-      if (destination != null) {
-        if (!destinationRepository.exists(null, destination)) {
-          destinationRepository.createDestination(null, destination);
+      String destinationUrn = (String) definitionMap.get("destinationAttributeUrn");
+      Destination destination = null;
+      if (destinationUrn != null) {
+        destination = new Destination(destinationUrn, null, true);
+        if (!destinationRepository.exists(destination)) {
+          destinationRepository.createDestination(destination);
         }
       }
 
@@ -157,13 +159,14 @@ public class ItemConfigLoader implements CommandLineRunner {
       return;
     }
 
-    Map<FormSpecification, Set<String>> destMap = new HashMap<>();
-    destinations.forEach(destination -> {
-      if (!destinationRepository.exists(null, destination)) {
-        destMap.put(null, new HashSet<>(destinations));
+    List<Destination> destinationList = new ArrayList<>();
+    destinations.forEach(destinationUrn -> {
+      Destination destination = new Destination(destinationUrn, null, true);
+      if (!destinationRepository.exists(destination)) {
+        destinationList.add(destination);
       }
     });
-    destinationRepository.saveAll(destMap);
+    destinationRepository.saveAll(destinationList);
   }
 
   private <T> T loadYaml(String path) {
