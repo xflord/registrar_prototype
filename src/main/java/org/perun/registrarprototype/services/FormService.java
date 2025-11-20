@@ -81,13 +81,13 @@ public interface FormService {
    * Sets modules for the form. Checks whether the module actually exists and whether all the required options are set.
    *
    * @param sess authenticated session token
-   * @param formId ID of the form to assign modules to
+   * @param formSpecification form to assign modules to
    * @param modulesToAssign modules with module name and options set (the rest is ignored)
    * @return list of assigned form modules
    * @throws InsufficientRightsException if the user is not authorized to manage the form
    */
-  List<AssignedFormModule> setModules(RegistrarAuthenticationToken sess, int formId,
-                                      List<AssignedFormModule> modulesToAssign) throws InsufficientRightsException;
+  List<AssignedFormModule> setModules(RegistrarAuthenticationToken sess, FormSpecification formSpecification,
+                                      List<AssignedFormModule> modulesToAssign);
 
   /**
    * Retrieves all forms with their items populated.

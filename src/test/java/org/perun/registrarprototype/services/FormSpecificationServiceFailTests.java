@@ -41,7 +41,7 @@ public class FormSpecificationServiceFailTests extends GenericRegistrarServiceTe
     AssignedFormModule
         module = new AssignedFormModule("testModuleWithOptions", new HashMap<>());
 
-    assertThrows(IllegalArgumentException.class, () -> formService.setModules(null, formSpecification.getId(), List.of(module)));
+    assertThrows(IllegalArgumentException.class, () -> formService.setModules(null, formSpecification, List.of(module)));
   }
 
   @Test
@@ -57,7 +57,7 @@ public class FormSpecificationServiceFailTests extends GenericRegistrarServiceTe
     AssignedFormModule
         module = new AssignedFormModule("testModuleWithOptions", Map.of("wrongOption", "value1"));
 
-    assertThrows(IllegalArgumentException.class, () -> formService.setModules(null, formSpecification.getId(), List.of(module)));
+    assertThrows(IllegalArgumentException.class, () -> formService.setModules(null, formSpecification, List.of(module)));
   }
 
 }

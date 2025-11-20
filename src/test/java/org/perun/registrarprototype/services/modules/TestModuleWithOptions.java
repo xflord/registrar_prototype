@@ -13,10 +13,6 @@ import org.springframework.stereotype.Component;
 @Profile("test")
 public class TestModuleWithOptions implements FormModule {
 
-  @Override
-  public String getName() {
-    return "TestModuleWithOptions";
-  }
 
   @Override
   public String getName() {

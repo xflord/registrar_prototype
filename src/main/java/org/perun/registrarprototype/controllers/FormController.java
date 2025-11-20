@@ -79,14 +79,11 @@ public class FormController {
     List<AssignedFormModule> modules = modulesDTO.stream()
         .map(this::toAssignedFormModule)
         .collect(Collectors.toList());
-    try {
-      List<AssignedFormModule> setModules = formService.setModules(session, formId, modules);
-      return ResponseEntity.ok(setModules.stream()
-          .map(this::toAssignedFormModuleDTO)
-          .collect(Collectors.toList()));
-    } catch (InsufficientRightsException e) {
-      return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
-    }
+
+    List<AssignedFormModule> setModules = formService.setModules(session, formSpec, modules);
+    return ResponseEntity.ok(setModules.stream()
+        .map(this::toAssignedFormModuleDTO)
+        .collect(Collectors.toList()));
   }
 
   /**

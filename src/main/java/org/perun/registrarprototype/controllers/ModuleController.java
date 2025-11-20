@@ -37,7 +37,8 @@ public class ModuleController {
   }
 
   /**
-   * Upload a new module. Be careful to espace the json newlines when uploading script via api
+   * Upload a new module. Be careful to escape the json newlines when uploading script via api
+   * TODO allow this endpoint for localhost only in server settings
    * @param module
    * @return
    */

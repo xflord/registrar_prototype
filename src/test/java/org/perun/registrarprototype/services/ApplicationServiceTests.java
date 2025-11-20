@@ -116,7 +116,7 @@ class ApplicationServiceTests extends GenericRegistrarServiceTests {
 
     AssignedFormModule module = new AssignedFormModule("testModuleBeforeSubmission", new HashMap<>());
 
-    formService.setModules(null, formSpecification.getId(), List.of(module));
+    formService.setModules(null, formSpecification, List.of(module));
 
     List<FormItemData> data = applicationService.loadForm(sessionProvider.getCurrentSession(), formSpecification, FormSpecification.FormType.INITIAL);
 

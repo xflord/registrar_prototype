@@ -93,7 +93,7 @@ public class FormServiceImpl implements FormService {
   public FormSpecification createForm(FormSpecification formSpecification, List<AssignedFormModule> modules) throws InsufficientRightsException {
     formSpecification.setId(-1);
     formSpecification = formRepository.save(formSpecification);
-    setModules(sessionProvider.getCurrentSession(), formSpecification.getId(), modules);
+    setModules(sessionProvider.getCurrentSession(), formSpecification, modules);
     return formSpecification;
   }
 
@@ -171,22 +171,14 @@ public class FormServiceImpl implements FormService {
   }
 
   @Override
-  public List<AssignedFormModule> setModules(RegistrarAuthenticationToken sess, int formId,
-                                             List<AssignedFormModule> modulesToAssign)
-      throws InsufficientRightsException {
-    FormSpecification formSpecification = formRepository.findById(formId).orElseThrow(() -> new EntityNotExistsException("FormSpecification", formId));
-
-    if (!authorizationService.canManage(sess, formSpecification.getGroupId())) {
-      // 403
-      throw new InsufficientRightsException("You are not authorized to create a form for this group");
-    }
-
+  public List<AssignedFormModule> setModules(RegistrarAuthenticationToken sess, FormSpecification formSpecification,
+                                             List<AssignedFormModule> modulesToAssign) {
     List<AssignedFormModule> modules = new ArrayList<>();
 
     for (AssignedFormModule assignedFormModule : modulesToAssign) {
         FormModule moduleComponent = modulesManager.getModule(assignedFormModule.getModuleName());
         if (moduleComponent == null) {
-          throw new IllegalArgumentException("Module " + assignedFormModule.getModuleName() + " not found");
+          throw new EntityNotExistsException("FormModule", assignedFormModule.getModuleName());
         }
         if (!moduleComponent.getRequiredOptions().isEmpty()) {
           if (assignedFormModule.getOptions() == null || assignedFormModule.getOptions().isEmpty()) {
@@ -507,7 +499,11 @@ public class FormServiceImpl implements FormService {
 
   @Override
   public Map<String, List<String>> getAvailableModulesWithRequiredOptions() {
-    return Map.of();
+    Map<String, List<String>> availableModules = new HashMap<>();
+    for (Map.Entry<String, FormModule> entry : modulesManager.getLoadedModules().entrySet()) {
+      availableModules.put(entry.getKey(), entry.getValue().getRequiredOptions());
+    }
+    return availableModules;
   }
 
   /**
@@ -695,22 +691,6 @@ public class FormServiceImpl implements FormService {
         visited.add(current);
         current = childToParent.get(current);
       }
-    }
-  }
-
-  /**
-   * Sets module components by the name of the module.
-   * @param module
-   * @return
-   */
-  private AssignedFormModule setModule(AssignedFormModule module) throws FormModuleNotExistsException {
-    try {
-      FormModule formModule = context.getBean(module.getModuleName(), FormModule.class);
-      module.setFormModule(formModule);
-      return module;
-    } catch (BeansException e) {
-      throw new FormModuleNotExistsException("Could not find definition for module " + module.getModuleName() +
-                                                 " when retrieving modules for form " + module.getFormId());
     }
   }
 }

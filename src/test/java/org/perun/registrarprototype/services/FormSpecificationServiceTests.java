@@ -65,7 +65,7 @@ public class FormSpecificationServiceTests extends GenericRegistrarServiceTests 
 
     AssignedFormModule module = new AssignedFormModule("testModule", new HashMap<>());
 
-    formService.setModules(null, formSpecification.getId(), List.of(module));
+    formService.setModules(null, formSpecification, List.of(module));
 
     List<AssignedFormModule> modules = formModuleRepository.findAllByFormId(formSpecification.getId());
 
@@ -91,7 +91,7 @@ public class FormSpecificationServiceTests extends GenericRegistrarServiceTests 
 
     AssignedFormModule module = new AssignedFormModule("testModuleWithOptions", Map.of("option1", "value1", "option2", "value2"));
 
-    formService.setModules(null, formSpecification.getId(), List.of(module));
+    formService.setModules(null, formSpecification, List.of(module));
 
     List<AssignedFormModule> modules = formModuleRepository.findAllByFormId(formSpecification.getId());
 

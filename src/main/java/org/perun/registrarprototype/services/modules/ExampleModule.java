@@ -3,8 +3,8 @@ package org.perun.registrarprototype.services.modules;
 import java.util.List;
 import java.util.Map;
 import org.perun.registrarprototype.models.Application;
-import org.perun.registrarprototype.models.Form;
 import org.perun.registrarprototype.models.FormItemData;
+import org.perun.registrarprototype.models.FormSpecification;
 import org.perun.registrarprototype.security.CurrentUser;
 import org.perun.registrarprototype.services.ApplicationService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -23,12 +23,12 @@ public class ExampleModule implements FormModule {
   }
 
   @Override
-  public void canBeSubmitted(CurrentUser sess, Form.FormType type, Map<String, String> options) {
+  public void canBeSubmitted(CurrentUser sess, FormSpecification.FormType type, Map<String, String> options) {
 
   }
 
   @Override
-  public void afterFormItemsPrefilled(CurrentUser sess, Form.FormType type, List<FormItemData> prefilledFormItems) {
+  public void afterFormItemsPrefilled(CurrentUser sess, FormSpecification.FormType type, List<FormItemData> prefilledFormItems) {
 
   }
 
