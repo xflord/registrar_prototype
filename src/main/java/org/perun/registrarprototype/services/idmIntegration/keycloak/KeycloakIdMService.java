@@ -8,7 +8,6 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Set;
 import org.keycloak.OAuth2Constants;
 import org.keycloak.admin.client.CreatedResponseUtil;
@@ -27,6 +26,13 @@ import org.perun.registrarprototype.models.Identity;
 import org.perun.registrarprototype.models.ItemType;
 import org.perun.registrarprototype.models.Role;
 import org.perun.registrarprototype.services.idmIntegration.IdMService;
+import org.perun.registrarprototype.models.Destination;
+import org.perun.registrarprototype.models.FormSpecification;
+import org.perun.registrarprototype.models.ItemDefinition;
+import org.perun.registrarprototype.persistance.DestinationRepository;
+import org.perun.registrarprototype.persistance.FormRepository;
+import org.perun.registrarprototype.persistance.ItemDefinitionRepository;
+import org.perun.registrarprototype.persistance.SubmissionRepository;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Service;
@@ -48,11 +54,24 @@ public class KeycloakIdMService implements IdMService {
   private final Keycloak keycloak;
   private final String expirationAttribute = "group_expirations";
   private String realmName;
+  
+  private final ItemDefinitionRepository itemDefinitionRepository;
+  private final DestinationRepository destinationRepository;
+  private final FormRepository formRepository;
+  private final SubmissionRepository submissionRepository;
 
   public KeycloakIdMService(@Value("${idm.keycloak.realm}") String realmName,
             @Value("${idm.keycloak.url}") String url,
             @Value("${idm.keycloak.oauth.clientId}") String clientId,
-            @Value("${idm.keycloak.oauth.clientSecret}") String clientSecret) {
+            @Value("${idm.keycloak.oauth.clientSecret}") String clientSecret,
+            ItemDefinitionRepository itemDefinitionRepository,
+            DestinationRepository destinationRepository,
+            FormRepository formRepository,
+            SubmissionRepository submissionRepository) {
+    this.itemDefinitionRepository = itemDefinitionRepository;
+    this.destinationRepository = destinationRepository;
+    this.formRepository = formRepository;
+    this.submissionRepository = submissionRepository;
     this.keycloak = KeycloakBuilder.builder()
                         .grantType(OAuth2Constants.CLIENT_CREDENTIALS)
                         .serverUrl(url)
@@ -233,10 +252,25 @@ public class KeycloakIdMService implements IdMService {
     Map<String, List<String>> attributes = new HashMap<>();
 
     application.getFormItemData().stream()
-        .filter(item -> Objects.nonNull(item.getFormItem().getItemDefinition().getDestination()))
+        .filter(item -> {
+          Integer itemDefinitionId = item.getFormItem().getItemDefinitionId();
+          ItemDefinition itemDefinition = itemDefinitionRepository.findById(itemDefinitionId)
+              .orElseThrow(() -> new IllegalStateException("ItemDefinition not found for ID: " + itemDefinitionId));
+          Integer destinationId = itemDefinition.getDestinationId();
+          Destination destination = destinationId != null ? destinationRepository.findById(destinationId)
+              .orElseThrow(() -> new IllegalStateException("Destination not found for ID: " + destinationId)) : null;
+          return destination != null;
+        })
         // TODO some necessary filtering/processing might be done here, see `createCandidateFromApplicationData` in Perun
         .forEach(item -> {
-          String attributeName = item.getFormItem().getItemDefinition().getDestination().getUrn();
+          Integer itemDefinitionId = item.getFormItem().getItemDefinitionId();
+          ItemDefinition itemDefinition = itemDefinitionRepository.findById(itemDefinitionId)
+              .orElseThrow(() -> new IllegalStateException("ItemDefinition not found for ID: " + itemDefinitionId));
+          Integer destinationId = itemDefinition.getDestinationId();
+          Destination destination = destinationRepository.findById(destinationId)
+              .orElseThrow(() -> new IllegalStateException("Destination not found for ID: " + destinationId));
+              
+          String attributeName = destination.getUrn();
           UPAttribute attrDef = keycloak.realm(this.realmName).users().userProfile().getConfiguration().getAttribute(attributeName);
           if (attrDef == null) {
             throw new IllegalStateException("Attribute " + attributeName + " not found in underlying IdM");
@@ -253,8 +287,9 @@ public class KeycloakIdMService implements IdMService {
           }
         });
 
+    FormSpecification formSpec = formRepository.findById(application.getFormSpecificationId()).orElseThrow(() -> new RuntimeException("FormSpecification not found: " + application.getFormSpecificationId()));
     List<String> expires = new ArrayList<>();
-    expires.add(application.getFormSpecification().getGroupId() + ":" + Instant.now().plus(Duration.ofDays(30)).toEpochMilli());
+    expires.add(formSpec.getGroupId() + ":" + Instant.now().plus(Duration.ofDays(30)).toEpochMilli());
     attributes.put(expirationAttribute, expires);
 
     user.setAttributes(attributes);
@@ -270,7 +305,7 @@ public class KeycloakIdMService implements IdMService {
     }
 
     UserResource userResource = keycloak.realm(this.realmName).users().get(userId);
-    userResource.joinGroup(application.getFormSpecification().getGroupId());
+    userResource.joinGroup(formSpec.getGroupId());
 
 
     //    if (application.getSubmission().getSubmitterName() != null) {
@@ -303,20 +338,36 @@ public class KeycloakIdMService implements IdMService {
 
   @Override
   public String createMemberForUser(Application application) {
+    FormSpecification formSpec = formRepository.findById(application.getFormSpecificationId()).orElseThrow(() -> new RuntimeException("FormSpecification not found: " + application.getFormSpecificationId()));
 
     UserResource userResource = keycloak.realm(this.realmName).users().get(application.getIdmUserId());
     // join group
-    userResource.joinGroup(application.getFormSpecification().getGroupId());
+    userResource.joinGroup(formSpec.getGroupId());
     // TODO joining group can inherit attributes in keycloak, right? Do we join group and overwrite attributes, or the other way around?
     UserRepresentation user = userResource.toRepresentation();
     Map<String, List<String>> attributes = user.getAttributes();
 
     // once again, how to handle single/multivalued attributes
     application.getFormItemData().stream()
-        .filter(item -> Objects.nonNull(item.getFormItem().getItemDefinition().getDestination()))
+        .filter(item -> {
+          Integer itemDefinitionId = item.getFormItem().getItemDefinitionId();
+          ItemDefinition itemDefinition = itemDefinitionRepository.findById(itemDefinitionId)
+              .orElseThrow(() -> new IllegalStateException("ItemDefinition not found for ID: " + itemDefinitionId));
+          Integer destinationId = itemDefinition.getDestinationId();
+          Destination destination = destinationId != null ? destinationRepository.findById(destinationId)
+              .orElseThrow(() -> new IllegalStateException("Destination not found for ID: " + destinationId)) : null;
+          return destination != null;
+        })
         // TODO some necessary filtering/processing might be done here, see `createCandidateFromApplicationData` in Perun
         .forEach(item -> {
-          String attributeName = item.getFormItem().getItemDefinition().getDestination().getUrn();
+          Integer itemDefinitionId = item.getFormItem().getItemDefinitionId();
+          ItemDefinition itemDefinition = itemDefinitionRepository.findById(itemDefinitionId)
+              .orElseThrow(() -> new IllegalStateException("ItemDefinition not found for ID: " + itemDefinitionId));
+          Integer destinationId = itemDefinition.getDestinationId();
+          Destination destination = destinationRepository.findById(destinationId)
+              .orElseThrow(() -> new IllegalStateException("Destination not found for ID: " + destinationId));
+              
+          String attributeName = destination.getUrn();
           UPAttribute attrDef = keycloak.realm(this.realmName).users().userProfile().getConfiguration().getAttribute(attributeName);
           if (attrDef == null) {
             throw new IllegalStateException("Attribute " + attributeName + " not found in underlying IdM");
@@ -335,7 +386,7 @@ public class KeycloakIdMService implements IdMService {
 
     // TODO update the custom membership attribute (ideally a custom event listener inside Keycloak sets this)
     List<String> expires = user.getAttributes().getOrDefault(expirationAttribute, new ArrayList<>());
-    expires.add(application.getFormSpecification().getGroupId() + ":" + Instant.now().plus(Duration.ofDays(30)).toEpochMilli());
+    expires.add(formSpec.getGroupId() + ":" + Instant.now().plus(Duration.ofDays(30)).toEpochMilli());
     user.getAttributes().put(expirationAttribute, expires);
 
     user.setAttributes(attributes);
@@ -347,16 +398,32 @@ public class KeycloakIdMService implements IdMService {
 
   @Override
   public String extendMembership(Application application) {
+    FormSpecification formSpec = formRepository.findById(application.getFormSpecificationId()).orElseThrow(() -> new RuntimeException("FormSpecification not found: " + application.getFormSpecificationId()));
     UserResource userResource = keycloak.realm(this.realmName).users().get(application.getIdmUserId());
      UserRepresentation user = userResource.toRepresentation();
     Map<String, List<String>> attributes = user.getAttributes();
 
     // once again, how to handle single/multivalued attributes
     application.getFormItemData().stream()
-        .filter(item -> Objects.nonNull(item.getFormItem().getItemDefinition().getDestination()))
+        .filter(item -> {
+          Integer itemDefinitionId = item.getFormItem().getItemDefinitionId();
+          ItemDefinition itemDefinition = itemDefinitionRepository.findById(itemDefinitionId)
+              .orElseThrow(() -> new IllegalStateException("ItemDefinition not found for ID: " + itemDefinitionId));
+          Integer destinationId = itemDefinition.getDestinationId();
+          Destination destination = destinationId != null ? destinationRepository.findById(destinationId)
+              .orElseThrow(() -> new IllegalStateException("Destination not found for ID: " + destinationId)) : null;
+          return destination != null;
+        })
         // TODO some necessary filtering/processing might be done here, see `createCandidateFromApplicationData` in Perun
         .forEach(item -> {
-          String attributeName = item.getFormItem().getItemDefinition().getDestination().getUrn();
+          Integer itemDefinitionId = item.getFormItem().getItemDefinitionId();
+          ItemDefinition itemDefinition = itemDefinitionRepository.findById(itemDefinitionId)
+              .orElseThrow(() -> new IllegalStateException("ItemDefinition not found for ID: " + itemDefinitionId));
+          Integer destinationId = itemDefinition.getDestinationId();
+          Destination destination = destinationRepository.findById(destinationId)
+              .orElseThrow(() -> new IllegalStateException("Destination not found for ID: " + destinationId));
+              
+          String attributeName = destination.getUrn();
           UPAttribute attrDef = keycloak.realm(this.realmName).users().userProfile().getConfiguration().getAttribute(attributeName);
           if (attrDef == null) {
             throw new IllegalStateException("Attribute " + attributeName + " not found in underlying IdM");
@@ -374,7 +441,7 @@ public class KeycloakIdMService implements IdMService {
         });
 
     List<String> expires = user.getAttributes().getOrDefault(expirationAttribute, new ArrayList<>());
-    expires.add(application.getFormSpecification().getGroupId() + ":" + Instant.now().plus(Duration.ofDays(30)).toEpochMilli());
+    expires.add(formSpec.getGroupId() + ":" + Instant.now().plus(Duration.ofDays(30)).toEpochMilli());
     user.getAttributes().put(expirationAttribute, expires);
 
     user.setAttributes(attributes);
@@ -398,17 +465,29 @@ public class KeycloakIdMService implements IdMService {
     UserRepresentation user = new UserRepresentation();
     user.setEnabled(true);
 
+    // Load submission using submissionId
+    var submission = submissionRepository.findById(application.getSubmissionId())
+        .orElseThrow(() -> new IllegalStateException("Submission not found for application ID: " + application.getId()));
+
     // setting the `firstName`, `lastName` attributes, etc. is probably also ok?
-    user.setFirstName(application.getSubmission().getIdentityAttributes().get("given_name"));
-    user.setLastName(application.getSubmission().getIdentityAttributes().get("family_name"));
+    user.setFirstName(submission.getIdentityAttributes().get("given_name"));
+    user.setLastName(submission.getIdentityAttributes().get("family_name"));
     // TODO retrieve this from attributes as well
 
     application.getFormItemData().forEach(itemData -> {
-      if (itemData.getFormItem().getItemDefinition().getType().equals(ItemType.VERIFIED_EMAIL)) {
+      Integer itemDefinitionId = itemData.getFormItem().getItemDefinitionId();
+      ItemDefinition itemDefinition = itemDefinitionRepository.findById(itemDefinitionId)
+          .orElseThrow(() -> new IllegalStateException("ItemDefinition not found for ID: " + itemDefinitionId));
+          
+      if (itemDefinition.getType().equals(ItemType.VERIFIED_EMAIL)) {
         user.setEmail(itemData.getValue());
         user.setEmailVerified(true);
       }
-      if ("username".equals(itemData.getFormItem().getItemDefinition().getDestination())) {
+      
+      Integer destinationId = itemDefinition.getDestinationId();
+      Destination destination = destinationId != null ? destinationRepository.findById(destinationId)
+          .orElseThrow(() -> new IllegalStateException("Destination not found for ID: " + destinationId)) : null;
+      if (destination != null && "username".equals(destination.getUrn())) {
         // TODO could also use `login` item type (or define new), not sure if there are namespaces in Keycloak
         user.setUsername(itemData.getValue());
       }

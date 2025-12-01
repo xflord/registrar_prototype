@@ -3,12 +3,12 @@ package org.perun.registrarprototype.models;
 import java.util.List;
 
 public class ApplicationForm {
-  private FormSpecification formSpecification;
+  private Integer formSpecificationId;
   private List<FormItemData> formItemData;
   private FormSpecification.FormType type;
 
-  public ApplicationForm(FormSpecification formSpecification, List<FormItemData> prefilledData, FormSpecification.FormType type) {
-    this.formSpecification = formSpecification;
+  public ApplicationForm(Integer formSpecificationId, List<FormItemData> prefilledData, FormSpecification.FormType type) {
+    this.formSpecificationId = formSpecificationId;
     this.formItemData = prefilledData;
     this.type = type;
   }
@@ -21,12 +21,12 @@ public class ApplicationForm {
     return type;
   }
 
-  public FormSpecification getFormSpecification() {
-    return formSpecification;
+  public Integer getFormSpecificationId() {
+    return formSpecificationId;
   }
 
-  public void setFormSpecification(FormSpecification formSpecification) {
-    this.formSpecification = formSpecification;
+  public void setFormSpecificationId(Integer formSpecificationId) {
+    this.formSpecificationId = formSpecificationId;
   }
 
   public List<FormItemData> getFormItemData() {

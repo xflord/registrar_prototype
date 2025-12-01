@@ -30,9 +30,17 @@ public class IdmAttributePrefillStrategy implements PrefillStrategy {
 
   @Override
   public Optional<String> prefill(FormItem item, PrefillStrategyEntry entry) {
-    FormSpecification
-        formSpecification = formRepository.findById(item.getFormId())
-                                .orElseThrow(() -> new DataInconsistencyException("Form with ID " + item.getFormId() + " not found for form item " + item.getId()));
+    Integer formSpecificationId = item.getFormSpecificationId();
+    if (formSpecificationId == null) {
+      throw new DataInconsistencyException("Form item does not have a valid form specification ID");
+    }
+    
+    Optional<FormSpecification> formSpecificationOpt = formRepository.findById(formSpecificationId);
+    if (formSpecificationOpt.isEmpty()) {
+      throw new DataInconsistencyException("Form specification with ID " + formSpecificationId + " not found");
+    }
+    
+    FormSpecification formSpecification = formSpecificationOpt.get();
 
 
     String sourceAttr = entry.getSourceAttribute();

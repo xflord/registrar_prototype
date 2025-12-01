@@ -24,19 +24,21 @@ public class ApplicationServiceFailTests extends GenericRegistrarServiceTests {
 
     ItemDefinition itemDef1 = createItemDefinition(ItemType.VERIFIED_EMAIL, "email", true, "");
     FormItem item1 = createFormItem(formSpecification.getId(), itemDef1, 1);
-    item1 = formService.setFormItem(formSpecification.getId(), item1);
+    FormItem updatedItem1 = formService.setFormItem(formSpecification.getId(), item1);
     
     ItemDefinition itemDef2 = createItemDefinition(ItemType.TEXTFIELD, "item2", false, null);
     FormItem item2 = createFormItem(formSpecification.getId(), itemDef2, 2);
-    item2 = formService.setFormItem(formSpecification.getId(), item2);
+    FormItem updatedItem2 = formService.setFormItem(formSpecification.getId(), item2);
 
-    FormItemData formItemData1 = new FormItemData(item2, "test2");
+    FormItemData formItemData1 = new FormItemData(updatedItem2, "test2");
 
     InvalidApplicationDataException
         ex = assertThrows(InvalidApplicationDataException.class, () -> applicationService.applyForMembership(new ApplicationForm(
-        formSpecification, List.of(formItemData1), FormSpecification.FormType.INITIAL), submission, ""));
-    assert ex.getErrors().getFirst().itemId() == item1.getId();
-    assert ex.getErrors().getFirst().message().equals("Field " + item1.getItemDefinition().getLabel() + " is required");
+        formSpecification.getId(), List.of(formItemData1), FormSpecification.FormType.INITIAL), submission, ""));
+    assert ex.getErrors().getFirst().itemId() == updatedItem1.getId();
+    ItemDefinition itemDefinition = itemDefinitionRepository.findById(updatedItem1.getItemDefinitionId())
+        .orElseThrow(() -> new IllegalStateException("ItemDefinition not found for ID: " + updatedItem1.getItemDefinitionId()));
+    assert ex.getErrors().getFirst().message().equals("Field " + itemDefinition.getLabel() + " is required");
   }
 
   @Test
@@ -47,20 +49,27 @@ public class ApplicationServiceFailTests extends GenericRegistrarServiceTests {
 
     ItemDefinition itemDef1 = createItemDefinition(ItemType.VERIFIED_EMAIL, "email", true, "");
     FormItem item1 = createFormItem(formSpecification.getId(), itemDef1, 1);
-    item1 = formService.setFormItem(formSpecification.getId(), item1);
+    FormItem updatedItem1 = formService.setFormItem(formSpecification.getId(), item1);
     
     ItemDefinition itemDef2 = createItemDefinition(ItemType.VERIFIED_EMAIL, "email", false, "^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$");
     FormItem item2 = createFormItem(formSpecification.getId(), itemDef2, 2);
-    item2 = formService.setFormItem(formSpecification.getId(), item2);
+    FormItem updatedItem2 = formService.setFormItem(formSpecification.getId(), item2);
 
-    FormItemData formItemData = new FormItemData(item2, "incorrectTestgmail.com");
+    FormItemData formItemData = new FormItemData(updatedItem2, "incorrectTestgmail.com");
 
     InvalidApplicationDataException ex = assertThrows(InvalidApplicationDataException.class, () -> applicationService.applyForMembership(new ApplicationForm(
-        formSpecification, List.of(formItemData), FormSpecification.FormType.INITIAL), submission, ""));
-    assert ex.getErrors().getFirst().itemId() == item1.getId();
-    assert ex.getErrors().getFirst().message().equals("Field " + item1.getItemDefinition().getLabel() + " is required");
-    assert ex.getErrors().get(1).itemId() == item2.getId();
-    assert ex.getErrors().get(1).message().equals("Item " + item2.getItemDefinition().getLabel() + " must match constraint " + item2.getItemDefinition().getValidator());
+        formSpecification.getId(), List.of(formItemData), FormSpecification.FormType.INITIAL), submission, ""));
+    assert ex.getErrors().getFirst().itemId() == updatedItem1.getId();
+    
+    ItemDefinition itemDefinition1 = itemDefinitionRepository.findById(updatedItem1.getItemDefinitionId())
+        .orElseThrow(() -> new IllegalStateException("ItemDefinition not found for ID: " + updatedItem1.getItemDefinitionId()));
+    assert ex.getErrors().getFirst().message().equals("Field " + itemDefinition1.getLabel() + " is required");
+    
+    assert ex.getErrors().get(1).itemId() == updatedItem2.getId();
+    
+    ItemDefinition itemDefinition2 = itemDefinitionRepository.findById(updatedItem2.getItemDefinitionId())
+        .orElseThrow(() -> new IllegalStateException("ItemDefinition not found for ID: " + updatedItem2.getItemDefinitionId()));
+    assert ex.getErrors().get(1).message().equals("Item " + itemDefinition2.getLabel() + " must match constraint " + itemDefinition2.getValidator());
   }
 
   @Test
@@ -71,14 +80,17 @@ public class ApplicationServiceFailTests extends GenericRegistrarServiceTests {
 
     ItemDefinition itemDef1 = createItemDefinition(ItemType.VERIFIED_EMAIL, "email", false, "^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$");
     FormItem item1 = createFormItem(formSpecification.getId(), itemDef1, 1);
-    item1 = formService.setFormItem(formSpecification.getId(), item1);
+    FormItem updatedItem1 = formService.setFormItem(formSpecification.getId(), item1);
 
-    FormItemData formItemData1 = new FormItemData(item1, "incorrectTestgmail.com");
+    FormItemData formItemData1 = new FormItemData(updatedItem1, "incorrectTestgmail.com");
 
     InvalidApplicationDataException ex = assertThrows(InvalidApplicationDataException.class, () -> applicationService.applyForMembership(new ApplicationForm(
-        formSpecification, List.of(formItemData1), FormSpecification.FormType.INITIAL), submission, ""));
-    assert ex.getErrors().getFirst().itemId() == item1.getId();
-    assert ex.getErrors().getFirst().message().equals("Item " + item1.getItemDefinition().getLabel() + " must match constraint " + item1.getItemDefinition().getValidator());
+        formSpecification.getId(), List.of(formItemData1), FormSpecification.FormType.INITIAL), submission, ""));
+    assert ex.getErrors().getFirst().itemId() == updatedItem1.getId();
+    
+    ItemDefinition itemDefinition1 = itemDefinitionRepository.findById(updatedItem1.getItemDefinitionId())
+        .orElseThrow(() -> new IllegalStateException("ItemDefinition not found for ID: " + updatedItem1.getItemDefinitionId()));
+    assert ex.getErrors().getFirst().message().equals("Item " + itemDefinition1.getLabel() + " must match constraint " + itemDefinition1.getValidator());
   }
 //
 //  @Test

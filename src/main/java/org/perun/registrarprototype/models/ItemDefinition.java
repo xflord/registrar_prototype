@@ -9,15 +9,15 @@ import java.util.Set;
 
 public class ItemDefinition {
   private int id;
-  private FormSpecification formSpecification; // TODO duplicit in FormItem, decide on where to keep
+  private Integer formSpecificationId; // ID of the FormSpecification this ItemDefinition belongs to
 
   private String displayName;
   private ItemType type;
   private Boolean updatable;
   private Boolean required;
   private String validator; // todo replace with validator abstraction
-  private List<PrefillStrategyEntry> prefillStrategies;
-  private Destination destination;
+  private List<Integer> prefillStrategyIds; // IDs of PrefillStrategyEntry objects
+  private Integer destinationId; // ID of the Destination this ItemDefinition is associated with
   private Set<FormSpecification.FormType> formTypes = Set.of(FormSpecification.FormType.INITIAL, FormSpecification.FormType.EXTENSION);
   // potentially extract presentation fields into another class
   private Map<Locale, ItemTexts> texts = new HashMap<>();
@@ -30,37 +30,34 @@ public class ItemDefinition {
   public ItemDefinition() {}
 
   public ItemDefinition(ItemDefinition itemDefinition) {
-    this(itemDefinition.getId(), itemDefinition.getFormSpecification(), itemDefinition.getDisplayName(),
+    this(itemDefinition.getId(), itemDefinition.getFormSpecificationId(), itemDefinition.getDisplayName(),
         itemDefinition.getType(), itemDefinition.getUpdatable(), itemDefinition.getRequired(),
-        itemDefinition.getValidator(), itemDefinition.getPrefillStrategies(),
-        itemDefinition.getDestination(), itemDefinition.getFormTypes(),
+        itemDefinition.getValidator(), itemDefinition.getPrefillStrategyIds(),
+        itemDefinition.getDestinationId(), itemDefinition.getFormTypes(),
         itemDefinition.getTexts(), itemDefinition.getHidden(), itemDefinition.getDisabled(),
         itemDefinition.getDefaultValue(), itemDefinition.isGlobal());
   }
 
-  public ItemDefinition(int id, FormSpecification formSpecification, String displayName, ItemType type, Boolean updatable, Boolean required,
+  public ItemDefinition(int id, Integer formSpecificationId, String displayName, ItemType type, Boolean updatable, Boolean required,
                         String validator,
-                        List<PrefillStrategyEntry> prefillStrategies, Destination destination,
+                        List<Integer> prefillStrategyIds, Integer destinationId,
                         Set<FormSpecification.FormType> formTypes, Map<Locale, ItemTexts> texts, Condition hidden,
                         Condition disabled, String defaultValue, boolean global) {
     this.id = id;
-    this.formSpecification = formSpecification;
+    this.formSpecificationId = formSpecificationId;
     this.displayName = displayName;
     this.type = type;
     this.updatable = updatable;
     this.required = required;
     this.validator = validator;
-    this.prefillStrategies = prefillStrategies;
-    this.destination = destination;
+    this.prefillStrategyIds = prefillStrategyIds;
+    this.destinationId = destinationId;
     this.formTypes = formTypes;
     this.texts = texts;
     this.hidden = hidden;
     this.disabled = disabled;
     this.defaultValue = defaultValue;
     this.global = global;
-
-    this.performTypeSpecificChecks();
-    this.checkFormSpecificationConsistency();
   }
 
   public String getDisplayName() {
@@ -103,20 +100,20 @@ public class ItemDefinition {
     this.validator = validator;
   }
 
-  public List<PrefillStrategyEntry> getPrefillStrategies() {
-    return prefillStrategies;
+  public List<Integer> getPrefillStrategyIds() {
+    return prefillStrategyIds;
   }
 
-  public void setPrefillStrategies(List<PrefillStrategyEntry> prefillStrategies) {
-    this.prefillStrategies = prefillStrategies;
+  public void setPrefillStrategyIds(List<Integer> prefillStrategyIds) {
+    this.prefillStrategyIds = prefillStrategyIds;
   }
 
-  public Destination getDestination() {
-    return destination;
+  public Integer getDestinationId() {
+    return destinationId;
   }
 
-  public void setDestination(Destination destination) {
-    this.destination = destination;
+  public void setDestinationId(Integer destinationId) {
+    this.destinationId = destinationId;
   }
 
   public Set<FormSpecification.FormType> getFormTypes() {
@@ -196,12 +193,12 @@ public class ItemDefinition {
     this.required = required;
   }
 
-  public FormSpecification getFormSpecification() {
-    return formSpecification;
+  public Integer getFormSpecificationId() {
+    return formSpecificationId;
   }
 
-  public void setFormSpecification(FormSpecification formSpecification) {
-    this.formSpecification = formSpecification;
+  public void setFormSpecificationId(Integer formSpecificationId) {
+    this.formSpecificationId = formSpecificationId;
   }
 
   @Override
@@ -211,13 +208,13 @@ public class ItemDefinition {
     }
     ItemDefinition that = (ItemDefinition) o;
     return getId() == that.getId() && isGlobal() == that.isGlobal() &&
-               Objects.equals(getFormSpecification(), that.getFormSpecification()) &&
+               Objects.equals(getFormSpecificationId(), that.getFormSpecificationId()) &&
                Objects.equals(getDisplayName(), that.getDisplayName()) && getType() == that.getType() &&
                Objects.equals(getUpdatable(), that.getUpdatable()) &&
                Objects.equals(getRequired(), that.getRequired()) &&
                Objects.equals(getValidator(), that.getValidator()) &&
-               Objects.equals(getPrefillStrategies(), that.getPrefillStrategies()) &&
-               Objects.equals(getDestination(), that.getDestination()) &&
+               Objects.equals(getPrefillStrategyIds(), that.getPrefillStrategyIds()) &&
+               Objects.equals(getDestinationId(), that.getDestinationId()) &&
                Objects.equals(getFormTypes(), that.getFormTypes()) &&
                Objects.equals(getTexts(), that.getTexts()) && getHidden() == that.getHidden() &&
                getDisabled() == that.getDisabled() && Objects.equals(getDefaultValue(), that.getDefaultValue());
@@ -225,21 +222,23 @@ public class ItemDefinition {
 
   @Override
   public int hashCode() {
-    return Objects.hash(getId(), getFormSpecification(), getDisplayName(), getType(), getUpdatable(), getRequired(),
-        getValidator(), getPrefillStrategies(), getDestination(), getFormTypes(), getTexts(), getHidden(),
+    return Objects.hash(getId(), getFormSpecificationId(), getDisplayName(), getType(), getUpdatable(), getRequired(),
+        getValidator(), getPrefillStrategyIds(), getDestinationId(), getFormTypes(), getTexts(), getHidden(),
         getDisabled(), getDefaultValue(), isGlobal());
   }
 
   @Override
   public String toString() {
     return "ItemDefinition{" +
-               "displayName='" + displayName + '\'' +
+               "id=" + id +
+               ", formSpecificationId=" + formSpecificationId +
+               ", displayName='" + displayName + '\'' +
                ", type=" + type +
                ", updatable=" + updatable +
                ", required=" + required +
                ", validator='" + validator + '\'' +
-               ", prefillStrategies=" + prefillStrategies +
-               ", destinationAttributeUrn='" + destination + '\'' +
+               ", prefillStrategyIds=" + prefillStrategyIds +
+               ", destinationId=" + destinationId +
                ", formTypes=" + formTypes +
                ", texts=" + texts +
                ", hidden=" + hidden +
@@ -251,74 +250,5 @@ public class ItemDefinition {
 
   public enum Condition {
     NEVER, ALWAYS, IF_PREFILLED, IF_EMPTY
-  }
-
-  private void performTypeSpecificChecks() {
-    if (this.isUpdatable() != null && this.isUpdatable() && !this.getType().isUpdatable()) {
-      throw new IllegalArgumentException("Form item " + this + " of non-updatable type cannot be updatable");
-    }
-
-    if (this.getType().isLayoutItem()) {
-      if (this.isRequired()) {
-        throw new IllegalArgumentException("Layout form item " + this + " cannot be required");
-      }
-      if (this.getDefaultValue() != null) {
-        throw new IllegalArgumentException("Layout form item " + this + " cannot have a default value");
-      }
-      if (this.getDestination() != null) {
-        throw new IllegalArgumentException("Layout form item " + this + " cannot have a destination attribute");
-      }
-      if (this.getPrefillStrategies() != null && !this.getPrefillStrategies().isEmpty()) {
-        throw new IllegalArgumentException("Layout form item " + this + " cannot have a prefill strategy");
-      }
-    }
-
-
-    if (this.getType().equals(ItemType.PASSWORD)) {
-      // TODO a form of enforcing certain rules (label format, allowed destination attributes, etc.) via yaml config?
-      if (this.getDestination() == null) {
-        throw new IllegalArgumentException("Password item must have a destination IDM attribute");
-      }
-    }
-
-    if (this.getType().isHtmlItem()) {
-      // TODO validate/sanitize HTML content
-    }
-    // TODO check validators (e.g. valid regexes, etc.)
-  }
-
-  private void checkFormSpecificationConsistency() {
-    if (isGlobal()) {
-      if (getPrefillStrategies() != null) {
-        for (PrefillStrategyEntry prefillStrategyEntry : getPrefillStrategies()) {
-          if (!prefillStrategyEntry.isGlobal()) {
-            throw new IllegalArgumentException("Assigning non-global prefill strategy to global item definition");
-          }
-        }
-      }
-      if (getDestination() != null && !getDestination().isGlobal()) {
-        throw new IllegalArgumentException("Assigning non-global destination to global item definition");
-      }
-    } else {
-      if (getFormSpecification() == null) {
-        throw new IllegalArgumentException("Missing form specification for non-global item definition");
-      }
-      if (getPrefillStrategies() != null) {
-        for (PrefillStrategyEntry prefillStrategyEntry : getPrefillStrategies()) {
-          if (!prefillStrategyEntry.isGlobal()) {
-            if (prefillStrategyEntry.getFormSpecification() == null) {
-              throw new IllegalStateException("Missing form specification for non-global prefill strategy");
-            }
-            if (!prefillStrategyEntry.getFormSpecification().equals(getFormSpecification())) {
-              throw new IllegalArgumentException("Form specification of prefill strategy: " + prefillStrategyEntry + " does not match that of the item definition");
-            }
-          }
-        }
-      }
-      if (getDestination() != null && !getDestination().isGlobal() &&
-              !Objects.equals(getFormSpecification(), getDestination().getFormSpecification())) {
-        throw new IllegalArgumentException("Destination: " + getDestination() + " is not defined for the form specification of this item definition");
-      }
-    }
   }
 }

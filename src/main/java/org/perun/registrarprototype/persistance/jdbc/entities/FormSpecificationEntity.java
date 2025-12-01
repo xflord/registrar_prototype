@@ -1,20 +1,31 @@
 package org.perun.registrarprototype.persistance.jdbc.entities;
 
+import java.util.List;
 import org.springframework.data.annotation.Id;
+import org.springframework.data.relational.core.mapping.Column;
+import org.springframework.data.relational.core.mapping.MappedCollection;
 import org.springframework.data.relational.core.mapping.Table;
 
 @Table("form_specification")
 public class FormSpecificationEntity {
   @Id
+  @Column("id")
   private Integer id;
 
+  @Column("vo_id")
   private String voId;
 
+  @Column("group_id")
   private String groupId;
 
+  @Column("auto_approve")
   private Boolean autoApprove;
 
+  @Column("auto_approve_extension")
   private Boolean autoApproveExtension;
+
+  @MappedCollection(idColumn = "form_id", keyColumn = "ord_num")
+  private List<FormItemEntity> formItemEntities;
 
   public FormSpecificationEntity() {
   }
@@ -57,5 +68,14 @@ public class FormSpecificationEntity {
 
   public void setAutoApproveExtension(Boolean autoApproveExtension) {
     this.autoApproveExtension = autoApproveExtension;
+  }
+
+  public List<FormItemEntity> getFormItemEntities() {
+    return formItemEntities;
+  }
+
+  public void setFormItemEntities(
+      List<FormItemEntity> formItemEntities) {
+    this.formItemEntities = formItemEntities;
   }
 }

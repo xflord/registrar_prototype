@@ -1,30 +1,39 @@
 package org.perun.registrarprototype.persistance.jdbc.entities;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import org.perun.registrarprototype.models.FormTransition;
 import org.perun.registrarprototype.models.Requirement;
 import org.springframework.data.annotation.Id;
+import org.springframework.data.relational.core.mapping.Column;
 import org.springframework.data.relational.core.mapping.MappedCollection;
 import org.springframework.data.relational.core.mapping.Table;
 
 @Table("form_transition")
 public class FormTransitionEntity {
   @Id
+  @Column("id")
   private Integer id;
 
+  @Column("source_form_specification_id")
   private Integer sourceFormSpecificationId;
 
+  @Column("target_form_specification_id")
   private Integer targetFormSpecificationId;
 
+  @Column("position")
   private Integer position;
 
+  @Column("target_form_state")
   private String targetFormState;
 
+  @Column("transition_type")
   private String transitionType;
 
   @MappedCollection(idColumn = "form_transition_id")
-  private List<SourceStateRef> sourceStates = new ArrayList<>();
+  private Set<SourceStateRef> sourceStates;
 
   public FormTransitionEntity() {
   }
@@ -77,12 +86,12 @@ public class FormTransitionEntity {
     this.transitionType = transitionType != null ? transitionType.name() : null;
   }
 
-  public List<SourceStateRef> getSourceStates() {
+  public Set<SourceStateRef> getSourceStates() {
     return sourceStates;
   }
 
   public void setSourceStates(List<SourceStateRef> sourceStates) {
-    this.sourceStates = sourceStates != null ? sourceStates : new ArrayList<>();
+    this.sourceStates = sourceStates != null ? new HashSet<>(sourceStates) : new HashSet<>();
   }
 }
 

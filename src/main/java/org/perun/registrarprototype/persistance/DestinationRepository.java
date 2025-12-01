@@ -1,10 +1,12 @@
 package org.perun.registrarprototype.persistance;
 
 import java.util.List;
+import java.util.Optional;
 import org.perun.registrarprototype.models.Destination;
 import org.perun.registrarprototype.models.FormSpecification;
 
 public interface DestinationRepository {
+  Optional<Destination> findById(int id);
   List<Destination> getDestinationsForForm(FormSpecification formSpecification);
   List<Destination> getGlobalDestinations();
   Destination createDestination(Destination destination);

@@ -3,18 +3,26 @@ package org.perun.registrarprototype.persistance.jdbc.entities;
 import java.util.ArrayList;
 import java.util.List;
 import org.springframework.data.annotation.Id;
+import org.springframework.data.relational.core.mapping.Column;
 import org.springframework.data.relational.core.mapping.MappedCollection;
 import org.springframework.data.relational.core.mapping.Table;
 
 @Table("assigned_form_module")
 public class AssignedFormModuleEntity {
   @Id
+  @Column("id")
   private Integer id;
 
+  @Column("form_id")
   private Integer formId;
 
+  @Column("module_name")
   private String moduleName;
+  
+  @Column("script_module_id")
+  private Integer scriptModuleId;
 
+  @Column("position")
   private Integer position;
 
   @MappedCollection(idColumn = "assigned_form_module_id")
@@ -46,6 +54,14 @@ public class AssignedFormModuleEntity {
   public void setModuleName(String moduleName) {
     this.moduleName = moduleName;
   }
+  
+  public Integer getScriptModuleId() {
+    return scriptModuleId;
+  }
+  
+  public void setScriptModuleId(Integer scriptModuleId) {
+    this.scriptModuleId = scriptModuleId;
+  }
 
   public Integer getPosition() {
     return position;
@@ -61,6 +77,20 @@ public class AssignedFormModuleEntity {
 
   public void setOptions(List<FormModuleOption> options) {
     this.options = options != null ? options : new ArrayList<>();
+  }
+  
+  /**
+   * Check if this is a hardcoded module (referenced by name)
+   */
+  public boolean isHardcodedModule() {
+    return moduleName != null && scriptModuleId == null;
+  }
+  
+  /**
+   * Check if this is a script module (referenced by script module ID)
+   */
+  public boolean isScriptModule() {
+    return moduleName == null && scriptModuleId != null;
   }
 }
 

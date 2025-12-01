@@ -49,11 +49,11 @@ class ApplicationServiceTests extends GenericRegistrarServiceTests {
 
     ItemDefinition itemDef1 = createItemDefinition(ItemType.VERIFIED_EMAIL, "email", false, "^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$");
     FormItem item1 = createFormItem(formSpecification.getId(), itemDef1, 1);
-    item1 = formService.setFormItem(formSpecification.getId(), item1);
+    FormItem updatedItem1 = formService.setFormItem(formSpecification.getId(), item1);
 
-    FormItemData formItemData1 = new FormItemData(item1, "test@gmail.com");
+    FormItemData formItemData1 = new FormItemData(updatedItem1, "test@gmail.com");
 
-    Application app = applicationService.applyForMembership(new ApplicationForm(formSpecification, List.of(formItemData1), FormSpecification.FormType.INITIAL), submission, "");
+    Application app = applicationService.applyForMembership(new ApplicationForm(formSpecification.getId(), List.of(formItemData1), FormSpecification.FormType.INITIAL), submission, "");
 
     Application createdApp = applicationRepository.findById(app.getId()).orElse(null);
 
@@ -69,11 +69,11 @@ class ApplicationServiceTests extends GenericRegistrarServiceTests {
 
     ItemDefinition itemDef1 = createItemDefinition(ItemType.VERIFIED_EMAIL, "email", false, "^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$");
     FormItem item1 = createFormItem(formSpecification.getId(), itemDef1, 1);
-    item1 = formService.setFormItem(formSpecification.getId(), item1);
+    FormItem updatedItem1 = formService.setFormItem(formSpecification.getId(), item1);
 
-    FormItemData formItemData1 = new FormItemData(item1, "test@gmail.com");
+    FormItemData formItemData1 = new FormItemData(updatedItem1, "test@gmail.com");
 
-    Application app = applicationService.applyForMembership(new ApplicationForm(formSpecification, new ArrayList<>(List.of(formItemData1)), FormSpecification.FormType.INITIAL), submission, "");
+    Application app = applicationService.applyForMembership(new ApplicationForm(formSpecification.getId(), new ArrayList<>(List.of(formItemData1)), FormSpecification.FormType.INITIAL), submission, "");
 
     Application createdApp = applicationRepository.findById(app.getId()).orElse(null);
 
@@ -95,13 +95,13 @@ class ApplicationServiceTests extends GenericRegistrarServiceTests {
 
     ItemDefinition itemDef1 = createItemDefinition(ItemType.VERIFIED_EMAIL, "email", false, "^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$");
     FormItem item1 = createFormItem(formSpecification.getId(), itemDef1, 1);
-    item1 = formService.setFormItem(formSpecification.getId(), item1);
+    FormItem updatedItem1 = formService.setFormItem(formSpecification.getId(), item1);
 
     List<FormItemData> data = applicationService.loadForm(sessionProvider.getCurrentSession(), formSpecification, FormSpecification.FormType.INITIAL);
 
     assert data != null;
     assert data.size() == 1;
-    assert data.getFirst().getFormItem().getId() == item1.getId();
+    assert data.getFirst().getFormItem().getId() == updatedItem1.getId();
   }
 
   @Test
@@ -112,7 +112,7 @@ class ApplicationServiceTests extends GenericRegistrarServiceTests {
 
     ItemDefinition itemDef1 = createItemDefinition(ItemType.TEXTFIELD, "item1", false, null);
     FormItem item1 = createFormItem(formSpecification.getId(), itemDef1, 1);
-    item1 = formService.setFormItem(formSpecification.getId(), item1);
+    FormItem updatedItem1 = formService.setFormItem(formSpecification.getId(), item1);
 
     AssignedFormModule module = new AssignedFormModule("testModuleBeforeSubmission", new HashMap<>());
 
@@ -122,7 +122,7 @@ class ApplicationServiceTests extends GenericRegistrarServiceTests {
 
     assert data != null;
     assert data.size() == 1;
-    assert data.getFirst().getFormItem().getId() == item1.getId();
+    assert data.getFirst().getFormItem().getId() == updatedItem1.getId();
     assert data.getFirst().getPrefilledValue().equals("testModuleValue");
   }
 
@@ -142,22 +142,25 @@ class ApplicationServiceTests extends GenericRegistrarServiceTests {
     itemDef1.setDisabled(ItemDefinition.Condition.NEVER);
     itemDef1.setGlobal(false);
     
-    // Add prefill strategy to ItemDefinition
+    // Create and save prefill strategy first to get its ID
     PrefillStrategyEntry prefillStrategy = new PrefillStrategyEntry();
     prefillStrategy.setType(PrefillStrategyEntry.PrefillStrategyType.IDENTITY_ATTRIBUTE);
     prefillStrategy.setSourceAttribute("testAttribute");
     prefillStrategy.setOptions(new HashMap<>());
-    itemDef1.setPrefillStrategies(List.of(prefillStrategy));
+    prefillStrategy = formService.createPrefillStrategy(prefillStrategy);
+    
+    // Set the prefill strategy ID in the ItemDefinition
+    itemDef1.setPrefillStrategyIds(List.of(prefillStrategy.getId()));
     itemDef1 = formService.createItemDefinition(itemDef1);
     
     FormItem item1 = createFormItem(formSpecification.getId(), itemDef1, 1);
-    item1 = formService.setFormItem(formSpecification.getId(), item1);
+    FormItem updatedItem1 = formService.setFormItem(formSpecification.getId(), item1);
 
     List<FormItemData> data = applicationService.loadForm(sessionProvider.getCurrentSession(), formSpecification, FormSpecification.FormType.INITIAL);
 
     assert data != null;
     assert data.size() == 1;
-    assert data.getFirst().getFormItem().getId() == item1.getId();
+    assert data.getFirst().getFormItem().getId() == updatedItem1.getId();
     assert data.getFirst().getPrefilledValue().equals("testValue");
   }
 }

@@ -7,8 +7,10 @@ import java.util.Optional;
 import org.perun.registrarprototype.models.FormSpecification;
 import org.perun.registrarprototype.models.PrefillStrategyEntry;
 import org.perun.registrarprototype.persistance.PrefillStrategyEntryRepository;
+import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
 
+@Profile("!jdbc")
 @Component
 public class PrefillStrategyEntryRepositoryDummy implements PrefillStrategyEntryRepository {
   private static final List<PrefillStrategyEntry> prefillStrategyEntries = new ArrayList<>();
@@ -35,6 +37,13 @@ public class PrefillStrategyEntryRepositoryDummy implements PrefillStrategyEntry
   }
 
   @Override
+  public List<PrefillStrategyEntry> findAllById(List<Integer> ids) {
+    return prefillStrategyEntries.stream()
+               .filter(entry -> ids.contains(entry.getId()))
+               .toList();
+  }
+
+  @Override
   public List<PrefillStrategyEntry> findAllGlobal() {
     return prefillStrategyEntries.stream()
                .filter(PrefillStrategyEntry::isGlobal)
@@ -44,7 +53,7 @@ public class PrefillStrategyEntryRepositoryDummy implements PrefillStrategyEntry
   @Override
   public List<PrefillStrategyEntry> findByFormSpecification(FormSpecification formSpecification) {
     return prefillStrategyEntries.stream()
-               .filter(entry -> formSpecification.equals(entry.getFormSpecification()))
+               .filter(entry -> formSpecification.getId() == entry.getFormSpecificationId())
                .toList();
   }
 
@@ -52,7 +61,7 @@ public class PrefillStrategyEntryRepositoryDummy implements PrefillStrategyEntry
   public Optional<PrefillStrategyEntry> exists(PrefillStrategyEntry entry) {
     return prefillStrategyEntries.stream().filter(existing ->
                                                        existing.isGlobal() == entry.isGlobal() &&
-                                                       Objects.equals(existing.getFormSpecification(), entry.getFormSpecification()) &&
+                                                       Objects.equals(existing.getFormSpecificationId(), entry.getFormSpecificationId()) &&
                                                        existing.getType().equals(entry.getType()) &&
                                                        Objects.equals(existing.getSourceAttribute(), entry.getSourceAttribute()) &&
                                                        existing.getOptions().equals(entry.getOptions()))

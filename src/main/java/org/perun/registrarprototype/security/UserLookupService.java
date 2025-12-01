@@ -29,6 +29,7 @@ public class UserLookupService {
   }
   // ideally eliminate this by including all in jwt
   @Cacheable(value = "userInfo", key = "#jwt.tokenValue")
+  @SuppressWarnings("unchecked")
   public Map<String, Object> getUserInfo(Jwt jwt) {
     try {
       String response = webClient.get()

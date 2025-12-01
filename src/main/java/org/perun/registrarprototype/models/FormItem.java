@@ -1,12 +1,5 @@
 package org.perun.registrarprototype.models;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Locale;
-import java.util.Map;
-import java.util.Set;
-
 /**
  * Represents a single form item.
  * To provide a more structured (and customizable) way of storing form items, compared to old registrar, this
@@ -27,39 +20,45 @@ import java.util.Set;
  */
 public class FormItem {
   private int id;
-  private int formId; // TODO this probably does not belong to the domain
+  private Integer formSpecificationId; // ID of the FormSpecification this FormItem belongs to
   private String shortName;
   private Integer parentId; // null for root, ID of parent element in the form, allows for hierarchical tree structure
   private int ordNum; // TODO rework domain to work without this (position in list should be enough)
   private Integer hiddenDependencyItemId;
   private Integer disabledDependencyItemId;
-  private ItemDefinition itemDefinition;
+  private Integer itemDefinitionId; // TODO most likely rework this into direct reference to save number of repository calls
 
 
   public FormItem() {
   }
 
   public FormItem(FormItem formItem) {
+    if (formItem.itemDefinitionId == null) {
+      throw new IllegalArgumentException("FormItem itemDefinitionId cannot be null");
+    }
     this.id = formItem.id;
-    this.formId = formItem.formId;
+    this.formSpecificationId = formItem.formSpecificationId;
     this.shortName = formItem.shortName;
     this.parentId = formItem.parentId;
     this.ordNum = formItem.ordNum;
     this.hiddenDependencyItemId = formItem.hiddenDependencyItemId;
     this.disabledDependencyItemId = formItem.disabledDependencyItemId;
-    this.itemDefinition = formItem.itemDefinition;
+    this.itemDefinitionId = formItem.itemDefinitionId;
   }
 
-  public FormItem(int id, int formId, String shortName, Integer parentId, int ordNum, Integer hiddenDependencyItemId,
-                  Integer disabledDependencyItemId, ItemDefinition itemDefinition) {
+  public FormItem(int id, Integer formSpecificationId, String shortName, Integer parentId, int ordNum, Integer hiddenDependencyItemId,
+                  Integer disabledDependencyItemId, Integer itemDefinitionId) {
+    if (itemDefinitionId == null) {
+      throw new IllegalArgumentException("FormItem itemDefinitionId cannot be null");
+    }
     this.id = id;
-    this.formId = formId;
+    this.formSpecificationId = formSpecificationId;
     this.shortName = shortName;
     this.parentId = parentId;
     this.ordNum = ordNum;
     this.hiddenDependencyItemId = hiddenDependencyItemId;
     this.disabledDependencyItemId = disabledDependencyItemId;
-    this.itemDefinition = itemDefinition;
+    this.itemDefinitionId = itemDefinitionId;
   }
 
   public int getId() {
@@ -70,12 +69,12 @@ public class FormItem {
     this.id = id;
   }
 
-  public int getFormId() {
-    return formId;
+  public Integer getFormSpecificationId() {
+    return formSpecificationId;
   }
 
-  public void setFormId(int formId) {
-    this.formId = formId;
+  public void setFormSpecificationId(Integer formSpecificationId) {
+    this.formSpecificationId = formSpecificationId;
   }
 
   public String getShortName() {
@@ -118,25 +117,28 @@ public class FormItem {
     this.disabledDependencyItemId = disabledDependencyItemId;
   }
 
-  public ItemDefinition getItemDefinition() {
-    return itemDefinition;
+  public Integer getItemDefinitionId() {
+    return itemDefinitionId;
   }
 
-  public void setItemDefinition(ItemDefinition itemDefinition) {
-    this.itemDefinition = itemDefinition;
+  public void setItemDefinitionId(Integer itemDefinitionId) {
+    if (itemDefinitionId == null) {
+      throw new IllegalArgumentException("FormItem itemDefinitionId cannot be null");
+    }
+    this.itemDefinitionId = itemDefinitionId;
   }
 
   @Override
   public String toString() {
     return "FormItem{" +
                "id=" + id +
-               ", formId=" + formId +
+               ", formSpecificationId=" + formSpecificationId +
                ", shortName='" + shortName + '\'' +
                ", parentId=" + parentId +
                ", ordNum=" + ordNum +
                ", hiddenDependencyItemId=" + hiddenDependencyItemId +
                ", disabledDependencyItemId=" + disabledDependencyItemId +
-               ", itemDefinition=" + itemDefinition +
+               ", itemDefinitionId=" + itemDefinitionId +
                '}';
   }
 }

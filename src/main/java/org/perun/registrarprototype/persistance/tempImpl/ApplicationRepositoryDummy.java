@@ -3,20 +3,17 @@ package org.perun.registrarprototype.persistance.tempImpl;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
-import org.perun.registrarprototype.exceptions.DataInconsistencyException;
 import org.perun.registrarprototype.models.Application;
 import org.perun.registrarprototype.persistance.ApplicationRepository;
-import org.perun.registrarprototype.persistance.FormRepository;
-import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
 
 // in-memory dummy implementation of persistent storage
+@Profile("!jdbc")
 @Component
 public class ApplicationRepositoryDummy implements ApplicationRepository {
   private static List<Application> applications = new ArrayList<>();
   private static int currId = 1;
-  @Autowired
-  private FormRepository formRepository;
 
   @Override
   public Application save(Application application) {
@@ -47,19 +44,14 @@ public class ApplicationRepositoryDummy implements ApplicationRepository {
 
   @Override
   public Optional<Application> findById(int id) {
-    Optional<Application> optionalApplication = applications.stream()
-                                                    .filter(application -> application.getId() == id)
-                                                    .findFirst();
-    optionalApplication.ifPresent(
-        application -> application.setFormSpecification(formRepository.findById(application.getFormSpecification().getId())
-                                               .orElseThrow(() -> new DataInconsistencyException("Application: " + id +
-                                                                                                     " has no form."))));
-    return optionalApplication;
+    return applications.stream()
+        .filter(application -> application.getId() == id)
+        .findFirst();
   }
 
   @Override
   public List<Application> findByFormId(int formId) {
-    return applications.stream().filter(application -> application.getFormSpecification().getId() == formId).toList();
+    return applications.stream().filter(application -> application.getFormSpecificationId() == formId).toList();
   }
 
   @Override
@@ -70,6 +62,13 @@ public class ApplicationRepositoryDummy implements ApplicationRepository {
   @Override
   public int getNextId() {
     return currId++;
+  }
+
+  @Override
+  public List<Application> findOpenApplicationsByItemDefinitionId(Integer itemDefinitionId) {
+    // This is a dummy implementation - in a real scenario, you would check the form items
+    // associated with each application to see if they use the specified item definition
+    return new ArrayList<>();
   }
 
   // for testing purposes

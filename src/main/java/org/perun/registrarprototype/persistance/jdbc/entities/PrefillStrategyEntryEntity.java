@@ -4,26 +4,32 @@ import java.util.ArrayList;
 import java.util.List;
 import org.perun.registrarprototype.models.PrefillStrategyEntry;
 import org.springframework.data.annotation.Id;
+import org.springframework.data.relational.core.mapping.Column;
 import org.springframework.data.relational.core.mapping.MappedCollection;
 import org.springframework.data.relational.core.mapping.Table;
 
 @Table("prefill_strategy_entry")
-public class PrefilStrategyEntryEntity {
+public class PrefillStrategyEntryEntity {
   @Id
+  @Column("id")
   private Integer id;
 
+  @Column("form_specification_id")
   private Integer formSpecificationId;
 
+  @Column("type")
   private String type;
 
+  @Column("source_attribute")
   private String sourceAttribute;
 
+  @Column("global")
   private Boolean global;
 
-  @MappedCollection(idColumn = "prefill_strategy_entry_id")
+  @MappedCollection(idColumn = "prefill_strategy_entry_id", keyColumn = "id")
   private List<PrefillStrategyOption> options = new ArrayList<>();
 
-  public PrefilStrategyEntryEntity() {
+  public PrefillStrategyEntryEntity() {
   }
 
   public Integer getId() {

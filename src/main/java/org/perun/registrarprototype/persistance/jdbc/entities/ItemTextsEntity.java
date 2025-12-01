@@ -1,21 +1,28 @@
 package org.perun.registrarprototype.persistance.jdbc.entities;
 
 import org.springframework.data.annotation.Id;
+import org.springframework.data.relational.core.mapping.Column;
 import org.springframework.data.relational.core.mapping.Table;
 
 @Table("item_texts")
 public class ItemTextsEntity {
   @Id
+  @Column("id")
   private Integer id;
 
+  @Column("item_definition_id")
   private Integer itemDefinitionId;
 
+  @Column("locale")
   private String locale;
 
+  @Column("label")
   private String label;
 
+  @Column("help")
   private String help;
 
+  @Column("error")
   private String error;
 
   public ItemTextsEntity() {

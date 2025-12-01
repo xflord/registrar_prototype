@@ -44,7 +44,7 @@ public class IdMServiceDummy implements IdMService {
 
   @Override
   public boolean checkGroupExists(String groupId) {
-    return false;
+    return true;
   }
 
   @Override

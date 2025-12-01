@@ -5,8 +5,10 @@ import java.util.List;
 import org.perun.registrarprototype.models.FormSpecification;
 import org.perun.registrarprototype.models.FormTransition;
 import org.perun.registrarprototype.persistance.FormTransitionRepository;
+import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
 
+@Profile("!jdbc")
 @Component
 public class FormTransitionRepositoryDummy implements FormTransitionRepository {
   private static List<FormTransition> formTransitions = new ArrayList<>();

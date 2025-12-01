@@ -14,9 +14,21 @@ public class MemberCreatedEvent extends Event {
     this.groupId = groupId;
     this.memberId = memberId;
   }
+  
+  public Integer getUserId() {
+    return userId;
+  }
+  
+  public Integer getGroupId() {
+    return groupId;
+  }
+  
+  public Integer getMemberId() {
+    return memberId;
+  }
 
   @Override
   public String getEventMessage() {
-    return "";
+    return "Member created with ID: " + memberId + " for user ID: " + userId + " in group ID: " + groupId;
   }
 }

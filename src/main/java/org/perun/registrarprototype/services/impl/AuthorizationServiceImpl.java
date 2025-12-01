@@ -1,26 +1,39 @@
 package org.perun.registrarprototype.services.impl;
 
+import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
 import org.perun.registrarprototype.models.Application;
+import org.perun.registrarprototype.models.Destination;
+import org.perun.registrarprototype.models.FormSpecification;
 import org.perun.registrarprototype.models.ItemDefinition;
 import org.perun.registrarprototype.models.PrefillStrategyEntry;
 import org.perun.registrarprototype.models.Role;
+import org.perun.registrarprototype.persistance.DestinationRepository;
+import org.perun.registrarprototype.persistance.FormRepository;
+import org.perun.registrarprototype.persistance.PrefillStrategyEntryRepository;
+import org.perun.registrarprototype.persistance.SubmissionRepository;
 import org.perun.registrarprototype.security.RegistrarAuthenticationToken;
 import org.perun.registrarprototype.services.AuthorizationService;
-import org.perun.registrarprototype.services.RoleService;
-import org.perun.registrarprototype.services.idmIntegration.IdMService;
+
 import org.springframework.stereotype.Service;
 
 // Role-based access control implementation
 @Service
 public class AuthorizationServiceImpl implements AuthorizationService {
 
-  private final IdMService idmService;
-  private final RoleService roleService;
+  private final FormRepository formRepository;
+  private final DestinationRepository destinationRepository;
+  private final PrefillStrategyEntryRepository prefillStrategyEntryRepository;
+  private final SubmissionRepository submissionRepository;
 
-  public AuthorizationServiceImpl(IdMService idmService, RoleService roleService) {
-    this.idmService = idmService;
-    this.roleService = roleService;
+  public AuthorizationServiceImpl(FormRepository formRepository, DestinationRepository destinationRepository,
+                                  PrefillStrategyEntryRepository prefillStrategyEntryRepository,
+                                  SubmissionRepository submissionRepository) {
+    this.formRepository = formRepository;
+    this.destinationRepository = destinationRepository;
+    this.prefillStrategyEntryRepository = prefillStrategyEntryRepository;
+    this.submissionRepository = submissionRepository;
   }
 
   @Override
@@ -51,8 +64,11 @@ public class AuthorizationServiceImpl implements AuthorizationService {
       return true;
     }
 
-    return Objects.equals(app.getSubmission().getIdentityIssuer(), sess.getPrincipal().attribute("iss")) &&
-               Objects.equals(app.getSubmission().getIdentityIdentifier(), sess.getPrincipal().attribute("sub"));
+    // Load the submission using the submissionId
+    return submissionRepository.findById(app.getSubmissionId())
+        .map(submission -> Objects.equals(submission.getIdentityIssuer(), sess.getPrincipal().attribute("iss")) &&
+               Objects.equals(submission.getIdentityIdentifier(), sess.getPrincipal().attribute("sub")))
+        .orElse(false);
   }
 
   @Override
@@ -60,19 +76,36 @@ public class AuthorizationServiceImpl implements AuthorizationService {
     if (itemDefinition.isGlobal()) {
       return isAdmin(sess);
     } else {
-      if (itemDefinition.getDestination().isGlobal()) {
-        return isAdmin(sess);
-      }
-      for (PrefillStrategyEntry entry : itemDefinition.getPrefillStrategies()) {
-        if (entry.isGlobal()) {
+      // Check if destination is global
+      if (itemDefinition.getDestinationId() != null) {
+        Optional<Destination> destination = destinationRepository.findById(itemDefinition.getDestinationId());
+        if (destination.isPresent() && destination.get().isGlobal()) {
           return isAdmin(sess);
         }
       }
-      if (itemDefinition.getFormSpecification() == null) {
-        throw new IllegalArgumentException("Form specification is null");
+      
+      // Check if any prefill strategy is global
+      if (itemDefinition.getPrefillStrategyIds() != null && !itemDefinition.getPrefillStrategyIds().isEmpty()) {
+        List<PrefillStrategyEntry> prefillStrategies = prefillStrategyEntryRepository.findAllById(itemDefinition.getPrefillStrategyIds());
+        for (PrefillStrategyEntry entry : prefillStrategies) {
+          if (entry.isGlobal()) {
+            return isAdmin(sess);
+          }
+        }
       }
+      
+      // Check form specification
+      if (itemDefinition.getFormSpecificationId() == null) {
+        throw new IllegalArgumentException("Form specification ID is null");
+      }
+      
       // Authorization check
-      return canManage(sess, itemDefinition.getFormSpecification().getGroupId());
+      Optional<FormSpecification> formSpecification = formRepository.findById(itemDefinition.getFormSpecificationId());
+      if (formSpecification.isPresent()) {
+        return canManage(sess, formSpecification.get().getGroupId());
+      } else {
+        throw new IllegalArgumentException("Form specification not found for ID: " + itemDefinition.getFormSpecificationId());
+      }
     }
   }
 

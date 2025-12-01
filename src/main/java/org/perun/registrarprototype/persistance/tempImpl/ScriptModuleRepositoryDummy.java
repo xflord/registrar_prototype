@@ -5,8 +5,10 @@ import java.util.List;
 import java.util.Optional;
 import org.perun.registrarprototype.models.ScriptModule;
 import org.perun.registrarprototype.persistance.ScriptModuleRepository;
+import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
 
+@Profile("!jdbc")
 @Component
 public class ScriptModuleRepositoryDummy implements ScriptModuleRepository {
   public static final List<ScriptModule> modules = new ArrayList<>();

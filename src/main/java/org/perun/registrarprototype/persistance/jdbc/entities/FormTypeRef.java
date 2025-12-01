@@ -6,8 +6,10 @@ import org.springframework.data.relational.core.mapping.Table;
 
 @Table("item_definition_form_types")
 public class FormTypeRef {
+  @Column("item_definition_id")
   private Integer itemDefinitionId;
 
+  @Column("form_type")
   private String formType;
 
   public FormTypeRef() {

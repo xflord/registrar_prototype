@@ -7,8 +7,13 @@ public class IdMUserCreatedEvent extends Event {
   public IdMUserCreatedEvent(Integer userId) {
     this.userId = userId;
   }
+  
+  public Integer getUserId() {
+    return userId;
+  }
+  
   @Override
   public String getEventMessage() {
-    return "";
+    return "User created with ID: " + userId;
   }
 }

@@ -9,9 +9,13 @@ public interface FormItemRepository {
 
   List<FormItem> getFormItemsByDestinationAttribute(String urn);
 
+  List<FormItem> getFormItemsByItemDefinitionId(Integer itemDefinitionId);
+
   Optional<FormItem> getFormItemById(int formItemId);
 
   FormItem save(FormItem formItem);
+
+  List<FormItem> saveAll(List<FormItem> formItems);
 
   FormItem update(FormItem formItem);
 

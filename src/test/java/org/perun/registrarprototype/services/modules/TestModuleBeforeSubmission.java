@@ -13,8 +13,9 @@ import org.springframework.stereotype.Component;
 @Profile("test")
 public class TestModuleBeforeSubmission implements FormModule {
 
+  @Override
   public String getName() {
-    return "TestModuleBeforeSubmission";
+    return "testModuleBeforeSubmission";
   }
 
   @Override

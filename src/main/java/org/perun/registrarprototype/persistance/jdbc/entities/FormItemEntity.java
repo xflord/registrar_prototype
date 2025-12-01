@@ -1,25 +1,34 @@
 package org.perun.registrarprototype.persistance.jdbc.entities;
 
 import org.springframework.data.annotation.Id;
+import org.springframework.data.relational.core.mapping.Column;
 import org.springframework.data.relational.core.mapping.Table;
 
 @Table("form_item")
 public class FormItemEntity {
   @Id
+  @Column("id")
   private Integer id;
 
+  @Column("form_id")
   private Integer formId;
 
+  @Column("short_name")
   private String shortName;
 
+  @Column("parent_id")
   private Integer parentId;
 
+  @Column("ord_num")
   private Integer ordNum;
 
+  @Column("hidden_dependency_item_id")
   private Integer hiddenDependencyItemId;
 
+  @Column("disabled_dependency_item_id")
   private Integer disabledDependencyItemId;
 
+  @Column("item_definition_id")
   private Integer itemDefinitionId;
 
   public FormItemEntity() {

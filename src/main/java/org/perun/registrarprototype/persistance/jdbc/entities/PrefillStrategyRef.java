@@ -5,10 +5,13 @@ import org.springframework.data.relational.core.mapping.Table;
 
 @Table("item_definition_prefill_strategies")
 public class PrefillStrategyRef {
+  @Column("item_definition_id")
   private Integer itemDefinitionId;
 
+  @Column("prefill_strategy_entry_id")
   private Integer prefillStrategyEntryId;
 
+  @Column("position")
   private Integer position;
 
   public PrefillStrategyRef() {

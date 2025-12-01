@@ -2,6 +2,7 @@ package org.perun.registrarprototype.services;
 
 import java.util.List;
 import java.util.Map;
+import org.perun.registrarprototype.exceptions.EntityNotExistsException;
 import org.perun.registrarprototype.exceptions.FormItemRegexNotValid;
 import org.perun.registrarprototype.exceptions.InsufficientRightsException;
 import org.perun.registrarprototype.models.AssignedFormModule;
@@ -182,6 +183,15 @@ public interface FormService {
   Destination createDestination(Destination destination);
 
   void removeDestination(Destination destination);
+
+  /**
+   * Gets a destination by its ID.
+   *
+   * @param id the ID of the destination to retrieve
+   * @return the destination with the specified ID
+   * @throws EntityNotExistsException if no destination with the specified ID exists
+   */
+  Destination getDestinationById(int id) throws EntityNotExistsException;
 
   /**
    * Creates a new form item.

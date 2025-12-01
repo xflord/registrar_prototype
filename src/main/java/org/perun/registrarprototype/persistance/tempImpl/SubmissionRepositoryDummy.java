@@ -5,10 +5,12 @@ import java.util.List;
 import java.util.Optional;
 import org.perun.registrarprototype.models.Submission;
 import org.perun.registrarprototype.persistance.SubmissionRepository;
+import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
 
+@Profile("!jdbc")
 @Component
-public class SubmissionRepositorDummy implements SubmissionRepository {
+public class SubmissionRepositoryDummy implements SubmissionRepository {
   private static List<Submission> submissions = new ArrayList<>();
   private static int currId = 1;
 

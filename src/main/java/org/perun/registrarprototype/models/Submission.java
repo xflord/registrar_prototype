@@ -23,7 +23,8 @@ public class Submission {
   public Submission() {
   }
 
-  public Submission(List<Application> applications, LocalDateTime timestamp, String submitterId, String submitterName, Map<String, String> identityAttributes) {
+  public Submission(int id, List<Application> applications, LocalDateTime timestamp, String submitterId, String submitterName, Map<String, String> identityAttributes) {
+    this.id = id;
     this.applications = applications;
     this.timestamp = timestamp;
     this.submitterId = submitterId;

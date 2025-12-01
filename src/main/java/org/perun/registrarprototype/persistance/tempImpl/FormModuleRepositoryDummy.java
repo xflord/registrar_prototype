@@ -4,9 +4,11 @@ import java.util.ArrayList;
 import java.util.List;
 import org.perun.registrarprototype.models.AssignedFormModule;
 import org.perun.registrarprototype.persistance.FormModuleRepository;
+import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
 
 @Component
+@Profile("!jdbc")
 public class FormModuleRepositoryDummy implements FormModuleRepository {
   private final static List<AssignedFormModule> modules = new ArrayList<>();
 

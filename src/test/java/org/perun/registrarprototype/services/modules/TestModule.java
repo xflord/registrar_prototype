@@ -15,7 +15,7 @@ public class TestModule implements FormModule {
 
   @Override
   public String getName() {
-    return "TestModule";
+    return "testModule";
   }
 
   @Override

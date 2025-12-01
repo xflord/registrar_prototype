@@ -1,7 +1,6 @@
 package org.perun.registrarprototype.services.prefillStrategy.impl;
 
 import io.micrometer.common.util.StringUtils;
-import java.util.Map;
 import java.util.Optional;
 import org.perun.registrarprototype.models.FormItem;
 import org.perun.registrarprototype.models.PrefillStrategyEntry;

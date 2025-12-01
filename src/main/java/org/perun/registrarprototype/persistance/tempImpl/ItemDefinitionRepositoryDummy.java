@@ -7,8 +7,10 @@ import java.util.Optional;
 import org.perun.registrarprototype.models.FormSpecification;
 import org.perun.registrarprototype.models.ItemDefinition;
 import org.perun.registrarprototype.persistance.ItemDefinitionRepository;
+import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
 
+@Profile("!jdbc")
 @Component
 public class ItemDefinitionRepositoryDummy implements ItemDefinitionRepository {
   private static final List<ItemDefinition> storedItemDefinitions = new ArrayList<>();
@@ -19,6 +21,13 @@ public class ItemDefinitionRepositoryDummy implements ItemDefinitionRepository {
     return storedItemDefinitions.stream()
                .filter(itemDefinition -> itemDefinition.getId() == id)
                .findFirst();
+  }
+
+  @Override
+  public List<ItemDefinition> findAllById(List<Integer> ids) {
+    return storedItemDefinitions.stream()
+               .filter(item -> ids.contains(item.getId()))
+               .toList();
   }
 
   @Override
@@ -37,7 +46,9 @@ public class ItemDefinitionRepositoryDummy implements ItemDefinitionRepository {
 
   @Override
   public List<ItemDefinition> findAllByForm(FormSpecification formSpecification) {
-    return List.of();
+    return storedItemDefinitions.stream()
+               .filter(def -> def.getFormSpecificationId() != null && def.getFormSpecificationId() == formSpecification.getId())
+               .toList();
   }
 
   @Override

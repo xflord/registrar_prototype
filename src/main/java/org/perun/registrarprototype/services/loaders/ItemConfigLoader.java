@@ -55,6 +55,7 @@ public class ItemConfigLoader implements CommandLineRunner {
   }
 
   // TODO transactional
+  @SuppressWarnings("unchecked")
   public void load() {
     Map<String, Object> config = loadYaml(configPath);
 
@@ -63,6 +64,7 @@ public class ItemConfigLoader implements CommandLineRunner {
     loadItemDefinitions((Map<String, Map<String, Object>>) config.get("definitions"));
   }
 
+  @SuppressWarnings("unchecked")
   public void loadItemDefinitions(Map<String, Map<String, Object>> itemDefinitionMap) {
     if (itemDefinitionMap == null) {
       return;
@@ -77,7 +79,7 @@ public class ItemConfigLoader implements CommandLineRunner {
       Boolean updatable = getBool(definitionMap, "updatable", null);
       Boolean required = getBool(definitionMap, "required", null);
       String validator = (String) definitionMap.get("validator");
-      List<PrefillStrategyEntry> prefillStrategies = null;
+      List<PrefillStrategyEntry> prefillStrategies = new ArrayList<>();
       List<Map<String, Object>> prefillStrategiesRaw = (List<Map<String, Object>>) definitionMap.get("prefillStrategies");
       if (prefillStrategiesRaw != null) {
         prefillStrategies = getPrefillStrategyEntries(prefillStrategiesRaw);
@@ -88,7 +90,16 @@ public class ItemConfigLoader implements CommandLineRunner {
       if (destinationUrn != null) {
         destination = new Destination(0, destinationUrn, null, true);
         if (!destinationRepository.exists(destination)) {
-          destinationRepository.createDestination(destination);
+          destination = destinationRepository.createDestination(destination);
+        } else {
+          // Find the existing destination
+          List<Destination> globalDestinations = destinationRepository.getGlobalDestinations();
+          for (Destination d : globalDestinations) {
+            if (d.getUrn().equals(destinationUrn)) {
+              destination = d;
+              break;
+            }
+          }
         }
       }
 
@@ -115,13 +126,20 @@ public class ItemConfigLoader implements CommandLineRunner {
       String defaultValue = (String) definitionMap.get("defaultValue");
 
 
+      // Extract IDs from PrefillStrategyEntry objects
+
+      List<Integer> prefillStrategyIds = prefillStrategies.stream()
+          .map(PrefillStrategyEntry::getId)
+          .collect(ArrayList::new, ArrayList::add, ArrayList::addAll);
+
       itemDefinitions.add(new ItemDefinition(-1, null, displayName, type, updatable, required, validator,
-          prefillStrategies, destination, formTypes, itemTexts, hidden, disabled, defaultValue, true));
+          prefillStrategyIds, destination == null ? null : destination.getId(), formTypes, itemTexts, hidden, disabled, defaultValue, true));
     }
 
     itemDefinitionRepository.saveAll(itemDefinitions);
   }
 
+  @SuppressWarnings("unchecked")
   private List<PrefillStrategyEntry> getPrefillStrategyEntries(List<Map<String, Object>> prefillStrategiesRaw) {
     List<PrefillStrategyEntry> prefillStrategies = new ArrayList<>();
     List<PrefillStrategyEntry> entriesToSave = new ArrayList<>();
@@ -166,7 +184,9 @@ public class ItemConfigLoader implements CommandLineRunner {
         destinationList.add(destination);
       }
     });
-    destinationRepository.saveAll(destinationList);
+    if (!destinationList.isEmpty()) {
+      destinationRepository.saveAll(destinationList);
+    }
   }
 
   private <T> T loadYaml(String path) {
@@ -189,6 +209,7 @@ public class ItemConfigLoader implements CommandLineRunner {
     return raw == null ? null : Enum.valueOf(enumClass, (String) raw);
   }
 
+  @SuppressWarnings("unchecked")
   private <E extends Enum<E>> Set<E> parseEnumSet(Object raw, Class<E> enumClass) {
     if (raw == null) return null;
     List<String> names = (List<String>) raw;

@@ -14,6 +14,7 @@ import org.perun.registrarprototype.exceptions.DataInconsistencyException;
 import org.perun.registrarprototype.exceptions.EntityNotExistsException;
 import org.perun.registrarprototype.exceptions.FormItemRegexNotValid;
 import org.perun.registrarprototype.exceptions.InsufficientRightsException;
+import org.perun.registrarprototype.models.Application;
 import org.perun.registrarprototype.models.AssignedFormModule;
 import org.perun.registrarprototype.models.Destination;
 import org.perun.registrarprototype.models.FormSpecification;
@@ -32,23 +33,19 @@ import org.perun.registrarprototype.persistance.ItemDefinitionRepository;
 import org.perun.registrarprototype.persistance.PrefillStrategyEntryRepository;
 import org.perun.registrarprototype.security.RegistrarAuthenticationToken;
 import org.perun.registrarprototype.security.SessionProvider;
-import org.perun.registrarprototype.services.AuthorizationService;
 import org.perun.registrarprototype.services.FormService;
 import org.perun.registrarprototype.services.idmIntegration.IdMService;
 import org.perun.registrarprototype.services.modules.FormModule;
 import org.perun.registrarprototype.services.modules.ModulesManager;
-import org.springframework.context.ApplicationContext;
 import org.springframework.stereotype.Service;
 
 @Service
 public class FormServiceImpl implements FormService {
   private final FormRepository formRepository;
-  private final AuthorizationService authorizationService;
   private final FormModuleRepository formModuleRepository;
   private final ModulesManager modulesManager;
   private final FormItemRepository formItemRepository;
   private final FormTransitionRepository formTransitionRepository;
-  private final ApplicationContext context;
   private final ApplicationRepository applicationRepository;
   private final SessionProvider sessionProvider;
   private final ItemDefinitionRepository itemDefinitionRepository;
@@ -56,9 +53,8 @@ public class FormServiceImpl implements FormService {
   private final DestinationRepository destinationRepository;
   private final IdMService idmService;
 
-  public FormServiceImpl(FormRepository formRepository, AuthorizationService authorizationService,
+  public FormServiceImpl(FormRepository formRepository,
                          FormModuleRepository formModuleRepository, ModulesManager modulesManager,
-                         ApplicationContext context,
                          FormItemRepository formItemRepository, FormTransitionRepository formTransitionRepository,
                          ApplicationRepository applicationRepository, SessionProvider sessionProvider,
                          ItemDefinitionRepository itemDefinitionRepository,
@@ -66,10 +62,8 @@ public class FormServiceImpl implements FormService {
                          DestinationRepository destinationRepository,
                          IdMService idmService) {
     this.formRepository = formRepository;
-    this.authorizationService = authorizationService;
     this.formModuleRepository = formModuleRepository;
     this.modulesManager = modulesManager;
-    this.context = context;
     this.formItemRepository = formItemRepository;
     this.formTransitionRepository = formTransitionRepository;
     this.applicationRepository = applicationRepository;
@@ -119,15 +113,17 @@ public class FormServiceImpl implements FormService {
     FormSpecification formSpecification = formRepository.findById(formId).orElseThrow(() -> new EntityNotExistsException("FormSpecification", formId));
 
     // Validate regex if present
-    if (formItem.getItemDefinition() != null && formItem.getItemDefinition().getValidator() != null && !formItem.getItemDefinition().getValidator().isEmpty()) {
+    ItemDefinition itemDefinition = itemDefinitionRepository.findById(formItem.getItemDefinitionId())
+        .orElseThrow(() -> new EntityNotExistsException("ItemDefinition", formItem.getItemDefinitionId()));
+    if (itemDefinition.getValidator() != null && !itemDefinition.getValidator().isEmpty()) {
       try {
-        java.util.regex.Pattern.compile(formItem.getItemDefinition().getValidator());
+        java.util.regex.Pattern.compile(itemDefinition.getValidator());
       } catch (java.util.regex.PatternSyntaxException e) {
-        throw new FormItemRegexNotValid("Cannot compile regex: " + formItem.getItemDefinition().getValidator(), formItem);
+        throw new FormItemRegexNotValid("Cannot compile regex: " + itemDefinition.getValidator(), formItem);
       }
     }
 
-    formItem.setFormId(formId);
+    formItem.setFormSpecificationId(formSpecification.getId());
     FormItem savedItem = formItemRepository.save(formItem);
 
     List<FormItem> items = formSpecification.getItems();
@@ -143,7 +139,7 @@ public class FormServiceImpl implements FormService {
     FormSpecification formSpecification = formRepository.findById(formId).orElseThrow(() -> new EntityNotExistsException("FormSpecification", formId));
 
     items.forEach(item -> {
-                      item.setFormId(formSpecification.getId());
+                        item.setFormSpecificationId(formSpecification.getId());
                       formItemRepository.update(item);
         }
     );
@@ -191,6 +187,7 @@ public class FormServiceImpl implements FormService {
           }
         }
         assignedFormModule.setFormId(formSpecification.getId());
+        assignedFormModule.setFormModule(moduleComponent);
         modules.add(assignedFormModule);
       }
     formModuleRepository.saveAll(modules);
@@ -281,8 +278,13 @@ public class FormServiceImpl implements FormService {
 
   @Override
   public List<FormItem> getFormItems(FormSpecification formSpecification, FormSpecification.FormType type) {
-    return formItemRepository.getFormItemsByFormId(formSpecification.getId()).stream()
-               .filter(formItem -> formItem.getItemDefinition().getFormTypes().contains(type)).toList();
+    return formSpecification.getItems().stream()
+        .filter(item -> {
+          ItemDefinition def = itemDefinitionRepository.findById(item.getItemDefinitionId())
+                                   .orElseThrow(() -> new EntityNotExistsException("ItemDefinition", item.getItemDefinitionId()));
+          return def.getFormTypes().contains(type);
+        })
+        .toList();
   }
 
   @Override
@@ -356,12 +358,28 @@ public class FormServiceImpl implements FormService {
   }
 
   @Override
+  public Destination getDestinationById(int id) throws EntityNotExistsException {
+    return destinationRepository.findById(id)
+        .orElseThrow(() -> new EntityNotExistsException("Destination", id));
+  }
+
+  @Override
   public ItemDefinition createItemDefinition(ItemDefinition itemDefinition) {
     return itemDefinitionRepository.save(itemDefinition);
   }
 
   @Override
   public ItemDefinition updateItemDefinition(ItemDefinition itemDefinition) {
+    ItemDefinition existing =  getItemDefinitionById(itemDefinition.getId());
+
+    if (!Objects.equals(existing.getDestinationId(), itemDefinition.getDestinationId())) {
+      List<Application> apps = applicationRepository.findOpenApplicationsByItemDefinitionId(existing.getId());
+      if (!apps.isEmpty()) {
+        // TODO throw an exception, or display some sort of warning in this case?
+        throw new IllegalArgumentException("Cannot change destination of definition with id " + existing +
+                                               " because there are open applications with this definition");
+      }
+    }
     return itemDefinitionRepository.save(itemDefinition);
   }
 
@@ -380,33 +398,35 @@ public class FormServiceImpl implements FormService {
   @Override
   // TODO make transactional?
   public void updateFormItems(int formId, List<FormItem> updatedItems) {
-    formRepository.findById(formId).orElseThrow(() -> new IllegalArgumentException("Form with ID " + formId + " not found"));
     updatedItems.forEach(item -> {
-      if (item.getFormId() != formId) {
+      if (item.getFormSpecificationId() == null || item.getFormSpecificationId() != formId) {
         throw new IllegalArgumentException("Form id of item  " + item + " does not match the specified form id!");
+      }
+      if (item.getItemDefinitionId() == null) {
+        throw new IllegalArgumentException("FormItem " + item + " does not have itemDefinitionId!");
       }
     });
 
     Set<Integer> presentGlobalDefinitions = new HashSet<>();
     updatedItems.forEach(item -> {
-      ItemDefinition itemDefinition = itemDefinitionRepository.findById(item.getItemDefinition().getId())
-                                          .orElseThrow(() -> new EntityNotExistsException("Item definition", item.getItemDefinition().getId()));
-      item.setItemDefinition(itemDefinition);
+      ItemDefinition itemDefinition = itemDefinitionRepository.findById(item.getItemDefinitionId())
+                                          .orElseThrow(() -> new EntityNotExistsException("Item definition", item.getItemDefinitionId()));
       if (itemDefinition.isGlobal()) {
         presentGlobalDefinitions.add(itemDefinition.getId());
         return;
       }
-      if (itemDefinition.getFormSpecification().getId() != formId) {
-        throw new IllegalArgumentException("Item definition " + item.getItemDefinition().getId() + " does not match the specified form id!");
+      if (itemDefinition.getFormSpecificationId() != null && itemDefinition.getFormSpecificationId() != formId) {
+        throw new IllegalArgumentException("Item definition " + item.getItemDefinitionId() + " does not match the specified form id!");
       }
     });
-    Set<Integer> globalDefinitions = getGlobalItemDefinitions().stream()
-                                         .map(ItemDefinition::getId).collect(Collectors.toSet());
-    Set<Integer> missingGlobalDefinitions = globalDefinitions.stream().filter(presentGlobalDefinitions::contains).collect(Collectors.toSet());
-    if (!missingGlobalDefinitions.isEmpty()) {
-      // ensure all enforced items are present
-      throw new IllegalArgumentException("Global item definitions " + missingGlobalDefinitions + " not found");
-    }
+    //    Set<Integer> globalDefinitions = getGlobalItemDefinitions().stream()
+//                                         .map(ItemDefinition::getId).collect(Collectors.toSet());
+//    Set<Integer> missingGlobalDefinitions = globalDefinitions.stream().filter(def -> !presentGlobalDefinitions.contains(def)).collect(Collectors.toSet());
+//    TODO uncomment this to enforce all global definitions
+//    if (!missingGlobalDefinitions.isEmpty()) {
+//      // ensure all enforced items are present
+//      throw new IllegalArgumentException("Global item definitions " + missingGlobalDefinitions + " not found");
+//    }
 
     if (!validateUniqueOrdNums(updatedItems)) {
       // is this the correct placement for the check?
@@ -441,42 +461,27 @@ public class FormServiceImpl implements FormService {
         }
         item = updatedItem;
         // existing item so definition has to exist as well
-        ItemDefinition existingItemDef = existingById.get(actualId).getItemDefinition();
-        // prolly retrieve the items from db based on id in the entry layer (along with validation)
-        if (existingItemDef.getId() != updatedItem.getItemDefinition().getId()) {
-          throw new IllegalArgumentException("Trying to edit definition of another form item!");
-        }
-
-        // no need for checks if item definition is defined globally
-        if (!existingItemDef.isGlobal()) {
-          // check that updated items do not change destination, if so then warn/throw exception
-          Destination oldDestination = existingItemDef.getDestination();
-          if (oldDestination != null) {
-            Destination newDestination = item.getItemDefinition().getDestination();
-            boolean hasOpenApplications = applicationRepository.findByFormId(formId).stream()
-                                              .anyMatch(app -> app.getState().isOpenState());
-            if (!oldDestination.equals(newDestination) && hasOpenApplications) {
-              // TODO throw an exception, or display some sort of warning in this case?
-              throw new IllegalArgumentException("Cannot change destination of item with id " + actualId +
-                                                     " because there are open applications");
-            }
+        FormItem existingFormItem = existingById.get(actualId);
+          ItemDefinition existingItemDef = itemDefinitionRepository.findById(existingFormItem.getItemDefinitionId())
+                                               .orElseThrow(() -> new DataInconsistencyException(
+                                                   "ItemDefinition with ID " + existingFormItem.getItemDefinitionId() +
+                                                       " not found"));
+          // prolly retrieve the items from db based on id in the entry layer (along with validation)
+          if (existingItemDef.getId() != updatedItem.getItemDefinitionId()) {
+            throw new IllegalArgumentException("Cannot change item definition!");
           }
-        } else {
-          // rewrite with global definition to prevent unauthorized changes to it
-          updatedItem.setItemDefinition(existingItemDef);
+      }
+        if (item == null) {
+          item = formItemRepository.getFormItemById(actualId)
+                     .orElseThrow(() -> new DataInconsistencyException("Form item with id " + updatedItem.getId() + " should exist"));
         }
-      }
-      if (item == null) {
-        item = formItemRepository.getFormItemById(actualId)
-                   .orElseThrow(() -> new DataInconsistencyException("Form item with id " + updatedItem.getId() + " should exist"));
-      }
 
-      item.setParentId(resolveReferenceItemId(item.getParentId(), newIdMap));
-      item.setHiddenDependencyItemId(resolveReferenceItemId(item.getHiddenDependencyItemId(), newIdMap));
-      item.setDisabledDependencyItemId(resolveReferenceItemId(item.getDisabledDependencyItemId(), newIdMap));
-      // item.setOrdNum(updatedItem.getOrdNum());
+        item.setParentId(resolveReferenceItemId(item.getParentId(), newIdMap));
+        item.setHiddenDependencyItemId(resolveReferenceItemId(item.getHiddenDependencyItemId(), newIdMap));
+        item.setDisabledDependencyItemId(resolveReferenceItemId(item.getDisabledDependencyItemId(), newIdMap));
+        // item.setOrdNum(updatedItem.getOrdNum());
 
-      formItemRepository.save(item);
+        formItemRepository.save(item);
     }
 
     // removal
@@ -518,7 +523,9 @@ public class FormServiceImpl implements FormService {
 
     items.forEach(item -> {
       Set<Integer> seenItems = new HashSet<>();
-      if (item.getItemDefinition().isRequired() && willItemAlwaysBeEmpty(item, formItemMap, seenItems)) {
+      ItemDefinition itemDefinition = itemDefinitionRepository.findById(item.getItemDefinitionId())
+                                          .orElseThrow(() -> new DataInconsistencyException("ItemDefinition with ID " + item.getItemDefinitionId() + " not found"));
+      if (itemDefinition.isRequired() && willItemAlwaysBeEmpty(item, formItemMap, seenItems)) {
         invalidItems.add(item);
       }
     });
@@ -542,22 +549,34 @@ public class FormServiceImpl implements FormService {
       // Circular dependencies on their own aren't a problem(?), as long as they don't cause the items to be unfillable (as is the case here)
       throw new IllegalArgumentException("Circular dependency detected starting with item: " + item);
     }
-    return isItemPrefillEmpty(item.getItemDefinition()) &&
+    
+    ItemDefinition itemDefinition = itemDefinitionRepository.findById(item.getItemDefinitionId())
+                               .orElseThrow(() -> new DataInconsistencyException("ItemDefinition with ID " + item.getItemDefinitionId() + " not found"));
+    
+    return isItemPrefillEmpty(itemDefinition) &&
                (isEmptyItemHidden(item, formItemMap, seenItems) || isEmptyItemDisabled(item, formItemMap, seenItems));
 
   }
 
   private boolean isItemPrefillEmpty(ItemDefinition itemDef) {
-    return StringUtils.isEmpty(itemDef.getDefaultValue()) &&
-               (itemDef.getPrefillStrategies() == null || itemDef.getPrefillStrategies().isEmpty());
+    boolean hasDefaultValue = !StringUtils.isEmpty(itemDef.getDefaultValue());
+    
+    boolean hasPrefillStrategies =
+        itemDef.getPrefillStrategyIds() != null && !itemDef.getPrefillStrategyIds().isEmpty();
+
+    return !hasDefaultValue && !hasPrefillStrategies;
   }
 
   private boolean isEmptyItemHidden(FormItem item, Map<Integer, FormItem> formItemMap, Set<Integer> seenItems) {
-    return isEmptyItemConditionApplied(item.getItemDefinition().getHidden(), item, formItemMap, seenItems);
+    ItemDefinition itemDefinition = itemDefinitionRepository.findById(item.getItemDefinitionId())
+                                        .orElseThrow(() -> new DataInconsistencyException("ItemDefinition with ID " + item.getItemDefinitionId() + " not found"));
+    return isEmptyItemConditionApplied(itemDefinition.getHidden(), item, formItemMap, seenItems);
   }
 
   private boolean isEmptyItemDisabled(FormItem item, Map<Integer, FormItem> formItemMap, Set<Integer> seenItems) {
-    return isEmptyItemConditionApplied(item.getItemDefinition().getDisabled(), item, formItemMap, seenItems);
+    ItemDefinition itemDefinition = itemDefinitionRepository.findById(item.getItemDefinitionId())
+                                        .orElseThrow(() -> new DataInconsistencyException("ItemDefinition with ID " + item.getItemDefinitionId() + " not found"));
+    return isEmptyItemConditionApplied(itemDefinition.getDisabled(), item, formItemMap, seenItems);
   }
 
   private boolean isEmptyItemConditionApplied(ItemDefinition.Condition condition, FormItem item,
@@ -570,7 +589,11 @@ public class FormServiceImpl implements FormService {
         case IF_EMPTY -> willItemAlwaysBeEmpty(dependencyItem, formItemMap, seenItems);
         // TODO how do we want to behave if the dependency item is prefilled, but changed by the user afterwards (e.g. the item itself
         //  is not disabled/hidden if_prefilled). This is mostly a GUI question, but still relates to this check.
-        case IF_PREFILLED -> !isItemPrefillEmpty(dependencyItem.getItemDefinition()); // not problematic if it doesn't actually get prefilled, still should not allow TODO verify this
+        case IF_PREFILLED -> {
+          ItemDefinition itemDefinition = itemDefinitionRepository.findById(dependencyItem.getItemDefinitionId())
+                                              .orElseThrow(() -> new DataInconsistencyException("ItemDefinition with ID " + dependencyItem.getItemDefinitionId() + " not found"));
+          yield !isItemPrefillEmpty(itemDefinition); // not problematic if it doesn't actually get prefilled, still should not allow TODO verify this
+        }
       };
     }
 
@@ -647,11 +670,13 @@ public class FormServiceImpl implements FormService {
    */
   private void checkSubmissibility(List<FormItem> items) {
     boolean containsValueItems = items.stream()
-                                     .map(FormItem::getItemDefinition)
+                                     .map(item -> itemDefinitionRepository.findById(item.getItemDefinitionId())
+                                                 .orElseThrow(() -> new DataInconsistencyException("ItemDefinition with ID " + item.getItemDefinitionId() + " not found")))
             .anyMatch(itemDef -> !itemDef.getType().isLayoutItem());
     if (containsValueItems &&
             items.stream()
-                .map(FormItem::getItemDefinition)
+                .map(item -> itemDefinitionRepository.findById(item.getItemDefinitionId())
+                            .orElseThrow(() -> new DataInconsistencyException("ItemDefinition with ID " + item.getItemDefinitionId() + " not found")))
                 .noneMatch(itemDef -> itemDef.getType().isSubmitItem() &&
                                        !(itemDef.getHidden().equals(ItemDefinition.Condition.ALWAYS) ||
                                            itemDef.getHidden().equals(ItemDefinition.Condition.IF_EMPTY)))) {
@@ -670,8 +695,13 @@ public class FormServiceImpl implements FormService {
         throw new IllegalArgumentException(dependencyType + " dependency item" + dependencyId + " cannot be the same as the item itself");
       }
 
-      if (!dependencyType.equals("Parent") && existingById.get(dependencyId).getItemDefinition().getType().isLayoutItem()) {
-        throw new IllegalArgumentException("Cannot depend on layout item as it does not have a value");
+      FormItem dependencyItem = existingById.get(dependencyId);
+      if (!dependencyType.equals("Parent")) {
+        ItemDefinition itemDefinition = itemDefinitionRepository.findById(dependencyItem.getItemDefinitionId())
+                                            .orElseThrow(() -> new DataInconsistencyException("ItemDefinition with ID " + dependencyItem.getItemDefinitionId() + " not found"));
+        if (itemDefinition.getType().isLayoutItem()) {
+          throw new IllegalArgumentException("Cannot depend on layout item as it does not have a value");
+        }
       }
     }
   }

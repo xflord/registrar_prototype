@@ -15,4 +15,6 @@ public interface ApplicationRepository {
   List<Application> findAll();
 
   int getNextId();
+  
+  List<Application> findOpenApplicationsByItemDefinitionId(Integer itemDefinitionId);
 }

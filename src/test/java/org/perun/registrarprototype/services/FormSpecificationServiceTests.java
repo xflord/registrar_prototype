@@ -22,18 +22,18 @@ public class FormSpecificationServiceTests extends GenericRegistrarServiceTests 
 
     ItemDefinition itemDef1 = createItemDefinition(ItemType.TEXTFIELD, "item1", false, null);
     FormItem item1 = createFormItem(formSpecification.getId(), itemDef1, 1);
-    item1 = formService.setFormItem(formSpecification.getId(), item1);
+    FormItem updatedItem1 = formService.setFormItem(formSpecification.getId(), item1);
     
     ItemDefinition itemDef2 = createItemDefinition(ItemType.TEXTFIELD, "item2", false, null);
     FormItem item2 = createFormItem(formSpecification.getId(), itemDef2, 2);
-    item2 = formService.setFormItem(formSpecification.getId(), item2);
+    FormItem updatedItem2 = formService.setFormItem(formSpecification.getId(), item2);
 
     FormSpecification createdFormSpecification = formRepository.findById(formSpecification.getId()).orElse(null);
     assert createdFormSpecification == formSpecification;
     assert createdFormSpecification.getGroupId().equals(groupId);
     assert createdFormSpecification.getItems().size() == 2;
-    assert createdFormSpecification.getItems().contains(item1);
-    assert createdFormSpecification.getItems().contains(item2);
+    assert createdFormSpecification.getItems().contains(updatedItem1);
+    assert createdFormSpecification.getItems().contains(updatedItem2);
   }
 
   @Test
@@ -44,13 +44,13 @@ public class FormSpecificationServiceTests extends GenericRegistrarServiceTests 
 
     ItemDefinition itemDef1 = createItemDefinition(ItemType.VERIFIED_EMAIL, "email", false, "^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$");
     FormItem item1 = createFormItem(formSpecification.getId(), itemDef1, 1);
-    item1 = formService.setFormItem(formSpecification.getId(), item1);
+    FormItem updatedItem1 = formService.setFormItem(formSpecification.getId(), item1);
 
     FormSpecification createdFormSpecification = formRepository.findById(formSpecification.getId()).orElse(null);
     assert createdFormSpecification == formSpecification;
     assert createdFormSpecification.getGroupId().equals(groupId);
     assert createdFormSpecification.getItems().size() == 1;
-    assert createdFormSpecification.getItems().contains(item1);
+    assert createdFormSpecification.getItems().contains(updatedItem1);
   }
 
   @Test
@@ -61,7 +61,7 @@ public class FormSpecificationServiceTests extends GenericRegistrarServiceTests 
 
     ItemDefinition itemDef1 = createItemDefinition(ItemType.TEXTFIELD, "item1", false, null);
     FormItem item1 = createFormItem(formSpecification.getId(), itemDef1, 1);
-    item1 = formService.setFormItem(formSpecification.getId(), item1);
+    formService.setFormItem(formSpecification.getId(), item1);
 
     AssignedFormModule module = new AssignedFormModule("testModule", new HashMap<>());
 
@@ -86,7 +86,7 @@ public class FormSpecificationServiceTests extends GenericRegistrarServiceTests 
 
     ItemDefinition itemDef1 = createItemDefinition(ItemType.TEXTFIELD, "item1", false, null);
     FormItem item1 = createFormItem(formSpecification.getId(), itemDef1, 1);
-    item1 = formService.setFormItem(formSpecification.getId(), item1);
+    formService.setFormItem(formSpecification.getId(), item1);
 
 
     AssignedFormModule module = new AssignedFormModule("testModuleWithOptions", Map.of("option1", "value1", "option2", "value2"));

@@ -8,8 +8,10 @@ import org.perun.registrarprototype.models.ItemType;
 import org.perun.registrarprototype.models.FormSpecification;
 import org.perun.registrarprototype.models.Submission;
 import org.perun.registrarprototype.persistance.ApplicationRepository;
+import org.perun.registrarprototype.persistance.DestinationRepository;
 import org.perun.registrarprototype.persistance.FormModuleRepository;
 import org.perun.registrarprototype.persistance.FormRepository;
+import org.perun.registrarprototype.persistance.ItemDefinitionRepository;
 import org.perun.registrarprototype.persistance.tempImpl.FormModuleRepositoryDummy;
 import org.perun.registrarprototype.security.SessionProvider;
 import org.perun.registrarprototype.services.config.TestConfig;
@@ -38,6 +40,10 @@ public class GenericRegistrarServiceTests {
    protected ApplicationRepository applicationRepository;
    @Autowired
    protected FormRepository formRepository;
+   @Autowired
+   protected ItemDefinitionRepository itemDefinitionRepository;
+   @Autowired
+   protected DestinationRepository destinationRepository;
    protected FormModuleRepository formModuleRepository;
 
    private static int groupId = 1;
@@ -78,9 +84,12 @@ public class GenericRegistrarServiceTests {
      * Helper method to create a FormItem with an ItemDefinition.
      */
     protected FormItem createFormItem(int formId, ItemDefinition itemDef, int ordNum) {
+      // Get the FormSpecification
+      FormSpecification formSpec = formRepository.findById(formId)
+          .orElseThrow(() -> new RuntimeException("FormSpecification with id " + formId + " not found"));
       FormItem formItem = new FormItem();
-      formItem.setFormId(formId);
-      formItem.setItemDefinition(itemDef);
+      formItem.setFormSpecificationId(formSpec.getId());
+      formItem.setItemDefinitionId(itemDef.getId());
       formItem.setShortName(itemDef.getDisplayName());
       formItem.setOrdNum(ordNum);
       formItem.setParentId(null);

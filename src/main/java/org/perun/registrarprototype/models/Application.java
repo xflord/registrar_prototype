@@ -10,13 +10,16 @@ public class Application extends ApplicationForm {
   private String idmUserId;
   private ApplicationState state = ApplicationState.PENDING;
   private String redirectUrl;
-  private Submission submission = new Submission();
+  private Integer submissionId;
 
-  public Application(int id, String idmUserId, FormSpecification formSpecification, List<FormItemData> formItemData, String redirectUrl, FormSpecification.FormType type) {
-    super(formSpecification, formItemData, type);
+  public Application(int id, String idmUserId, Integer formSpecificationId, List<FormItemData> formItemData, String redirectUrl, FormSpecification.FormType type, ApplicationState state,
+                     Integer submissionId) {
+    super(formSpecificationId, formItemData, type);
     this.id = id;
     this.idmUserId = idmUserId;
     this.redirectUrl = redirectUrl;
+    this.state = state;
+    this.submissionId = submissionId;
   }
 
   public int getId() {
@@ -77,12 +80,12 @@ public class Application extends ApplicationForm {
     this.redirectUrl = redirectUrl;
   }
 
-  public Submission getSubmission() {
-    return submission;
+  public Integer getSubmissionId() {
+    return submissionId;
   }
 
-  public void setSubmission(Submission submission) {
-    this.submission = submission;
+  public void setSubmissionId(Integer submissionId) {
+    this.submissionId = submissionId;
   }
 
   public void setState(ApplicationState state) {
@@ -101,6 +104,17 @@ public class Application extends ApplicationForm {
   @Override
   public int hashCode() {
     return Objects.hashCode(getId());
+  }
+
+  @Override
+  public String toString() {
+    return "Application{" +
+               "id=" + id +
+               ", idmUserId='" + idmUserId + '\'' +
+               ", state=" + state +
+               ", redirectUrl='" + redirectUrl + '\'' +
+               ", submissionId=" + submissionId +
+               '}';
   }
 }
 

@@ -30,35 +30,37 @@ public class TestDataKeycloak {
 
       ItemTexts itemTexts2 = new ItemTexts("Full name", "Enter your full name", "Name is required");
       PrefillStrategyEntry
-          prefillStrat22 = new PrefillStrategyEntry(-2, PrefillStrategyEntry.PrefillStrategyType.IDM_ATTRIBUTE, new HashMap<>(), "firstName", formSpecification2, false);
+          prefillStrat22 = new PrefillStrategyEntry(-2, PrefillStrategyEntry.PrefillStrategyType.IDM_ATTRIBUTE, new HashMap<>(), "firstName", formSpecification2.getId(), false);
+      prefillStrat22 = formService.createPrefillStrategy(prefillStrat22);
       Destination destination = new Destination(0, "firstName", null, true);
       destination = formService.createDestination(destination);
       ItemDefinition
-          itemDef22 = new ItemDefinition(-2, formSpecification2, "full name", ItemType.TEXTFIELD, false, true, null,
-          List.of(prefillStrat22), destination, Set.of(FormSpecification.FormType.INITIAL),
+          itemDef22 = new ItemDefinition(-2, formSpecification2.getId(), "full name", ItemType.TEXTFIELD, false, true, null,
+          List.of(prefillStrat22.getId()), destination.getId(), Set.of(FormSpecification.FormType.INITIAL),
           Map.of(Locale.ENGLISH, itemTexts2), ItemDefinition.Condition.NEVER,
           ItemDefinition.Condition.IF_PREFILLED, null, false);
       itemDef22 = formService.createItemDefinition(itemDef22);
-      FormItem item22 = new FormItem(-2, formSpecification2.getId(), "full name", null, 2, null, null, itemDef22);
+      FormItem item22 = new FormItem(-2, formSpecification2.getId(), "full name", null, 2, null, null, itemDef22.getId());
 
 
       ItemTexts itemTexts23 = new ItemTexts("Address", "Enter your address", "Address is required");
       destination = new Destination(0, "address", null, true);
       destination = formService.createDestination(destination);
-      PrefillStrategyEntry prefillStrat23 = new PrefillStrategyEntry(-2, PrefillStrategyEntry.PrefillStrategyType.IDM_ATTRIBUTE, new HashMap<>(), "address", formSpecification2, false);
-      ItemDefinition itemDef23 = new ItemDefinition(-3, formSpecification2, "address", ItemType.TEXTFIELD, false, true, null,
-          List.of(prefillStrat23), destination, Set.of(FormSpecification.FormType.INITIAL),
+      PrefillStrategyEntry prefillStrat23 = new PrefillStrategyEntry(-2, PrefillStrategyEntry.PrefillStrategyType.IDM_ATTRIBUTE, new HashMap<>(), "address", formSpecification2.getId(), false);
+      prefillStrat23 = formService.createPrefillStrategy(prefillStrat23);
+      ItemDefinition itemDef23 = new ItemDefinition(-3, formSpecification2.getId(), "address", ItemType.TEXTFIELD, false, true, null,
+          List.of(prefillStrat23.getId()), destination.getId(), Set.of(FormSpecification.FormType.INITIAL),
           Map.of(Locale.ENGLISH, itemTexts23), ItemDefinition.Condition.NEVER,
           ItemDefinition.Condition.NEVER, null, false);
       itemDef23 = formService.createItemDefinition(itemDef23);
-      FormItem item23 = new FormItem(-2, formSpecification2.getId(), "full name", null, 3, null, null, itemDef23);
+      FormItem item23 = new FormItem(-2, formSpecification2.getId(), "full name", null, 3, null, null, itemDef23.getId());
 
-      ItemDefinition itemDef33 = new ItemDefinition(-4, formSpecification2, "submit", ItemType.SUBMIT_BUTTON, false, false, null,
+      ItemDefinition itemDef33 = new ItemDefinition(-4, formSpecification2.getId(), "submit", ItemType.SUBMIT_BUTTON, false, false, null,
           null, null, Set.of(FormSpecification.FormType.INITIAL),
           Map.of(Locale.ENGLISH, itemTexts2), ItemDefinition.Condition.NEVER,
           ItemDefinition.Condition.NEVER, null, false);
       itemDef33 = formService.createItemDefinition(itemDef33);
-      FormItem submit2 = new FormItem(-3, formSpecification2.getId(), "submit", null, 4, null, null, itemDef33);
+      FormItem submit2 = new FormItem(-3, formSpecification2.getId(), "submit", null, 4, null, null, itemDef33.getId());
 
       formService.updateFormItems(formSpecification2.getId(), List.of(item22, item23, submit2));
     };

@@ -2,6 +2,7 @@ package org.perun.registrarprototype.controllers;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Collectors;
 import org.perun.registrarprototype.controllers.dto.ApplicationDTO;
 import org.perun.registrarprototype.controllers.dto.ApplicationDetailDTO;
@@ -18,6 +19,7 @@ import org.perun.registrarprototype.models.ApplicationForm;
 import org.perun.registrarprototype.models.Decision;
 import org.perun.registrarprototype.models.FormItem;
 import org.perun.registrarprototype.models.FormItemData;
+import org.perun.registrarprototype.models.FormSpecification;
 import org.perun.registrarprototype.models.Identity;
 import org.perun.registrarprototype.models.Requirement;
 import org.perun.registrarprototype.models.Submission;
@@ -40,12 +42,14 @@ public class ApplicationController {
   private final SessionProvider sessionProvider;
   private final FormService formService;
   private final AuthorizationService authorizationService;
+  private final org.perun.registrarprototype.persistance.SubmissionRepository submissionRepository;
 
-  public ApplicationController(ApplicationService applicationService, SessionProvider sessionProvider, FormService formService, AuthorizationService authorizationService) {
+  public ApplicationController(ApplicationService applicationService, SessionProvider sessionProvider, FormService formService, AuthorizationService authorizationService, org.perun.registrarprototype.persistance.SubmissionRepository submissionRepository) {
       this.applicationService = applicationService;
       this.sessionProvider = sessionProvider;
       this.formService = formService;
       this.authorizationService = authorizationService;
+      this.submissionRepository = submissionRepository;
   }
 
   // --- Manager approves an application ---
@@ -53,9 +57,10 @@ public class ApplicationController {
   public ResponseEntity<Void> approveApplication(@PathVariable int applicationId, @RequestBody(required = false) String message) {
     RegistrarAuthenticationToken session = sessionProvider.getCurrentSession();
     Application app = applicationService.getApplicationById(applicationId);
+    FormSpecification formSpec = formService.getFormById(app.getFormSpecificationId());
 
     // Authorization check
-    if (!authorizationService.canDecide(session, app.getFormSpecification().getGroupId())) {
+    if (!authorizationService.canDecide(session, formSpec.getGroupId())) {
       return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
     }
 
@@ -68,9 +73,10 @@ public class ApplicationController {
   public ResponseEntity<Void> rejectApplication(@PathVariable int applicationId, @RequestBody String message) {
     RegistrarAuthenticationToken session = sessionProvider.getCurrentSession();
     Application app = applicationService.getApplicationById(applicationId);
+    FormSpecification formSpec = formService.getFormById(app.getFormSpecificationId());
 
     // Authorization check
-    if (!authorizationService.canDecide(session, app.getFormSpecification().getGroupId())) {
+    if (!authorizationService.canDecide(session, formSpec.getGroupId())) {
       return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
     }
 
@@ -108,8 +114,9 @@ public class ApplicationController {
   public ResponseEntity<ApplicationDetailDTO> getApplication(@PathVariable int id) {
     RegistrarAuthenticationToken session = sessionProvider.getCurrentSession();
     Application app = applicationService.getApplicationById(id);
+    FormSpecification formSpec = formService.getFormById(app.getFormSpecificationId());
 
-    if (!authorizationService.canDecide(session, app.getFormSpecification().getGroupId()) &&
+    if (!authorizationService.canDecide(session, formSpec.getGroupId()) &&
         !authorizationService.canManage(session, app)) {
       return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
     }
@@ -134,18 +141,43 @@ public class ApplicationController {
 
  // TODO use mappers in the future
   private ApplicationDTO toApplicationDTO(Application app) {
+    String submitterName = null;
+    Integer submissionId = null;
+    
+    if (app.getSubmissionId() != null) {
+      Optional<Submission> submissionOpt = submissionRepository.findById(app.getSubmissionId());
+      if (submissionOpt.isPresent()) {
+        Submission submission = submissionOpt.get();
+        submitterName = submission.getSubmitterName();
+        submissionId = submission.getId();
+      }
+    }
+    
     return new ApplicationDTO(
         app.getId(),
-        app.getFormSpecification() != null ? app.getFormSpecification().getId() : null,
+        app.getFormSpecificationId(),
         app.getState(),
-        app.getSubmission() != null ? app.getSubmission().getSubmitterName() : null,
-        app.getSubmission() != null ? app.getSubmission().getId() : null,
+        submitterName,
+        submissionId,
         app.getType()
     );
   }
 
   private ApplicationDetailDTO toApplicationDetailDTO(Application app) {
-    SubmissionDTO submissionDTO = toSubmissionDTO(app.getSubmission());
+    SubmissionDTO submissionDTO = null;
+    String submitterName = null;
+    Integer submissionId = null;
+    
+    if (app.getSubmissionId() != null) {
+      Optional<Submission> submissionOpt = submissionRepository.findById(app.getSubmissionId());
+      if (submissionOpt.isPresent()) {
+        Submission submission = submissionOpt.get();
+        submissionDTO = toSubmissionDTO(submission);
+        submitterName = submission.getSubmitterName();
+        submissionId = submission.getId();
+      }
+    }
+    
     DecisionDTO latestDecisionDTO = toDecisionDTO(applicationService.getLatestDecisionByApplicationId(app.getId()));
     
     List<FormItemDataDTO> formItemDataDTO = null;
@@ -157,10 +189,10 @@ public class ApplicationController {
 
     return new ApplicationDetailDTO(
         app.getId(),
-        app.getFormSpecification() != null ? app.getFormSpecification().getId() : null,
+        app.getFormSpecificationId(),
         app.getState(),
-        app.getSubmission() != null ? app.getSubmission().getSubmitterName() : null,
-        app.getSubmission() != null ? app.getSubmission().getId() : null,
+        submitterName,
+        submissionId,
         app.getType(),
         formItemDataDTO,
         submissionDTO,
@@ -189,7 +221,7 @@ public class ApplicationController {
     }
     return new DecisionDTO(
         decision.getId(),
-        decision.getApplication() != null ? decision.getApplication().getId() : null,
+        decision.getApplicationId(),
         decision.getApproverId(),
         decision.getApproverName(),
         decision.getMessage(),
@@ -239,17 +271,18 @@ public class ApplicationController {
   }
 
   private ApplicationForm toApplicationForm(ApplicationFormDTO dto) {
-    org.perun.registrarprototype.models.FormSpecification formSpec = null;
-    if (dto.getFormSpecificationId() != null) {
-      formSpec = formService.getFormById(dto.getFormSpecificationId());
+    if (dto.getFormSpecificationId() == null) {
+      throw new IllegalArgumentException("FormSpecification id cannot be null!");
     }
+    FormSpecification formSpec = formService.getFormById(dto.getFormSpecificationId());
+
     List<FormItemData> formItemData = null;
     if (dto.getFormItemData() != null) {
       formItemData = dto.getFormItemData().stream()
           .map(this::toFormItemData)
           .collect(Collectors.toList());
     }
-    return new ApplicationForm(formSpec, formItemData, dto.getType());
+    return new ApplicationForm(formSpec.getId(), formItemData, dto.getType());
   }
 
   private SubmissionContext toSubmissionContext(SubmissionContextDTO dto) {
@@ -280,10 +313,10 @@ public class ApplicationController {
 
   private ApplicationFormDTO toApplicationFormDTO(ApplicationForm applicationForm) {
     if (applicationForm == null) {
-      return null;
+      throw new RuntimeException("ApplicationForm cannot be null");
     }
     ApplicationFormDTO dto = new ApplicationFormDTO();
-    dto.setFormSpecificationId(applicationForm.getFormSpecification() != null ? applicationForm.getFormSpecification().getId() : null);
+    dto.setFormSpecificationId(applicationForm.getFormSpecificationId());
     dto.setType(applicationForm.getType());
     if (applicationForm.getFormItemData() != null) {
       dto.setFormItemData(applicationForm.getFormItemData().stream()

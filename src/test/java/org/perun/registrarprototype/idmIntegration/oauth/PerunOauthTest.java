@@ -7,6 +7,10 @@ import org.perun.registrarprototype.services.impl.EventServiceImpl;
 import org.perun.registrarprototype.services.idmIntegration.perun.PerunIdMService;
 import org.perun.registrarprototype.services.idmIntegration.perun.oauth.BearerTokenInterceptor;
 import org.perun.registrarprototype.services.idmIntegration.perun.oauth.ClientAccessTokenService;
+import org.perun.registrarprototype.persistance.ItemDefinitionRepository;
+import org.perun.registrarprototype.persistance.DestinationRepository;
+import org.perun.registrarprototype.persistance.FormRepository;
+import org.perun.registrarprototype.persistance.SubmissionRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.client.RestClientTest;
 import org.springframework.boot.web.client.RestTemplateBuilder;
@@ -17,6 +21,7 @@ import org.springframework.test.web.client.MockRestServiceServer;
 import org.springframework.test.web.client.match.MockRestRequestMatchers;
 import org.springframework.test.web.client.response.MockRestResponseCreators;
 import org.springframework.web.client.RestTemplate;
+import org.mockito.Mockito;
 
 @RestClientTest
 @Import(TestOauthConfig.class)
@@ -51,7 +56,12 @@ public class PerunOauthTest {
           .andExpect(MockRestRequestMatchers.header("Authorization", "Bearer fake-access-token"))
           .andRespond(MockRestResponseCreators.withSuccess());
 
-    PerunIdMService perunIdMService = new PerunIdMService(perunRpc, new EventServiceImpl());
+    ItemDefinitionRepository itemDefinitionRepository = Mockito.mock(ItemDefinitionRepository.class);
+    DestinationRepository destinationRepository = Mockito.mock(DestinationRepository.class);
+    FormRepository formRepository = Mockito.mock(FormRepository.class);
+    SubmissionRepository submissionRepository = Mockito.mock(SubmissionRepository.class);
+    
+    PerunIdMService perunIdMService = new PerunIdMService(perunRpc, new EventServiceImpl(), itemDefinitionRepository, destinationRepository, formRepository, submissionRepository);
     perunIdMService.getUserIdByIdentifier("test-ext-source", "test-id");
 
     mockServer.verify();

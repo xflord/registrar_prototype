@@ -26,6 +26,7 @@ import org.perun.registrarprototype.models.Application;
 import org.perun.registrarprototype.models.ApplicationState;
 import org.perun.registrarprototype.models.AssignedFormModule;
 import org.perun.registrarprototype.models.Decision;
+import org.perun.registrarprototype.models.Destination;
 import org.perun.registrarprototype.models.FormSpecification;
 import org.perun.registrarprototype.models.FormItem;
 import org.perun.registrarprototype.models.FormItemData;
@@ -42,13 +43,14 @@ import org.perun.registrarprototype.models.SubmissionResult;
 import org.perun.registrarprototype.models.ValidationError;
 import org.perun.registrarprototype.persistance.ApplicationRepository;
 import org.perun.registrarprototype.persistance.DecisionRepository;
+import org.perun.registrarprototype.persistance.DestinationRepository;
 import org.perun.registrarprototype.persistance.FormRepository;
+import org.perun.registrarprototype.persistance.ItemDefinitionRepository;
 import org.perun.registrarprototype.persistance.SubmissionRepository;
 import org.perun.registrarprototype.security.CurrentUser;
 import org.perun.registrarprototype.security.RegistrarAuthenticationToken;
 import org.perun.registrarprototype.security.SessionProvider;
 import org.perun.registrarprototype.services.ApplicationService;
-import org.perun.registrarprototype.services.AuthorizationService;
 import org.perun.registrarprototype.services.EventService;
 import org.perun.registrarprototype.services.FormService;
 import org.perun.registrarprototype.services.idmIntegration.IdMService;
@@ -64,40 +66,46 @@ public class ApplicationServiceImpl implements ApplicationService {
   private final SubmissionRepository submissionRepository;
   private final DecisionRepository decisionRepository;
   private final EventService eventService;
-  private final AuthorizationService authorizationService;
   private final FormService formService;
   private final IdMService idmService;
   private final SessionProvider sessionProvider;
   private final PrefillStrategyResolver prefillStrategyResolver;
+  private final ItemDefinitionRepository itemDefinitionRepository;
+  private final DestinationRepository destinationRepository;
 
   public ApplicationServiceImpl(ApplicationRepository applicationRepository, FormRepository formRepository,
                                 SubmissionRepository submissionRepository, DecisionRepository decisionRepository,
                                 EventService eventService,
-                                AuthorizationService authorizationService, FormService formService,
+                                FormService formService,
                                 IdMService idmService, SessionProvider sessionProvider,
-                                PrefillStrategyResolver prefillStrategyResolver) {
+                                PrefillStrategyResolver prefillStrategyResolver,
+                                ItemDefinitionRepository itemDefinitionRepository,
+                                DestinationRepository destinationRepository) {
     this.applicationRepository = applicationRepository;
     this.formRepository = formRepository;
     this.submissionRepository = submissionRepository;
     this.decisionRepository = decisionRepository;
     this.eventService = eventService;
-    this.authorizationService = authorizationService;
     this.formService = formService;
     this.idmService = idmService;
     this.sessionProvider = sessionProvider;
     this.prefillStrategyResolver = prefillStrategyResolver;
+    this.itemDefinitionRepository = itemDefinitionRepository;
+    this.destinationRepository = destinationRepository;
   }
 
   @Override
   public Application approveApplication(RegistrarAuthenticationToken sess, int applicationId, String message) {
     Application app = applicationRepository.findById(applicationId).orElseThrow(() -> new EntityNotExistsException("Application", applicationId));
+    Integer formSpecId = app.getFormSpecificationId();
+    FormSpecification formSpec = formRepository.findById(formSpecId).orElseThrow(() -> new EntityNotExistsException("FormSpecification", formSpecId));
 
-    List<AssignedFormModule> modules = formService.getAssignedFormModules(app.getFormSpecification());
+    List<AssignedFormModule> modules = formService.getAssignedFormModules(formSpec);
     for (AssignedFormModule module : modules) {
       module.getFormModule().beforeApproval(app);
     }
 
-    makeDecision(sess.getPrincipal(), app, message, Decision.DecisionType.APPROVED);
+    makeDecision(sess.getPrincipal(), app, message, Decision.DecisionType.APPROVED); // TODO make sure to add transaction management to roll this back if anything fails down the line
 
     try {
       app.approve();
@@ -106,26 +114,29 @@ public class ApplicationServiceImpl implements ApplicationService {
     }
 
     // user could have consolidated identities in perun in time between submission and approval
+    Submission submission = submissionRepository.findById(app.getSubmissionId())
+        .orElseThrow(() -> new DataInconsistencyException("Submission not found for application " + app.getId()));
+    
     if (app.getIdmUserId() == null) {
       // TODO use ISSUER here to retrieve user instead of a hardcoded ext source name. Also find out how the naming in perun
       //  works, e.g. iss `https://login.e-infra.cz/oidc/` maps to `https://login.e-infra.cz/idp/`
-      String perunUserId = idmService.getUserIdByIdentifier(app.getSubmission().getIdentityIssuer(),
-          app.getSubmission().getIdentityIdentifier());
+      String perunUserId = idmService.getUserIdByIdentifier(submission.getIdentityIssuer(),
+          submission.getIdentityIdentifier());
       app.setIdmUserId(perunUserId);
     }
 
-    app = applicationRepository.save(app);
+    Application savedApp = applicationRepository.save(app);
 
-    String idmUserId = propagateApprovalToIdm(app);
+    String idmUserId = propagateApprovalToIdm(savedApp);
     // consolidate all applications with the potentially newly created idmUserId
-    consolidateSubmissions(idmUserId, app.getSubmission().getIdentityIdentifier(), app.getSubmission().getIdentityIssuer());
+    consolidateSubmissions(idmUserId, submission.getIdentityIdentifier(), submission.getIdentityIssuer());
 
     for (AssignedFormModule module : modules) {
-      module.getFormModule().onApproval(app);
+      module.getFormModule().onApproval(savedApp);
     }
 
-    eventService.emitEvent(new ApplicationApprovedEvent(app));
-    return app;
+    eventService.emitEvent(new ApplicationApprovedEvent(savedApp));
+    return savedApp;
   }
 
   /**
@@ -180,7 +191,9 @@ public class ApplicationServiceImpl implements ApplicationService {
 
     // TODO how do we handle auto-submitted applications related to this one?
 
-    List<AssignedFormModule> modules = formService.getAssignedFormModules(app.getFormSpecification());
+    Integer formSpecId = app.getFormSpecificationId();
+    FormSpecification formSpec = formRepository.findById(formSpecId).orElseThrow(() -> new EntityNotExistsException("FormSpecification", formSpecId));
+    List<AssignedFormModule> modules = formService.getAssignedFormModules(formSpec);
     for (AssignedFormModule module : modules) {
       module.getFormModule().onRejection(app);
     }
@@ -225,7 +238,7 @@ public class ApplicationServiceImpl implements ApplicationService {
    */
   private Decision makeDecision(CurrentUser principal, Application app, String message, Decision.DecisionType decisionType) {
     Decision decision = new Decision();
-    decision.setApplication(app);
+    decision.setApplicationId(app.getId());
     decision.setApproverId(principal.id());
     decision.setApproverName(principal.name());
     decision.setDecisionType(decisionType);
@@ -237,6 +250,10 @@ public class ApplicationServiceImpl implements ApplicationService {
   @Override
   public SubmissionResult applyForMemberships(SubmissionContext submissionData) {
     Submission submission = new Submission();
+
+    setSubmissionMetadata(submission);
+    submission = submissionRepository.save(submission);
+
     List<Application> applications = new ArrayList<>();
 
     for (ApplicationForm appContext : submissionData.getPrefilledData()) {
@@ -246,7 +263,6 @@ public class ApplicationServiceImpl implements ApplicationService {
 
     submission.setApplications(applications);
 
-    setSubmissionMetadata(submission);
     submission = submissionRepository.save(submission);
 
     SubmissionResult result = new SubmissionResult();
@@ -298,19 +314,16 @@ public class ApplicationServiceImpl implements ApplicationService {
 
   @Override
   public Application applyForMembership(ApplicationForm applicationForm, Submission submission, String redirectUrl) {
-    FormSpecification formSpecification = formRepository.findById(applicationForm.getFormSpecification().getId()).orElseThrow(() -> new EntityNotExistsException("FormSpecification", applicationForm.getFormSpecification().getId()));
+    FormSpecification formSpecification = formRepository.findById(applicationForm.getFormSpecificationId()).orElseThrow(() -> new EntityNotExistsException("FormSpecification", applicationForm.getFormSpecificationId()));
     RegistrarAuthenticationToken sess = sessionProvider.getCurrentSession();
 
-    if (applicationForm.getType() == FormSpecification.FormType.EXTENSION && !canExtendMembership(applicationForm.getFormSpecification()
-                                                                                            .getGroupId())) {
-      throw new IllegalArgumentException("User cannot extend membership in group: " + applicationForm.getFormSpecification()
-                                                                                          .getGroupId());
+    if (applicationForm.getType() == FormSpecification.FormType.EXTENSION && !canExtendMembership(formSpecification.getGroupId())) {
+      throw new IllegalArgumentException("User cannot extend membership in group: " + formSpecification.getGroupId());
     }
 
     if (checkOpenApplications(sess, formSpecification) != null && applicationForm.getType() != FormSpecification.FormType.UPDATE) {
       // user has applied for membership since loading the form
-      throw new IllegalArgumentException("User already has an open application in group: " + applicationForm.getFormSpecification()
-                                                                                                 .getGroupId());
+      throw new IllegalArgumentException("User already has an open application in group: " + formSpecification.getGroupId());
     }
 
 
@@ -319,10 +332,9 @@ public class ApplicationServiceImpl implements ApplicationService {
     applicationForm.getFormItemData().forEach(item -> checkPrefilledValueConsistency(sess, item));
     reserveLogins(applicationForm.getFormItemData()); // TODO handle reserved logins if creating app object fails
 
-    Application app = new Application(0, sess.getPrincipal().id(), formSpecification,
-        applicationForm.getFormItemData(), null, applicationForm.getType());
-    app.setRedirectUrl(redirectUrl);
-    app.setSubmission(submission);
+    Application app = new Application(0, sess.getPrincipal().id(), formSpecification.getId(),
+        applicationForm.getFormItemData(), redirectUrl, applicationForm.getType(), ApplicationState.PENDING,
+        submission.getId());
     try {
       app.submit(formSpecification);
     } catch (InvalidApplicationStateTransitionException e) {
@@ -376,14 +388,15 @@ public class ApplicationServiceImpl implements ApplicationService {
    */
   private void validateFilledFormData(ApplicationForm data) {
     // TODO consider checking whether DISABLED/HIDDEN items were not filled (or simply skip them)
-    List<FormItem> items = formService.getFormItems(data.getFormSpecification(), data.getType());
+    FormSpecification formSpec = formRepository.findById(data.getFormSpecificationId()).orElseThrow(() -> new EntityNotExistsException("FormSpecification", data.getFormSpecificationId()));
+    List<FormItem> items = formService.getFormItems(formSpec, data.getType());
 
     Set<Integer> itemIds = items.stream().map(FormItem::getId).collect(Collectors.toSet());
     List<FormItemData> foreignItems = data.getFormItemData().stream()
                                           .filter((itemData) -> !itemIds.contains(itemData.getFormItem().getId()))
                                           .toList();
     if (!foreignItems.isEmpty()) {
-      throw new DataInconsistencyException("Submitted form: " + data.getFormSpecification().getId() + " contains data for items" +
+      throw new DataInconsistencyException("Submitted form: " + formSpec.getId() + " contains data for items" +
                                                " not currently in that form: " + foreignItems);
     }
 
@@ -481,7 +494,11 @@ public class ApplicationServiceImpl implements ApplicationService {
       if (!existingItemToDataMap.containsKey(item.getFormItem())) {
         throw new IllegalArgumentException("Item " + item.getFormItem().getId() + " does not belong to application " + applicationId);
       }
-      if (!item.getFormItem().getItemDefinition().isUpdatable()) {
+      
+      ItemDefinition itemDefinition = itemDefinitionRepository.findById(item.getFormItem().getItemDefinitionId())
+          .orElseThrow(() -> new IllegalStateException("ItemDefinition not found for id: " + item.getFormItem().getItemDefinitionId()));
+          
+      if (!itemDefinition.isUpdatable()) {
         throw new IllegalArgumentException("Item " + item.getFormItem().getId() + " cannot be updated");
       }
 
@@ -489,7 +506,7 @@ public class ApplicationServiceImpl implements ApplicationService {
 
       existingItem.setValue(item.getValue());
 
-      if (item.getFormItem().getItemDefinition().getType().isVerifiedItem()) {
+      if (itemDefinition.getType().isVerifiedItem()) {
         checkPrefilledValueConsistency(sessionProvider.getCurrentSession(), existingItem);
       }
     });
@@ -517,9 +534,6 @@ public class ApplicationServiceImpl implements ApplicationService {
    * @param formSpecification
    * @param prefilledItems
    */
-  private ApplicationForm prefillAutosubmitFormItems(CurrentUser sess, FormSpecification formSpecification, List<FormItemData> prefilledItems) {
-    return null;
-  }
 
   /**
    * Check whether all items of which values need to be assured, are assured
@@ -528,7 +542,11 @@ public class ApplicationServiceImpl implements ApplicationService {
    */
   private void attemptApplicationVerification(Application application) {
     List<FormItemData> unassuredItems = application.getFormItemData().stream()
-        .filter(itemData -> itemData.getFormItem().getItemDefinition().getType().isVerifiedItem())
+        .filter(itemData -> {
+          ItemDefinition itemDefinition = itemDefinitionRepository.findById(itemData.getFormItem().getItemDefinitionId())
+              .orElseThrow(() -> new IllegalStateException("ItemDefinition not found for id: " + itemData.getFormItem().getItemDefinitionId()));
+          return itemDefinition.getType().isVerifiedItem();
+        })
         .filter(itemData -> !itemData.isValueAssured()).toList();
 
     if (unassuredItems.isEmpty()) {
@@ -556,23 +574,6 @@ public class ApplicationServiceImpl implements ApplicationService {
    * @param redirectTransitions
    * @return
    */
-  private void setRedirectForms(CurrentUser sess, List<FormTransition> redirectTransitions, SubmissionResult submissionResult) {
-    if (!redirectTransitions.isEmpty()) {
-      // TODO do we want to load prerequisites of redirect forms like so?
-      List<Requirement> requirements = redirectTransitions.stream()
-                                           .map(transition -> new Requirement(transition.getTargetFormSpecification().getGroupId(),
-                                               transition.getTargetFormState())).toList();
-      try {
-        submissionResult.setRedirectForms(loadForms(requirements, submissionResult.getRedirectUrl()));
-        // theoretically just the set of ids (or whatever the API will take as the entrypoint of registration flow) is enough and just redirect user to that endpoint
-      } catch (Exception e) {
-        System.out.println("Error assembling redirect forms: " + e.getMessage()); // TODO log properly
-        // probably best to use some constant here so that it can be localized
-        // submissionResult.addMessage("Error assembling redirect forms: " + e.getMessage());
-        submissionResult.addMessage("Could not redirect to another form. Please contact support.");
-      }
-    }
-  }
 
   //TODO should be enough to build the whole form page? or do we need more info?
   @Override
@@ -626,7 +627,7 @@ public class ApplicationServiceImpl implements ApplicationService {
 
       List<FormItemData> prefilledFormItemData = loadForm(sess, formSpecification, type);
 
-      requiredForms.add(new ApplicationForm(formSpecification, prefilledFormItemData, type));
+      requiredForms.add(new ApplicationForm(formSpecification.getId(), prefilledFormItemData, type));
     }
 
     // TODO probably some logic to order the individual forms? (e.g. prerequisites before their source form - or do we want
@@ -707,7 +708,8 @@ public class ApplicationServiceImpl implements ApplicationService {
 
   private ValidationError validate(FormItem item, String value) {
     // TODO ideally replace hardcoded strings with enums/inheritance and let GUI translate them
-    ItemDefinition itemDef = item.getItemDefinition();
+    ItemDefinition itemDef = itemDefinitionRepository.findById(item.getItemDefinitionId())
+        .orElseThrow(() -> new IllegalStateException("ItemDefinition not found for id: " + item.getItemDefinitionId()));
 
     if (itemDef.getType().isLayoutItem() && itemDef.isRequired()) {
       throw new IllegalStateException("Layout item required: " + this);
@@ -761,8 +763,11 @@ public class ApplicationServiceImpl implements ApplicationService {
     List<FormItemData> itemsWithMissingData = new ArrayList<>();
     prefilledItems.stream()
         .filter(item -> hasItemIncorrectVisibility(item, prefilledItems)).forEach(item -> {
-          if (item.getFormItem().getItemDefinition().getPrefillStrategies() == null ||
-              item.getFormItem().getItemDefinition().getPrefillStrategies().isEmpty()) {
+          ItemDefinition itemDefinition = itemDefinitionRepository.findById(item.getFormItem().getItemDefinitionId())
+              .orElseThrow(() -> new IllegalStateException("ItemDefinition not found for id: " + item.getFormItem().getItemDefinitionId()));
+              
+          if (itemDefinition.getPrefillStrategyIds() == null ||
+              itemDefinition.getPrefillStrategyIds().isEmpty()) {
             unmodifiableRequiredButEmpty.add(item);
           } else {
             itemsWithMissingData.add(item);
@@ -791,7 +796,10 @@ public class ApplicationServiceImpl implements ApplicationService {
    * @return
    */
   private boolean hasItemIncorrectVisibility(FormItemData item, List<FormItemData> prefilledFormItemData) {
-    return item.getFormItem().getItemDefinition().isRequired() && StringUtils.isEmpty(item.getPrefilledValue()) &&
+    ItemDefinition itemDefinition = itemDefinitionRepository.findById(item.getFormItem().getItemDefinitionId())
+        .orElseThrow(() -> new IllegalStateException("ItemDefinition not found for id: " + item.getFormItem().getItemDefinitionId()));
+        
+    return itemDefinition.isRequired() && StringUtils.isEmpty(item.getPrefilledValue()) &&
             (isItemHidden(item, prefilledFormItemData) || isItemDisabled(item, prefilledFormItemData));
   }
 
@@ -802,8 +810,11 @@ public class ApplicationServiceImpl implements ApplicationService {
    * @return
    */
   private boolean isItemHidden(FormItemData item, List<FormItemData> prefilledFormItemData) {
+    ItemDefinition itemDefinition = itemDefinitionRepository.findById(item.getFormItem().getItemDefinitionId())
+        .orElseThrow(() -> new IllegalStateException("ItemDefinition not found for id: " + item.getFormItem().getItemDefinitionId()));
+        
     return isItemConditionApplied(item.getPrefilledValue(), prefilledFormItemData,
-        item.getFormItem().getItemDefinition().getHidden(),
+        itemDefinition.getHidden(),
         item.getFormItem().getHiddenDependencyItemId());
   }
 
@@ -814,8 +825,11 @@ public class ApplicationServiceImpl implements ApplicationService {
    * @return
    */
   private boolean isItemDisabled(FormItemData item, List<FormItemData> prefilledFormItemData) {
+    ItemDefinition itemDefinition = itemDefinitionRepository.findById(item.getFormItem().getItemDefinitionId())
+        .orElseThrow(() -> new IllegalStateException("ItemDefinition not found for id: " + item.getFormItem().getItemDefinitionId()));
+        
     return isItemConditionApplied(item.getPrefilledValue(), prefilledFormItemData,
-        item.getFormItem().getItemDefinition().getDisabled(),
+        itemDefinition.getDisabled(),
         item.getFormItem().getDisabledDependencyItemId());
   }
 
@@ -852,14 +866,17 @@ public class ApplicationServiceImpl implements ApplicationService {
    */
   private String calculatePrefilledValue(RegistrarAuthenticationToken sess, FormItem item) { // again decide whether to pass principal as argument or retrieve it from the current session
 
+    ItemDefinition itemDefinition = itemDefinitionRepository.findById(item.getItemDefinitionId())
+        .orElseThrow(() -> new IllegalStateException("ItemDefinition not found for id: " + item.getItemDefinitionId()));
+
     if (!sess.isAuthenticated()) {
       // TODO potentially move this to the strategy logic? Could there be a strategy that returns value for unauthenticated users?
-      return item.getItemDefinition().getDefaultValue();
+      return itemDefinition.getDefaultValue();
     }
 
     Optional<String> prefilledValue = prefillStrategyResolver.prefill(item);
 
-    return prefilledValue.orElse(item.getItemDefinition().getDefaultValue());
+    return prefilledValue.orElse(itemDefinition.getDefaultValue());
 
   }
 
@@ -878,23 +895,32 @@ public class ApplicationServiceImpl implements ApplicationService {
     List<FormItemData> loginItemsToLeaveOut = new ArrayList<>();
     if (application.getIdmUserId() != null) {
       application.getFormItemData().stream()
-          .filter(item -> item.getFormItem().getItemDefinition().getType().equals(ItemType.LOGIN))
+          .filter(item -> {
+            ItemDefinition itemDefinition = itemDefinitionRepository.findById(item.getFormItem().getItemDefinitionId())
+                .orElseThrow(() -> new IllegalStateException("ItemDefinition not found for id: " + item.getFormItem().getItemDefinitionId()));
+            return itemDefinition.getType().equals(ItemType.LOGIN);
+          })
           .forEach(loginItem -> {
+            ItemDefinition itemDefinition = itemDefinitionRepository.findById(loginItem.getFormItem().getItemDefinitionId())
+                .orElseThrow(() -> new IllegalStateException("ItemDefinition not found for id: " + loginItem.getFormItem().getItemDefinitionId()));
+                
+           Destination destination = destinationRepository.findById(itemDefinition.getDestinationId())
+                .orElseThrow(() -> new IllegalStateException("Destination not found for id: " + itemDefinition.getDestinationId()));
+                
             String perunLogin;
             try {
               // TODO overall the reserved logins logic might be too `perun-specific`
-              perunLogin = idmService.getAttribute(loginItem.getFormItem().getItemDefinition().
-                                                       getDestination().getUrn(),
-                  application.getIdmUserId(), application.getFormSpecification().getGroupId(),
-                  application.getFormSpecification().getVoId());
+              FormSpecification formSpec = formRepository.findById(application.getFormSpecificationId()).orElseThrow(() -> new EntityNotExistsException("FormSpecification", application.getFormSpecificationId()));
+              perunLogin = idmService.getAttribute(destination.getUrn(),
+                  application.getIdmUserId(), formSpec.getGroupId(),
+                  formSpec.getVoId());
             } catch (IdmAttributeNotExistsException e) {
               // TODO login attribute definition was removed in IdM between submission and approval, alert admins?
               throw new IllegalStateException("Login item attribute has been deleted in the underlying IdM system, " +
                                                  e.getMessage());
             }
             String itemLogin = loginItem.getValue();
-            String namespace = extractNamespaceFromLoginAttrName(loginItem.getFormItem().getItemDefinition().
-                                                                     getDestination().getUrn());
+            String namespace = extractNamespaceFromLoginAttrName(destination.getUrn());
             if (!StringUtils.isEmpty(perunLogin)) {
               loginItemsToLeaveOut.add(loginItem);
               idmService.deletePassword(namespace, itemLogin);
@@ -908,10 +934,19 @@ public class ApplicationServiceImpl implements ApplicationService {
 
   private void releaseLogins(List<FormItemData> itemData) {
     itemData.stream()
-        .filter(item -> item.getFormItem().getItemDefinition().getType().equals(ItemType.LOGIN))
+        .filter(item -> {
+          ItemDefinition itemDefinition = itemDefinitionRepository.findById(item.getFormItem().getItemDefinitionId())
+              .orElseThrow(() -> new IllegalStateException("ItemDefinition not found for id: " + item.getFormItem().getItemDefinitionId()));
+          return itemDefinition.getType().equals(ItemType.LOGIN);
+        })
         .forEach(loginItem -> {
-          String namespace = extractNamespaceFromLoginAttrName(loginItem.getFormItem().getItemDefinition().
-                                                                   getDestination().getUrn());
+          ItemDefinition itemDefinition = itemDefinitionRepository.findById(loginItem.getFormItem().getItemDefinitionId())
+              .orElseThrow(() -> new IllegalStateException("ItemDefinition not found for id: " + loginItem.getFormItem().getItemDefinitionId()));
+              
+          Destination destination = destinationRepository.findById(itemDefinition.getDestinationId())
+              .orElseThrow(() -> new IllegalStateException("Destination not found for id: " + itemDefinition.getDestinationId()));
+              
+          String namespace = extractNamespaceFromLoginAttrName(destination.getUrn());
           if (namespace == null) {
             throw new IllegalStateException("Destination attribute of " + loginItem + " is not a login-namespace attribute.");
           }
@@ -929,15 +964,21 @@ public class ApplicationServiceImpl implements ApplicationService {
   private void reserveLogins(List<FormItemData> itemData) {
 
     for (FormItemData formItemData : itemData) {
-      if (formItemData.getFormItem().getItemDefinition().getType().equals(ItemType.LOGIN)) {
+      ItemDefinition itemDefinition = itemDefinitionRepository.findById(formItemData.getFormItem().getItemDefinitionId())
+          .orElseThrow(() -> new IllegalStateException("ItemDefinition not found for id: " + formItemData.getFormItem().getItemDefinitionId()));
+          
+      if (itemDefinition.getType().equals(ItemType.LOGIN)) {
         if (StringUtils.isEmpty(formItemData.getValue()) ||
                 formItemData.isValueAssured()) { // login with prefilled value => value alr reserved
           continue;
         }
         // could be a lot of calls, at the same time this checks that the attribute actually exists
         // AttributeDefinition attrDef = idmService.getAttributeDefinition(formItemData.getFormItem().getDestinationIdmAttribute());
-        String namespace = extractNamespaceFromLoginAttrName(formItemData.getFormItem().getItemDefinition().
-                                                                 getDestination().getUrn());
+        
+        Destination destination = destinationRepository.findById(itemDefinition.getDestinationId())
+            .orElseThrow(() -> new IllegalStateException("Destination not found for id: " + itemDefinition.getDestinationId()));
+            
+        String namespace = extractNamespaceFromLoginAttrName(destination.getUrn());
         if (namespace == null) {
           throw new IllegalStateException("Destination attribute of " + formItemData + " is not a login-namespace attribute.");
         }
@@ -945,8 +986,11 @@ public class ApplicationServiceImpl implements ApplicationService {
         if (idmService.isLoginAvailable(namespace, login)) {
           idmService.reserveLogin(namespace, login);
           itemData.stream()
-              .filter(passwordItem -> passwordItem.getFormItem().getItemDefinition()
-                                          .getType().equals(ItemType.PASSWORD))
+              .filter(passwordItem -> {
+                ItemDefinition passwordItemDefinition = itemDefinitionRepository.findById(passwordItem.getFormItem().getItemDefinitionId())
+                    .orElseThrow(() -> new IllegalStateException("ItemDefinition not found for id: " + passwordItem.getFormItem().getItemDefinitionId()));
+                return passwordItemDefinition.getType().equals(ItemType.PASSWORD);
+              })
               .forEach(passwordItem -> idmService.reservePassword(namespace, login, passwordItem.getValue()));
 
         } else {
@@ -984,12 +1028,16 @@ public class ApplicationServiceImpl implements ApplicationService {
       // TODO we need to have identities consolidated before this point
       Optional<Application> foundApp = applicationRepository.findByFormId(formSpecification.getId()).stream()
           .filter(app -> app.getState().isOpenState())
-          .filter(app -> (app.getIdmUserId() != null && Objects.equals(app.getIdmUserId(), sess.getPrincipal().id())) ||
-                             (Objects.equals(app.getSubmission().getIdentityIssuer(),
-                                 sess.getPrincipal().attribute(ISSUER_CLAIM))) &&
-                                 app.getSubmission().getIdentityIdentifier().equals(sess.getPrincipal().attribute(
-                                     IDENTIFIER_CLAIM)))
-                                .findFirst(); // TODO utilize similarUsers as well? prolly make IdM consolidate first?
+          .filter(app -> {
+            if (app.getIdmUserId() != null && Objects.equals(app.getIdmUserId(), sess.getPrincipal().id())) {
+              return true;
+            }
+            Submission submission = submissionRepository.findById(app.getSubmissionId())
+                .orElseThrow(() -> new DataInconsistencyException("Submission not found for application " + app.getId()));
+            return Objects.equals(submission.getIdentityIssuer(), sess.getPrincipal().attribute(ISSUER_CLAIM)) &&
+                submission.getIdentityIdentifier().equals(sess.getPrincipal().attribute(IDENTIFIER_CLAIM));
+          })
+          .findFirst(); // TODO utilize similarUsers as well? prolly make IdM consolidate first?
       return foundApp.orElse(null);
     }
     return null;

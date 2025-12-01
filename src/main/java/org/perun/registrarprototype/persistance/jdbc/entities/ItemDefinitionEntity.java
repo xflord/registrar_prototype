@@ -4,9 +4,12 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.stream.Collectors;
+import org.perun.registrarprototype.models.FormSpecification;
 import org.perun.registrarprototype.models.ItemDefinition;
 import org.perun.registrarprototype.models.ItemType;
 import org.springframework.data.annotation.Id;
+import org.springframework.data.relational.core.mapping.Column;
 import org.springframework.data.relational.core.mapping.MappedCollection;
 import org.springframework.data.relational.core.mapping.Table;
 
@@ -14,31 +17,43 @@ import org.springframework.data.relational.core.mapping.Table;
 public class ItemDefinitionEntity {
 
   @Id
+  @Column("id")
   private Integer id;
 
+  @Column("form_specification_id")
   private Integer formSpecificationId;
 
+  @Column("display_name")
   private String displayName;
 
+  @Column("type")
   private String type;
 
+  @Column("updatable")
   private Boolean updatable;
 
+  @Column("required")
   private Boolean required;
 
+  @Column("validator")
   private String validator;
 
+  @Column("destination_id")
   private Integer destinationId;
 
-  private String hiddenCondition;
+  @Column("hidden")
+  private String hidden;
 
-  private String disabledCondition;
+  @Column("disabled")
+  private String disabled;
 
+  @Column("default_value")
   private String defaultValue;
 
+  @Column("global")
   private Boolean global;
 
-  @MappedCollection(idColumn = "item_definition_id")
+  @MappedCollection(idColumn = "item_definition_id", keyColumn = "id")
   private List<ItemTextsEntity> texts = new ArrayList<>();
 
   @MappedCollection(idColumn = "item_definition_id")
@@ -115,19 +130,19 @@ public class ItemDefinitionEntity {
   }
 
   public ItemDefinition.Condition getHidden() {
-    return hiddenCondition != null ? ItemDefinition.Condition.valueOf(hiddenCondition) : null;
+    return hidden != null ? ItemDefinition.Condition.valueOf(hidden) : null;
   }
 
   public void setHidden(ItemDefinition.Condition hidden) {
-    this.hiddenCondition = hidden != null ? hidden.name() : null;
+    this.hidden = hidden != null ? hidden.name() : null;
   }
 
   public ItemDefinition.Condition getDisabled() {
-    return disabledCondition != null ? ItemDefinition.Condition.valueOf(disabledCondition) : null;
+    return disabled != null ? ItemDefinition.Condition.valueOf(disabled) : null;
   }
 
   public void setDisabled(ItemDefinition.Condition disabled) {
-    this.disabledCondition = disabled != null ? disabled.name() : null;
+    this.disabled = disabled != null ? disabled.name() : null;
   }
 
   public String getDefaultValue() {
@@ -154,8 +169,8 @@ public class ItemDefinitionEntity {
     this.texts = texts != null ? texts : new ArrayList<>();
   }
 
-  public Set<FormTypeRef> getFormTypes() {
-    return formTypes;
+  public Set<FormSpecification.FormType> getFormTypes() {
+    return formTypes.stream().map(FormTypeRef::getFormType).collect(Collectors.toSet());
   }
 
   public void setFormTypes(Set<FormTypeRef> formTypes) {

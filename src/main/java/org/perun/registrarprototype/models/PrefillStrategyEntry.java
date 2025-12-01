@@ -13,18 +13,18 @@ public class PrefillStrategyEntry {
   private Map<String, String> options;
   private String sourceAttribute;
 
-  private FormSpecification formSpecification;
+  private Integer formSpecificationId; // ID of the FormSpecification this PrefillStrategyEntry belongs to
   private boolean global;
 
   public PrefillStrategyEntry() {}
 
   public PrefillStrategyEntry(int id, PrefillStrategyType type, Map<String, String> options, String sourceAttribute,
-                              FormSpecification formSpecification, boolean global) {
+                              Integer formSpecificationId, boolean global) {
     this.id = id;
     this.type = type;
     this.options = options;
     this.sourceAttribute = sourceAttribute;
-    this.formSpecification = formSpecification;
+    this.formSpecificationId = formSpecificationId;
     this.global = global;
     this.checkPrefillStrategyOptions();
   }
@@ -62,12 +62,12 @@ public class PrefillStrategyEntry {
     return id == that.id && global == that.global && type == that.type &&
                Objects.equals(options, that.options) &&
                Objects.equals(sourceAttribute, that.sourceAttribute) &&
-               Objects.equals(formSpecification, that.formSpecification);
+               Objects.equals(formSpecificationId, that.formSpecificationId);
   }
 
   @Override
   public int hashCode() {
-    return Objects.hash(id, type, options, sourceAttribute, formSpecification, global);
+    return Objects.hash(id, type, options, sourceAttribute, formSpecificationId, global);
   }
 
   @Override
@@ -76,6 +76,8 @@ public class PrefillStrategyEntry {
                "prefillStrategyType=" + type +
                ", options=" + options +
                ", sourceAttribute='" + sourceAttribute + '\'' +
+               ", formSpecificationId=" + formSpecificationId +
+               ", global=" + global +
                '}';
   }
 
@@ -87,12 +89,12 @@ public class PrefillStrategyEntry {
     this.id = id;
   }
 
-  public FormSpecification getFormSpecification() {
-    return formSpecification;
+  public Integer getFormSpecificationId() {
+    return formSpecificationId;
   }
 
-  public void setFormSpecification(FormSpecification formSpecification) {
-    this.formSpecification = formSpecification;
+  public void setFormSpecificationId(Integer formSpecificationId) {
+    this.formSpecificationId = formSpecificationId;
   }
 
   public boolean isGlobal() {

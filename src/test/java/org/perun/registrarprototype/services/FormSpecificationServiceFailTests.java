@@ -36,7 +36,7 @@ public class FormSpecificationServiceFailTests extends GenericRegistrarServiceTe
 
     ItemDefinition itemDef1 = createItemDefinition(ItemType.TEXTFIELD, "item1", false, null);
     FormItem item1 = createFormItem(formSpecification.getId(), itemDef1, 1);
-    item1 = formService.setFormItem(formSpecification.getId(), item1);
+    formService.setFormItem(formSpecification.getId(), item1);
 
     AssignedFormModule
         module = new AssignedFormModule("testModuleWithOptions", new HashMap<>());
@@ -52,7 +52,7 @@ public class FormSpecificationServiceFailTests extends GenericRegistrarServiceTe
 
     ItemDefinition itemDef1 = createItemDefinition(ItemType.TEXTFIELD, "item1", false, null);
     FormItem item1 = createFormItem(formSpecification.getId(), itemDef1, 1);
-    item1 = formService.setFormItem(formSpecification.getId(), item1);
+    formService.setFormItem(formSpecification.getId(), item1);
 
     AssignedFormModule
         module = new AssignedFormModule("testModuleWithOptions", Map.of("wrongOption", "value1"));

@@ -5,6 +5,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Objects;
 import java.util.stream.Collectors;
 import org.perun.registrarprototype.controllers.dto.AssignedFormModuleDTO;
 import org.perun.registrarprototype.controllers.dto.DestinationDTO;
@@ -15,7 +16,6 @@ import org.perun.registrarprototype.controllers.dto.ItemDefinitionDTO;
 import org.perun.registrarprototype.controllers.dto.ItemTextsDTO;
 import org.perun.registrarprototype.controllers.dto.PrefillStrategyEntryDTO;
 import org.perun.registrarprototype.controllers.dto.PrincipalInfoDTO;
-import org.perun.registrarprototype.exceptions.InsufficientRightsException;
 import org.perun.registrarprototype.models.AssignedFormModule;
 import org.perun.registrarprototype.models.Destination;
 import org.perun.registrarprototype.models.FormSpecification;
@@ -110,7 +110,10 @@ public class FormController {
         .collect(Collectors.toList());
 
     // Validate prefill strategy scoping
-    items.forEach(item -> validatePrefillStrategyScoping(item.getItemDefinition(), isSystemAdmin));
+    items.forEach(item -> {
+      ItemDefinition itemDef = formService.getItemDefinitionById(item.getItemDefinitionId());
+      validatePrefillStrategyScoping(itemDef, isSystemAdmin);
+    });
 
     formService.updateFormItems(formId, items);
     return ResponseEntity.ok().build();
@@ -372,39 +375,39 @@ public class FormController {
   }
 
   private void validatePrefillStrategyScoping(ItemDefinition itemDef, boolean isSystemAdmin) {
-    if (itemDef.getPrefillStrategies() == null || itemDef.getPrefillStrategies().isEmpty()) {
+    if (itemDef.getPrefillStrategyIds() == null || itemDef.getPrefillStrategyIds().isEmpty()) {
       return;
     }
     if (itemDef.isGlobal()) {
       // Global ItemDefinitions can only use global PrefillStrategyEntries
-      for (PrefillStrategyEntry strategy : itemDef.getPrefillStrategies()) {
-        PrefillStrategyEntry existing = formService.getPrefillStrategyById(strategy.getId());
+      for (Integer strategyId : itemDef.getPrefillStrategyIds()) {
+        PrefillStrategyEntry existing = formService.getPrefillStrategyById(strategyId);
 
         if (!existing.isGlobal()) {
           throw new IllegalArgumentException(
-              "Global ItemDefinition cannot use form-specific PrefillStrategyEntry with id " + strategy.getId());
+              "Global ItemDefinition cannot use form-specific PrefillStrategyEntry with id " + strategyId);
         }
       }
     } else {
       // Non-global ItemDefinitions: form managers can only use form-specific strategies
       // System admins can also use global strategies
-      for (PrefillStrategyEntry strategy : itemDef.getPrefillStrategies()) {
-        PrefillStrategyEntry existing = formService.getPrefillStrategyById(strategy.getId());
+      for (Integer strategyId : itemDef.getPrefillStrategyIds()) {
+        PrefillStrategyEntry existing = formService.getPrefillStrategyById(strategyId);
 
         if (existing.isGlobal()) {
           // Only system admins can use global strategies for non-global definitions
           if (!isSystemAdmin) {
             throw new IllegalArgumentException(
-                "Form managers cannot use global PrefillStrategyEntry with id " + strategy.getId() +
+                "Form managers cannot use global PrefillStrategyEntry with id " + strategyId +
                 " for non-global ItemDefinition. Only system admins can do this.");
           }
         } else {
           // Form-specific strategy must belong to this form
-          if (existing.getFormSpecification() == null ||
-              !existing.getFormSpecification().equals(itemDef.getFormSpecification())) {
+          if (existing.getFormSpecificationId() == null ||
+              !existing.getFormSpecificationId().equals(itemDef.getFormSpecificationId())) {
             throw new IllegalArgumentException(
-                "PrefillStrategyEntry with id " + strategy.getId() +
-                " does not belong to FormSpecification " + itemDef.getFormSpecification().getId());
+                "PrefillStrategyEntry with id " + strategyId +
+                " does not belong to FormSpecification " + itemDef.getFormSpecificationId());
           }
         }
       }
@@ -417,7 +420,7 @@ public class FormController {
     }
 
     int id = dto.getId() != null ? dto.getId() : 0;
-    return new Destination(id, dto.getUrn(), dto.getFormSpecificationId() == null ? null : formService.getFormById(dto.getFormSpecificationId()), dto.isGlobal());
+    return new Destination(id, dto.getUrn(), dto.getFormSpecificationId(), dto.isGlobal());
   }
 
   private DestinationDTO toDestinationDTO(Destination destination) {
@@ -425,7 +428,7 @@ public class FormController {
       return null;
     }
 
-    return new DestinationDTO(destination.getId(), destination.getUrn(), destination.getFormSpecification() == null ? null : destination.getFormSpecification().getId(), destination.isGlobal());
+    return new DestinationDTO(destination.getId(), destination.getUrn(), destination.getFormSpecificationId(), destination.isGlobal());
   }
 
   // Mapper methods to convert DTOs to domain objects using constructors with validation
@@ -435,49 +438,40 @@ public class FormController {
   }
 
   private PrefillStrategyEntry toPrefillStrategyEntry(PrefillStrategyEntryDTO dto) {
-    FormSpecification formSpec = null;
-    if (dto.getFormSpecificationId() != null) {
-      formSpec = formService.getFormById(dto.getFormSpecificationId());
-    }
-    
     // Validation: form specification must be defined if NOT global, must be null if global
     if (dto.isGlobal()) {
-      if (formSpec != null) {
+      if (dto.getFormSpecificationId() != null) {
         throw new IllegalArgumentException("PrefillStrategyEntry formSpecification must be null when global is true");
       }
     } else {
-      if (formSpec == null) {
+      if (dto.getFormSpecificationId() == null) {
         throw new IllegalArgumentException("PrefillStrategyEntry formSpecificationId cannot be null when global is false");
       }
     }
     
     int id = dto.getId() != null ? dto.getId() : 0;
     // Use constructor with validation
-    return new PrefillStrategyEntry(id, dto.getType(), dto.getOptions(), dto.getSourceAttribute(), formSpec, dto.isGlobal());
+    return new PrefillStrategyEntry(id, dto.getType(), dto.getOptions(), dto.getSourceAttribute(), dto.getFormSpecificationId(), dto.isGlobal());
   }
 
   private ItemDefinition toItemDefinition(ItemDefinitionDTO dto) {
-    FormSpecification formSpec = null;
-    if (dto.getFormSpecificationId() != null) {
-      formSpec = formService.getFormById(dto.getFormSpecificationId());
-    }
-    
     // Validation: form specification must be defined if NOT global, must be null if global
     if (dto.isGlobal()) {
-      if (formSpec != null) {
+      if (dto.getFormSpecificationId() != null) {
         throw new IllegalArgumentException("ItemDefinition formSpecification must be null when global is true");
       }
     } else {
-      if (formSpec == null) {
+      if (dto.getFormSpecificationId() == null) {
         throw new IllegalArgumentException("ItemDefinition formSpecificationId cannot be null when global is false");
       }
     }
 
-    // Convert PrefillStrategyEntryDTOs to PrefillStrategyEntry objects
-    List<PrefillStrategyEntry> prefillStrategies = null;
+    // Convert PrefillStrategyEntryDTOs to PrefillStrategyEntry IDs
+    List<Integer> prefillStrategyIds = null;
     if (dto.getPrefillStrategies() != null) {
-      prefillStrategies = dto.getPrefillStrategies().stream()
-          .map(this::toPrefillStrategyEntry)
+      prefillStrategyIds = dto.getPrefillStrategies().stream()
+          .map(PrefillStrategyEntryDTO::getId)
+          .filter(Objects::nonNull)
           .collect(Collectors.toList());
     }
 
@@ -500,14 +494,14 @@ public class FormController {
     // Use constructor with validation
     return new ItemDefinition(
         id,
-        formSpec,
+        dto.getFormSpecificationId(),
         dto.getDisplayName(),
         dto.getType(),
         dto.getUpdatable(),
         dto.getRequired(),
         dto.getValidator(),
-        prefillStrategies,
-        toDestination(dto.getDestination()),
+        prefillStrategyIds,
+        dto.getDestination() != null ? dto.getDestination().getId() : null,
         dto.getFormTypes() != null ? dto.getFormTypes() : java.util.Set.of(FormSpecification.FormType.INITIAL, FormSpecification.FormType.EXTENSION),
         texts != null ? texts : new HashMap<>(),
         dto.getHidden() != null ? dto.getHidden() : ItemDefinition.Condition.NEVER,
@@ -531,9 +525,8 @@ public class FormController {
       throw new IllegalArgumentException("FormItem ordNum must be non-negative, got: " + dto.getOrdNum());
     }
     
-    // Validation: id must be negative when updating form items (this is the only time it's passed currently)
-    if (dto.getId() != null && dto.getId() >= 0) {
-      throw new IllegalArgumentException("FormItem id must be negative when updating form items, got: " + dto.getId());
+    if (dto.getId() == null) {
+      throw new IllegalArgumentException("FormItem id must be negative for removed items when updating form items, cannot be null " + dto.getId());
     }
 
     if (dto.getItemDefinition() == null) {
@@ -542,11 +535,11 @@ public class FormController {
 
     ItemDefinition existingDef = formService.getItemDefinitionById(dto.getItemDefinition().getId());
     if (!existingDef.isGlobal()) {
-      if (existingDef.getFormSpecification() == null ||
-              !(existingDef.getFormSpecification().getId() == dto.getFormId())) {
+      if (existingDef.getFormSpecificationId() == null ||
+              !(existingDef.getFormSpecificationId() == dto.getFormId())) {
         throw new IllegalArgumentException(
             "ItemDefinition with id " + existingDef.getId() +
-                " does not belong to FormSpecification " + dto.getId());
+                " does not belong to FormSpecification " + dto.getFormId());
       }
     }
 
@@ -554,16 +547,20 @@ public class FormController {
     int id = dto.getId() != null ? dto.getId() : 0;
     int formId = dto.getFormId();
     int ordNum = dto.getOrdNum();
+    
+    // Fetch the FormSpecification via FormService
+    FormSpecification formSpecification = formService.getFormById(formId);
+    
     // Use constructor
     return new FormItem(
         id,
-        formId,
+        formSpecification.getId(), // formSpecificationId
         dto.getShortName(),
         dto.getParentId(),
         ordNum,
         dto.getHiddenDependencyItemId(),
         dto.getDisabledDependencyItemId(),
-        existingDef
+        existingDef.getId()
     );
   }
 
@@ -619,15 +616,14 @@ public class FormController {
     }
     FormItemDTO dto = new FormItemDTO();
     dto.setId(item.getId());
-    dto.setFormId(item.getFormId());
+    dto.setFormId(item.getFormSpecificationId());
     dto.setShortName(item.getShortName());
     dto.setParentId(item.getParentId());
     dto.setOrdNum(item.getOrdNum());
     dto.setHiddenDependencyItemId(item.getHiddenDependencyItemId());
     dto.setDisabledDependencyItemId(item.getDisabledDependencyItemId());
-    if (item.getItemDefinition() != null) {
-      dto.setItemDefinition(toItemDefinitionDTO(item.getItemDefinition()));
-    }
+    ItemDefinition itemDef = formService.getItemDefinitionById(item.getItemDefinitionId());
+    dto.setItemDefinition(toItemDefinitionDTO(itemDef));
     return dto;
   }
 
@@ -650,7 +646,7 @@ public class FormController {
         entry.getType(),
         entry.getOptions(),
         entry.getSourceAttribute(),
-        entry.getFormSpecification() != null ? entry.getFormSpecification().getId() : null,
+        entry.getFormSpecificationId(),
         entry.isGlobal()
     );
   }
@@ -662,16 +658,17 @@ public class FormController {
     
     ItemDefinitionDTO dto = new ItemDefinitionDTO();
     dto.setId(itemDef.getId());
-    dto.setFormSpecificationId(itemDef.getFormSpecification() != null ? itemDef.getFormSpecification().getId() : null);
+    dto.setFormSpecificationId(itemDef.getFormSpecificationId());
     dto.setDisplayName(itemDef.getDisplayName());
     dto.setType(itemDef.getType());
     dto.setUpdatable(itemDef.getUpdatable());
     dto.setRequired(itemDef.getRequired());
     dto.setValidator(itemDef.getValidator());
     
-    // Convert PrefillStrategyEntry objects to DTOs
-    if (itemDef.getPrefillStrategies() != null) {
-      dto.setPrefillStrategies(itemDef.getPrefillStrategies().stream()
+    // Convert PrefillStrategyEntry IDs to DTOs
+    if (itemDef.getPrefillStrategyIds() != null) {
+      dto.setPrefillStrategies(itemDef.getPrefillStrategyIds().stream()
+          .map(formService::getPrefillStrategyById)
           .map(this::toPrefillStrategyEntryDTO)
           .collect(Collectors.toList()));
     }
@@ -689,7 +686,10 @@ public class FormController {
       dto.setTexts(textsDTO);
     }
 
-    dto.setDestination(toDestinationDTO(itemDef.getDestination()));
+    if (itemDef.getDestinationId() != null) {
+      Destination destination = formService.getDestinationById(itemDef.getDestinationId());
+      dto.setDestination(toDestinationDTO(destination));
+    }
     dto.setFormTypes(itemDef.getFormTypes());
     dto.setHidden(itemDef.getHidden());
     dto.setDisabled(itemDef.getDisabled());

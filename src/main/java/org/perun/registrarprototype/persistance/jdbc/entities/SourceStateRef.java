@@ -6,8 +6,10 @@ import org.springframework.data.relational.core.mapping.Table;
 
 @Table("form_transition_source_states")
 public class SourceStateRef {
+  @Column("form_transition_id")
   private Integer formTransitionId;
 
+  @Column("source_state")
   private String sourceState;
 
   public SourceStateRef() {

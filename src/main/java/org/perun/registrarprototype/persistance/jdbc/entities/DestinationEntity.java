@@ -1,17 +1,22 @@
 package org.perun.registrarprototype.persistance.jdbc.entities;
 
 import org.springframework.data.annotation.Id;
+import org.springframework.data.relational.core.mapping.Column;
 import org.springframework.data.relational.core.mapping.Table;
 
 @Table("destination")
 public class DestinationEntity {
   @Id
+  @Column("id")
   private Integer id;
 
+  @Column("urn")
   private String urn;
 
+  @Column("form_specification_id")
   private Integer formSpecificationId;
 
+  @Column("global")
   private Boolean global;
 
   public DestinationEntity() {

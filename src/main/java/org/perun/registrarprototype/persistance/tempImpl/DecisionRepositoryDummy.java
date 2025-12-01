@@ -4,8 +4,10 @@ import java.util.ArrayList;
 import java.util.List;
 import org.perun.registrarprototype.models.Decision;
 import org.perun.registrarprototype.persistance.DecisionRepository;
+import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
 
+@Profile("!jdbc")
 @Component
 public class DecisionRepositoryDummy implements DecisionRepository {
   private static List<Decision> decisions = new ArrayList<>();
@@ -34,7 +36,7 @@ public class DecisionRepositoryDummy implements DecisionRepository {
   @Override
   public List<Decision> findByApplicationId(int applicationId) {
     return decisions.stream()
-        .filter(d -> d.getApplication() != null && d.getApplication().getId() == applicationId)
+        .filter(d -> d.getApplicationId() != null && d.getApplicationId() == applicationId)
         .toList();
   }
 }

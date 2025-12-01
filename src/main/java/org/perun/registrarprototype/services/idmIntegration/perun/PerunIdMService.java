@@ -13,7 +13,6 @@ import cz.metacentrum.perun.openapi.model.InputCheckForSimilarUsersWithData;
 import cz.metacentrum.perun.openapi.model.InputCreateMemberForCandidate;
 import cz.metacentrum.perun.openapi.model.InputCreateMemberForUser;
 import cz.metacentrum.perun.openapi.model.InputSetMemberGroupWithUserAttributes;
-import cz.metacentrum.perun.openapi.model.InputSetMemberWithUserAttributes;
 import cz.metacentrum.perun.openapi.model.Member;
 import cz.metacentrum.perun.openapi.model.Type;
 import cz.metacentrum.perun.openapi.model.User;
@@ -23,7 +22,6 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
 import org.perun.registrarprototype.events.IdMUserCreatedEvent;
@@ -36,6 +34,13 @@ import org.perun.registrarprototype.models.Identity;
 import org.perun.registrarprototype.models.ItemType;
 import org.perun.registrarprototype.models.Role;
 import org.perun.registrarprototype.services.EventService;
+import org.perun.registrarprototype.models.Destination;
+import org.perun.registrarprototype.models.FormSpecification;
+import org.perun.registrarprototype.models.ItemDefinition;
+import org.perun.registrarprototype.persistance.DestinationRepository;
+import org.perun.registrarprototype.persistance.FormRepository;
+import org.perun.registrarprototype.persistance.ItemDefinitionRepository;
+import org.perun.registrarprototype.persistance.SubmissionRepository;
 import org.perun.registrarprototype.services.idmIntegration.IdMService;
 import org.springframework.context.annotation.Profile;
 import org.springframework.http.client.HttpComponentsClientHttpRequestFactory;
@@ -49,17 +54,27 @@ public class PerunIdMService implements IdMService {
   private static final String DISPLAY_NAME = "urn:perun:user:attribute-def:core:displayName";
   private final List<String> GROUP_MANAGER_ROLES = List.of("GROUPADMIN", "GROUPMEMBERSHIPMANAGER");
   private final List<String> VO_MANAGER_ROLES = List.of("VOADMIN", "ORGANIZATIONMEMBERSHIPMANAGER");
+  
+  private final ItemDefinitionRepository itemDefinitionRepository;
+  private final DestinationRepository destinationRepository;
+  private final FormRepository formRepository;
+  private final SubmissionRepository submissionRepository;
 
   private final PerunRPC rpc;
   private final EventService eventService;
 
-  // TODO ExtSource name in Perun does not match the `iss` field in this case, is a custom mapper required?
-  private final String extSourceName = "https://login.e-infra.cz/idp/";
 
-
-  public PerunIdMService(PerunRPC rpc, EventService eventService) {
+  public PerunIdMService(PerunRPC rpc, EventService eventService,
+                       ItemDefinitionRepository itemDefinitionRepository,
+                       DestinationRepository destinationRepository,
+                       FormRepository formRepository,
+                       SubmissionRepository submissionRepository) {
     this.rpc = rpc;
     this.eventService = eventService;
+    this.itemDefinitionRepository = itemDefinitionRepository;
+    this.destinationRepository = destinationRepository;
+    this.formRepository = formRepository;
+    this.submissionRepository = submissionRepository;
   }
 
   @Override
@@ -373,7 +388,8 @@ public class PerunIdMService implements IdMService {
 
   @Override
   public String createMemberForCandidate(Application application) {
-    Group group = retrieveGroup(application.getFormSpecification().getGroupId());
+    FormSpecification formSpec = formRepository.findById(application.getFormSpecificationId()).orElseThrow(() -> new RuntimeException("FormSpecification not found: " + application.getFormSpecificationId()));
+    Group group = retrieveGroup(formSpec.getGroupId());
     if (group == null) {
       return null;
     }
@@ -384,9 +400,23 @@ public class PerunIdMService implements IdMService {
     Candidate candidate = getCandidate(application);
     Map<String, String> attributes = new HashMap<>();
         application.getFormItemData().stream()
-            .filter(item -> Objects.nonNull(item.getFormItem().getItemDefinition().getDestination()))
+            .filter(item -> {
+              // Get the ItemDefinition using the itemDefinitionId
+              ItemDefinition itemDefinition = itemDefinitionRepository.findById(item.getFormItem().getItemDefinitionId())
+                  .orElseThrow(() -> new IllegalStateException("ItemDefinition not found for id: " + item.getFormItem().getItemDefinitionId()));
+              // Check if destinationId is not null
+              return itemDefinition.getDestinationId() != null;
+            })
             // TODO some necessary filtering/processing might be done here, see `createCandidateFromApplicationData` in Perun
-            .forEach(item -> attributes.put(item.getFormItem().getItemDefinition().getDestination().getUrn(), item.getValue()));
+            .forEach(item -> {
+              // Get the ItemDefinition using the itemDefinitionId
+              ItemDefinition itemDefinition = itemDefinitionRepository.findById(item.getFormItem().getItemDefinitionId())
+                  .orElseThrow(() -> new IllegalStateException("ItemDefinition not found for id: " + item.getFormItem().getItemDefinitionId()));
+              // Get the Destination using the destinationId
+              Destination destination = destinationRepository.findById(itemDefinition.getDestinationId())
+                  .orElseThrow(() -> new IllegalStateException("Destination not found for id: " + itemDefinition.getDestinationId()));
+              attributes.put(destination.getUrn(), item.getValue());
+            });
     candidate.setAttributes(attributes);
     input.setCandidate(candidate);
     Member createdMember = rpc.getMembersManager().createMemberForCandidate(input);
@@ -416,7 +446,8 @@ public class PerunIdMService implements IdMService {
 
   @Override
   public String createMemberForUser(Application application) {
-    Group group = retrieveGroup(application.getFormSpecification().getGroupId());
+    FormSpecification formSpec = formRepository.findById(application.getFormSpecificationId()).orElseThrow(() -> new RuntimeException("FormSpecification not found: " + application.getFormSpecificationId()));
+    Group group = retrieveGroup(formSpec.getGroupId());
     if (group == null) {
       return null;
     }
@@ -441,7 +472,7 @@ public class PerunIdMService implements IdMService {
 
       rpc.getMembersManager().validateMemberAsync(member.getId());
 
-      eventService.emitEvent(new MemberCreatedEvent(member.getUserId(), group.getId(), member.getId()));
+
 
       return member.getUserId().toString();
     }
@@ -451,13 +482,14 @@ public class PerunIdMService implements IdMService {
     members.add(member.getId());
     rpc.getGroupsManager().addMembers(group.getId(), members);
     updateMemberAttributesFromAppData(application, member, group);
-
+    eventService.emitEvent(new MemberCreatedEvent(member.getUserId(), group.getId(), member.getId()));
     return member.getUserId().toString();
   }
 
   @Override
   public String extendMembership(Application application) {
-    Group group = retrieveGroup(application.getFormSpecification().getGroupId());
+    FormSpecification formSpec = formRepository.findById(application.getFormSpecificationId()).orElseThrow(() -> new RuntimeException("FormSpecification not found: " + application.getFormSpecificationId()));
+    Group group = retrieveGroup(formSpec.getGroupId());
     if (group == null) {
       return null;
     }
@@ -500,14 +532,31 @@ public class PerunIdMService implements IdMService {
     List<ApplicationFormItemData> perunFormItems = new ArrayList<>();
 
     itemData.stream()
-        .filter(item -> item.getFormItem().getItemDefinition().getDestination() != null ||
-                            item.getFormItem().getItemDefinition().getType().equals(ItemType.VERIFIED_EMAIL))
+        .filter(item -> {
+          Integer itemDefinitionId = item.getFormItem().getItemDefinitionId();
+          ItemDefinition itemDefinition = itemDefinitionRepository.findById(itemDefinitionId)
+              .orElseThrow(() -> new IllegalStateException("ItemDefinition not found for ID: " + itemDefinitionId));
+          Integer destinationId = itemDefinition.getDestinationId();
+          Destination destination = destinationId != null ? destinationRepository.findById(destinationId)
+              .orElseThrow(() -> new IllegalStateException("Destination not found for ID: " + destinationId)) : null;
+          return destination != null || itemDefinition.getType().equals(ItemType.VERIFIED_EMAIL);
+        })
         .map(item -> {
           ApplicationFormItemData perunAppData = new ApplicationFormItemData();
           perunAppData.setValue(item.getValue());
           ApplicationFormItem perunAppItem = new ApplicationFormItem();
-          perunAppItem.setPerunDestinationAttribute(item.getFormItem().getItemDefinition().getDestination().getUrn());
-          if (item.getFormItem().getItemDefinition().getType().equals(ItemType.VERIFIED_EMAIL)) {
+          
+          Integer itemDefinitionId = item.getFormItem().getItemDefinitionId();
+          ItemDefinition itemDefinition = itemDefinitionRepository.findById(itemDefinitionId)
+              .orElseThrow(() -> new IllegalStateException("ItemDefinition not found for ID: " + itemDefinitionId));
+          Integer destinationId = itemDefinition.getDestinationId();
+          Destination destination = destinationId != null ? destinationRepository.findById(destinationId)
+              .orElseThrow(() -> new IllegalStateException("Destination not found for ID: " + destinationId)) : null;
+              
+          if (destination != null) {
+            perunAppItem.setPerunDestinationAttribute(destination.getUrn());
+          }
+          if (itemDefinition.getType().equals(ItemType.VERIFIED_EMAIL)) {
             perunAppItem.setType(Type.VALIDATED_EMAIL);
           } else {
             // should be fine to set default as textfield
@@ -562,15 +611,6 @@ public class PerunIdMService implements IdMService {
     return domainIdentities;
   }
 
-  private void updateMemberAttributesFromAppData(Application application, Member member) {
-    InputSetMemberWithUserAttributes inputAttributes = new InputSetMemberWithUserAttributes();
-    inputAttributes.setMember(member.getId());
-    List<Attribute> attributes = mapFormDataToAttributeObjects(application.getFormItemData());
-    inputAttributes.setAttributes(attributes);
-    inputAttributes.setWorkWithUserAttributes(true);
-    rpc.getAttributesManager().setMemberWithUserAttributes(inputAttributes);
-  }
-
   private void updateMemberAttributesFromAppData(Application application, Member member, Group group) {
     InputSetMemberGroupWithUserAttributes inputAttributes = new InputSetMemberGroupWithUserAttributes();
     inputAttributes.setMember(member.getId());
@@ -583,10 +623,25 @@ public class PerunIdMService implements IdMService {
 
   private List<Attribute> mapFormDataToAttributeObjects(List<FormItemData> itemData) {
     return itemData.stream()
-               .filter(item -> item.getFormItem().getItemDefinition().getDestination() != null)
+               .filter(item -> {
+                 Integer itemDefinitionId = item.getFormItem().getItemDefinitionId();
+                 ItemDefinition itemDefinition = itemDefinitionRepository.findById(itemDefinitionId)
+                     .orElseThrow(() -> new IllegalStateException("ItemDefinition not found for ID: " + itemDefinitionId));
+                 Integer destinationId = itemDefinition.getDestinationId();
+                 Destination destination = destinationId != null ? destinationRepository.findById(destinationId)
+                     .orElseThrow(() -> new IllegalStateException("Destination not found for ID: " + destinationId)) : null;
+                 return destination != null;
+               })
                .map(item -> {
+                 Integer itemDefinitionId = item.getFormItem().getItemDefinitionId();
+                 ItemDefinition itemDefinition = itemDefinitionRepository.findById(itemDefinitionId)
+                     .orElseThrow(() -> new IllegalStateException("ItemDefinition not found for ID: " + itemDefinitionId));
+                 Integer destinationId = itemDefinition.getDestinationId();
+                 Destination destination = destinationRepository.findById(destinationId)
+                     .orElseThrow(() -> new IllegalStateException("Destination not found for ID: " + destinationId));
+                     
                  AttributeDefinition attrDef = rpc.getAttributesManager()
-                                                   .getAttributeDefinitionByName(item.getFormItem().getItemDefinition().getDestination().getUrn());
+                                                   .getAttributeDefinitionByName(destination.getUrn());
                  Attribute attr = new Attribute();
                  attr.setId(attrDef.getId());
                  attr.setValue(item.getValue());
@@ -604,12 +659,24 @@ public class PerunIdMService implements IdMService {
     //  do not allow such forms, do not allow anonymous users?
     //  Old registrar currently uses `LOCAL` internal ExtSource with `createdBy` (e.g. timestamp) as login in such situations
 
-    candidate.setFirstName(application.getSubmission().getIdentityAttributes().get("given_name"));
-    candidate.setLastName(application.getSubmission().getIdentityAttributes().get("family_name"));
+    // Load submission using submissionId
+    var submission = submissionRepository.findById(application.getSubmissionId())
+        .orElseThrow(() -> new IllegalStateException("Submission not found for application ID: " + application.getId()));
+
+    candidate.setFirstName(submission.getIdentityAttributes().get("given_name"));
+    candidate.setLastName(submission.getIdentityAttributes().get("family_name"));
 
     String nameFromDisplayNameAttr = application.getFormItemData()
                                                         .stream()
-                                                        .filter(formItemData -> formItemData.getFormItem().getItemDefinition().getDestination().equals(DISPLAY_NAME))
+                                                        .filter(formItemData -> {
+                                                          Integer itemDefinitionId = formItemData.getFormItem().getItemDefinitionId();
+                                                          ItemDefinition itemDefinition = itemDefinitionRepository.findById(itemDefinitionId)
+                                                              .orElseThrow(() -> new IllegalStateException("ItemDefinition not found for ID: " + itemDefinitionId));
+                                                          Integer destinationId = itemDefinition.getDestinationId();
+                                                          Destination destination = destinationId != null ? destinationRepository.findById(destinationId)
+                                                              .orElseThrow(() -> new IllegalStateException("Destination not found for ID: " + destinationId)) : null;
+                                                          return destination != null && destination.equals(DISPLAY_NAME);
+                                                        })
                                                         .map(FormItemData::getValue)
                                          .findFirst().orElse(null);
     NameParser.ParsedName parsedName = NameParser.parseDisplayName(nameFromDisplayNameAttr);
@@ -624,12 +691,12 @@ public class PerunIdMService implements IdMService {
     }
 
 
-    if (application.getSubmission().getSubmitterName() != null) {
+    if (submission.getSubmitterName() != null) {
       var ues = new UserExtSource();
       ues.setLoa(1);
-      ues.setLogin(application.getSubmission().getIdentityIdentifier());
+      ues.setLogin(submission.getIdentityIdentifier());
       var es = new ExtSource();
-      es.setName(application.getSubmission().getIdentityIssuer());
+      es.setName(submission.getIdentityIssuer());
       es.setType("cz.metacentrum.perun.core.impl.ExtSourceIdp");
       ues.setExtSource(es);
       candidate.setUserExtSource(ues);
