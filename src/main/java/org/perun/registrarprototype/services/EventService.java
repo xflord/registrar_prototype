@@ -1,7 +1,7 @@
 package org.perun.registrarprototype.services;
 
-import org.perun.registrarprototype.events.Event;
+import org.perun.registrarprototype.services.events.RegistrarEvent;
 
 public interface EventService {
-  void emitEvent(Event event);
+  void emitEvent(RegistrarEvent event);
 }

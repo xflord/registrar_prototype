@@ -24,8 +24,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
-import org.perun.registrarprototype.events.IdMUserCreatedEvent;
-import org.perun.registrarprototype.events.MemberCreatedEvent;
+import org.perun.registrarprototype.services.events.IdMUserCreatedEvent;
+import org.perun.registrarprototype.services.events.MemberCreatedEvent;
 import org.perun.registrarprototype.exceptions.DataInconsistencyException;
 import org.perun.registrarprototype.exceptions.IdmAttributeNotExistsException;
 import org.perun.registrarprototype.models.Application;
@@ -33,14 +33,14 @@ import org.perun.registrarprototype.models.FormItemData;
 import org.perun.registrarprototype.models.Identity;
 import org.perun.registrarprototype.models.ItemType;
 import org.perun.registrarprototype.models.Role;
+import org.perun.registrarprototype.persistence.FormSpecificationRepository;
 import org.perun.registrarprototype.services.EventService;
 import org.perun.registrarprototype.models.Destination;
 import org.perun.registrarprototype.models.FormSpecification;
 import org.perun.registrarprototype.models.ItemDefinition;
-import org.perun.registrarprototype.persistance.DestinationRepository;
-import org.perun.registrarprototype.persistance.FormRepository;
-import org.perun.registrarprototype.persistance.ItemDefinitionRepository;
-import org.perun.registrarprototype.persistance.SubmissionRepository;
+import org.perun.registrarprototype.persistence.DestinationRepository;
+import org.perun.registrarprototype.persistence.ItemDefinitionRepository;
+import org.perun.registrarprototype.persistence.SubmissionRepository;
 import org.perun.registrarprototype.services.idmIntegration.IdMService;
 import org.springframework.context.annotation.Profile;
 import org.springframework.http.client.HttpComponentsClientHttpRequestFactory;
@@ -57,17 +57,18 @@ public class PerunIdMService implements IdMService {
   
   private final ItemDefinitionRepository itemDefinitionRepository;
   private final DestinationRepository destinationRepository;
-  private final FormRepository formRepository;
+  private final FormSpecificationRepository formRepository;
   private final SubmissionRepository submissionRepository;
 
   private final PerunRPC rpc;
   private final EventService eventService;
 
 
-  public PerunIdMService(PerunRPC rpc, EventService eventService,
+  public PerunIdMService(PerunRPC rpc,
+                         EventService eventService,
                        ItemDefinitionRepository itemDefinitionRepository,
                        DestinationRepository destinationRepository,
-                       FormRepository formRepository,
+                       FormSpecificationRepository formRepository,
                        SubmissionRepository submissionRepository) {
     this.rpc = rpc;
     this.eventService = eventService;
@@ -80,17 +81,14 @@ public class PerunIdMService implements IdMService {
   @Override
   public String getUserIdByIdentifier(String issuer, String identifier) {
     // TODO ask about way to make sure `iss` equals ext source name
-    System.out.println("Calling getUserIdByIdentifier with parameter " + identifier);
     User user;
     try {
       user = rpc.getUsersManager().getUserByExtSourceNameAndExtLogin(identifier, issuer);
     } catch (PerunRuntimeException ex) {
      if (ex.getName().equals("UserExtSourceNotExistsException")) {
-       System.out.println(ex.getMessage());
        return null;
      }
      if (ex.getName().equals("ExtSourceNotExistsException")) {
-       System.out.println(ex.getMessage());
        // are these cases really the same?
        return null;
      }
@@ -137,7 +135,6 @@ public class PerunIdMService implements IdMService {
 
   @Override
   public Map<Role, Set<String>> getRolesByUserId(String userId) {
-    System.out.println("Calling getRegistrarRolesByUserId with parameter " + userId);
     Map<Role, Set<String>> regRoles = new HashMap<>();
     if (userId == null) {
       return regRoles;

@@ -16,17 +16,18 @@ import org.perun.registrarprototype.models.ItemDefinition;
 import org.perun.registrarprototype.models.ItemTexts;
 import org.perun.registrarprototype.models.ItemType;
 import org.perun.registrarprototype.models.PrefillStrategyEntry;
-import org.perun.registrarprototype.persistance.DestinationRepository;
-import org.perun.registrarprototype.persistance.ItemDefinitionRepository;
-import org.perun.registrarprototype.persistance.PrefillStrategyEntryRepository;
+import org.perun.registrarprototype.persistence.DestinationRepository;
+import org.perun.registrarprototype.persistence.ItemDefinitionRepository;
+import org.perun.registrarprototype.persistence.PrefillStrategyEntryRepository;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.boot.CommandLineRunner;
+import org.springframework.boot.context.event.ApplicationReadyEvent;
+import org.springframework.context.event.EventListener;
 import org.springframework.core.io.ResourceLoader;
 import org.springframework.stereotype.Component;
 import org.yaml.snakeyaml.Yaml;
 
 @Component
-public class ItemConfigLoader implements CommandLineRunner {
+public class ItemConfigLoader {
 
   private final ResourceLoader resourceLoader;
 
@@ -46,12 +47,9 @@ public class ItemConfigLoader implements CommandLineRunner {
     this.destinationRepository = destinationRepository;
   }
 
-
-  @Override
-  public void run(String... args) throws Exception {
-    System.out.println("Loading config from " + configPath);
+  @EventListener(ApplicationReadyEvent.class)
+  public void onApplicationReady() throws Exception {
     load();
-    System.out.println("Finished loading config from " + configPath);
   }
 
   // TODO transactional
@@ -89,17 +87,11 @@ public class ItemConfigLoader implements CommandLineRunner {
       Destination destination = null;
       if (destinationUrn != null) {
         destination = new Destination(0, destinationUrn, null, true);
-        if (!destinationRepository.exists(destination)) {
-          destination = destinationRepository.createDestination(destination);
+        Optional<Destination> existing = destinationRepository.exists(destination);
+        if (existing.isPresent()) {
+          destination = existing.get();
         } else {
-          // Find the existing destination
-          List<Destination> globalDestinations = destinationRepository.getGlobalDestinations();
-          for (Destination d : globalDestinations) {
-            if (d.getUrn().equals(destinationUrn)) {
-              destination = d;
-              break;
-            }
-          }
+          destination = destinationRepository.createDestination(destination);
         }
       }
 
@@ -151,7 +143,6 @@ public class ItemConfigLoader implements CommandLineRunner {
 
       Optional<PrefillStrategyEntry> existing = prefillStrategyEntryRepository.exists(prefillStrategy);
       if (existing.isPresent()) {
-        System.out.println("YAML LOADER: Skipping prefill strategy " + prefillStrategy + " because it already exists");
         prefillStrategy =  existing.get();
       } else {
         entriesToSave.add(prefillStrategy);
@@ -180,7 +171,8 @@ public class ItemConfigLoader implements CommandLineRunner {
     List<Destination> destinationList = new ArrayList<>();
     destinations.forEach(destinationUrn -> {
       Destination destination = new Destination(0, destinationUrn, null, true);
-      if (!destinationRepository.exists(destination)) {
+      Optional<Destination> existing = destinationRepository.exists(destination);
+      if (existing.isEmpty()) {
         destinationList.add(destination);
       }
     });
@@ -194,7 +186,6 @@ public class ItemConfigLoader implements CommandLineRunner {
     try (InputStream in = resourceLoader.getResource(path).getInputStream()) {
       return yaml.load(in);
     } catch (IOException e) {
-      System.err.println("Failed to load item config file: " + path);
       throw new RuntimeException("Failed to load config file: " + path, e);
     }
   }

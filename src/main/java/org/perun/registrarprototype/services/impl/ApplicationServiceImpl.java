@@ -10,12 +10,12 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
-import org.perun.registrarprototype.events.ApplicationApprovedEvent;
-import org.perun.registrarprototype.events.ApplicationItemVerificationRequiredEvent;
-import org.perun.registrarprototype.events.ApplicationRejectedEvent;
-import org.perun.registrarprototype.events.ApplicationSubmittedEvent;
-import org.perun.registrarprototype.events.ApplicationVerifiedEvent;
-import org.perun.registrarprototype.events.ChangesRequestedToApplicationEvent;
+import org.perun.registrarprototype.services.events.ApplicationApprovedEvent;
+import org.perun.registrarprototype.services.events.ApplicationItemVerificationRequiredEvent;
+import org.perun.registrarprototype.services.events.ApplicationRejectedEvent;
+import org.perun.registrarprototype.services.events.ApplicationSubmittedEvent;
+import org.perun.registrarprototype.services.events.ApplicationVerifiedEvent;
+import org.perun.registrarprototype.services.events.ChangesRequestedToApplicationEvent;
 import org.perun.registrarprototype.exceptions.DataInconsistencyException;
 import org.perun.registrarprototype.exceptions.EntityNotExistsException;
 import org.perun.registrarprototype.exceptions.IdmAttributeNotExistsException;
@@ -41,12 +41,13 @@ import org.perun.registrarprototype.models.SubmissionContext;
 import org.perun.registrarprototype.models.Submission;
 import org.perun.registrarprototype.models.SubmissionResult;
 import org.perun.registrarprototype.models.ValidationError;
-import org.perun.registrarprototype.persistance.ApplicationRepository;
-import org.perun.registrarprototype.persistance.DecisionRepository;
-import org.perun.registrarprototype.persistance.DestinationRepository;
-import org.perun.registrarprototype.persistance.FormRepository;
-import org.perun.registrarprototype.persistance.ItemDefinitionRepository;
-import org.perun.registrarprototype.persistance.SubmissionRepository;
+import org.perun.registrarprototype.persistence.ApplicationRepository;
+import org.perun.registrarprototype.persistence.DecisionRepository;
+import org.perun.registrarprototype.persistence.DestinationRepository;
+import org.perun.registrarprototype.persistence.FormItemRepository;
+import org.perun.registrarprototype.persistence.FormSpecificationRepository;
+import org.perun.registrarprototype.persistence.ItemDefinitionRepository;
+import org.perun.registrarprototype.persistence.SubmissionRepository;
 import org.perun.registrarprototype.security.CurrentUser;
 import org.perun.registrarprototype.security.RegistrarAuthenticationToken;
 import org.perun.registrarprototype.security.SessionProvider;
@@ -55,14 +56,19 @@ import org.perun.registrarprototype.services.EventService;
 import org.perun.registrarprototype.services.FormService;
 import org.perun.registrarprototype.services.idmIntegration.IdMService;
 import org.perun.registrarprototype.services.prefillStrategy.impl.PrefillStrategyResolver;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 @Service
 public class ApplicationServiceImpl implements ApplicationService {
+
+  private static final Logger log = LoggerFactory.getLogger(ApplicationServiceImpl.class);
+
   public static final String IDENTIFIER_CLAIM = "sub";
   public static final String ISSUER_CLAIM = "iss";
   private final ApplicationRepository applicationRepository;
-  private final FormRepository formRepository;
+  private final FormSpecificationRepository formSpecificationRepository;
   private final SubmissionRepository submissionRepository;
   private final DecisionRepository decisionRepository;
   private final EventService eventService;
@@ -72,17 +78,18 @@ public class ApplicationServiceImpl implements ApplicationService {
   private final PrefillStrategyResolver prefillStrategyResolver;
   private final ItemDefinitionRepository itemDefinitionRepository;
   private final DestinationRepository destinationRepository;
+  private final FormItemRepository formItemRepository;
 
-  public ApplicationServiceImpl(ApplicationRepository applicationRepository, FormRepository formRepository,
+  public ApplicationServiceImpl(ApplicationRepository applicationRepository, FormSpecificationRepository formRepository,
                                 SubmissionRepository submissionRepository, DecisionRepository decisionRepository,
                                 EventService eventService,
                                 FormService formService,
                                 IdMService idmService, SessionProvider sessionProvider,
                                 PrefillStrategyResolver prefillStrategyResolver,
                                 ItemDefinitionRepository itemDefinitionRepository,
-                                DestinationRepository destinationRepository) {
+                                DestinationRepository destinationRepository, FormItemRepository formItemRepository) {
     this.applicationRepository = applicationRepository;
-    this.formRepository = formRepository;
+    this.formSpecificationRepository = formRepository;
     this.submissionRepository = submissionRepository;
     this.decisionRepository = decisionRepository;
     this.eventService = eventService;
@@ -92,13 +99,14 @@ public class ApplicationServiceImpl implements ApplicationService {
     this.prefillStrategyResolver = prefillStrategyResolver;
     this.itemDefinitionRepository = itemDefinitionRepository;
     this.destinationRepository = destinationRepository;
+    this.formItemRepository = formItemRepository;
   }
 
   @Override
   public Application approveApplication(RegistrarAuthenticationToken sess, int applicationId, String message) {
     Application app = applicationRepository.findById(applicationId).orElseThrow(() -> new EntityNotExistsException("Application", applicationId));
     Integer formSpecId = app.getFormSpecificationId();
-    FormSpecification formSpec = formRepository.findById(formSpecId).orElseThrow(() -> new EntityNotExistsException("FormSpecification", formSpecId));
+    FormSpecification formSpec = formSpecificationRepository.findById(formSpecId).orElseThrow(() -> new EntityNotExistsException("FormSpecification", formSpecId));
 
     List<AssignedFormModule> modules = formService.getAssignedFormModules(formSpec);
     for (AssignedFormModule module : modules) {
@@ -118,8 +126,6 @@ public class ApplicationServiceImpl implements ApplicationService {
         .orElseThrow(() -> new DataInconsistencyException("Submission not found for application " + app.getId()));
     
     if (app.getIdmUserId() == null) {
-      // TODO use ISSUER here to retrieve user instead of a hardcoded ext source name. Also find out how the naming in perun
-      //  works, e.g. iss `https://login.e-infra.cz/oidc/` maps to `https://login.e-infra.cz/idp/`
       String perunUserId = idmService.getUserIdByIdentifier(submission.getIdentityIssuer(),
           submission.getIdentityIdentifier());
       app.setIdmUserId(perunUserId);
@@ -192,7 +198,7 @@ public class ApplicationServiceImpl implements ApplicationService {
     // TODO how do we handle auto-submitted applications related to this one?
 
     Integer formSpecId = app.getFormSpecificationId();
-    FormSpecification formSpec = formRepository.findById(formSpecId).orElseThrow(() -> new EntityNotExistsException("FormSpecification", formSpecId));
+    FormSpecification formSpec = formSpecificationRepository.findById(formSpecId).orElseThrow(() -> new EntityNotExistsException("FormSpecification", formSpecId));
     List<AssignedFormModule> modules = formService.getAssignedFormModules(formSpec);
     for (AssignedFormModule module : modules) {
       module.getFormModule().onRejection(app);
@@ -314,7 +320,7 @@ public class ApplicationServiceImpl implements ApplicationService {
 
   @Override
   public Application applyForMembership(ApplicationForm applicationForm, Submission submission, String redirectUrl) {
-    FormSpecification formSpecification = formRepository.findById(applicationForm.getFormSpecificationId()).orElseThrow(() -> new EntityNotExistsException("FormSpecification", applicationForm.getFormSpecificationId()));
+    FormSpecification formSpecification = formSpecificationRepository.findById(applicationForm.getFormSpecificationId()).orElseThrow(() -> new EntityNotExistsException("FormSpecification", applicationForm.getFormSpecificationId()));
     RegistrarAuthenticationToken sess = sessionProvider.getCurrentSession();
 
     if (applicationForm.getType() == FormSpecification.FormType.EXTENSION && !canExtendMembership(formSpecification.getGroupId())) {
@@ -388,8 +394,8 @@ public class ApplicationServiceImpl implements ApplicationService {
    */
   private void validateFilledFormData(ApplicationForm data) {
     // TODO consider checking whether DISABLED/HIDDEN items were not filled (or simply skip them)
-    FormSpecification formSpec = formRepository.findById(data.getFormSpecificationId()).orElseThrow(() -> new EntityNotExistsException("FormSpecification", data.getFormSpecificationId()));
-    List<FormItem> items = formService.getFormItems(formSpec, data.getType());
+    FormSpecification formSpec = formSpecificationRepository.findById(data.getFormSpecificationId()).orElseThrow(() -> new EntityNotExistsException("FormSpecification", data.getFormSpecificationId()));
+    List<FormItem> items = formItemRepository.getFormItemsByFormIdAndType(formSpec.getId(), data.getType());
 
     Set<Integer> itemIds = items.stream().map(FormItem::getId).collect(Collectors.toSet());
     List<FormItemData> foreignItems = data.getFormItemData().stream()
@@ -461,13 +467,12 @@ public class ApplicationServiceImpl implements ApplicationService {
       FormSpecification.FormType type = selectFormType(new Requirement(autoSubmitTransition.getTargetFormSpecification().getGroupId(),
           autoSubmitTransition.getTargetFormState()));
       if (type == null) {
-        System.out.println("Requirement for auto submit " + autoSubmitTransition.getTargetFormSpecification().getGroupId() + " already fulfilled");
         return;
       }
       autoSubmitData = prepareApplicationForms(Map.of(autoSubmitTransition.getTargetFormSpecification(), type), null);
       applyForMemberships(autoSubmitData);
     } catch (Exception e) {
-      System.out.println("Error while auto-submitting application for form " + autoSubmitTransition.getTargetFormSpecification().getGroupId() + " with error: " + e.getMessage()); // TODO log properly
+      // TODO log properly
       // consider adding error into result messages?
     }
   }
@@ -495,6 +500,7 @@ public class ApplicationServiceImpl implements ApplicationService {
         throw new IllegalArgumentException("Item " + item.getFormItem().getId() + " does not belong to application " + applicationId);
       }
       
+      // Get the ItemDefinition using the itemDefinitionId
       ItemDefinition itemDefinition = itemDefinitionRepository.findById(item.getFormItem().getItemDefinitionId())
           .orElseThrow(() -> new IllegalStateException("ItemDefinition not found for id: " + item.getFormItem().getItemDefinitionId()));
           
@@ -623,8 +629,6 @@ public class ApplicationServiceImpl implements ApplicationService {
         continue;
       }
 
-      formSpecification.setItems(formService.getFormItems(formSpecification, type));
-
       List<FormItemData> prefilledFormItemData = loadForm(sess, formSpecification, type);
 
       requiredForms.add(new ApplicationForm(formSpecification.getId(), prefilledFormItemData, type));
@@ -677,6 +681,8 @@ public class ApplicationServiceImpl implements ApplicationService {
     List<AssignedFormModule> modules = formService.getAssignedFormModules(formSpecification);
     modules.forEach(module -> module.getFormModule().canBeSubmitted(sess.getPrincipal(), type, module.getOptions()));
 
+    formSpecification.setItems(formItemRepository.getFormItemsByFormIdAndType(formSpecification.getId(), type));
+
     List<FormItemData> prefilledFormItemData = prefillForm(sess, formSpecification);
 
     modules.forEach(module -> module.getFormModule().afterFormItemsPrefilled(sess.getPrincipal(), type, prefilledFormItemData));
@@ -708,6 +714,7 @@ public class ApplicationServiceImpl implements ApplicationService {
 
   private ValidationError validate(FormItem item, String value) {
     // TODO ideally replace hardcoded strings with enums/inheritance and let GUI translate them
+    // Get the ItemDefinition using the itemDefinitionId
     ItemDefinition itemDef = itemDefinitionRepository.findById(item.getItemDefinitionId())
         .orElseThrow(() -> new IllegalStateException("ItemDefinition not found for id: " + item.getItemDefinitionId()));
 
@@ -763,6 +770,7 @@ public class ApplicationServiceImpl implements ApplicationService {
     List<FormItemData> itemsWithMissingData = new ArrayList<>();
     prefilledItems.stream()
         .filter(item -> hasItemIncorrectVisibility(item, prefilledItems)).forEach(item -> {
+          // Get the ItemDefinition using the itemDefinitionId
           ItemDefinition itemDefinition = itemDefinitionRepository.findById(item.getFormItem().getItemDefinitionId())
               .orElseThrow(() -> new IllegalStateException("ItemDefinition not found for id: " + item.getFormItem().getItemDefinitionId()));
               
@@ -774,13 +782,10 @@ public class ApplicationServiceImpl implements ApplicationService {
           }
         });
     if (!unmodifiableRequiredButEmpty.isEmpty()) {
-      System.out.println("ERROR: The following items were set as hidden or disabled but do not have source attributes" +
-                             " to prefill from: " + unmodifiableRequiredButEmpty);
       throw new RuntimeException("Items that are hidden/disabled but do not have a source attribute should not exist:" +
                                      unmodifiableRequiredButEmpty);
     }
     if (!itemsWithMissingData.isEmpty()) {
-      System.out.println("ERROR: Could not prefill the following disabled/hidden attributes: " + itemsWithMissingData);
 //      if (sess.getPrincipal().id() != null) {
 //        // user exists in underlying IdM , hence source attribute values should exist?
 //        // TODO this does not necessarily apply to all prefill strategies
@@ -796,6 +801,7 @@ public class ApplicationServiceImpl implements ApplicationService {
    * @return
    */
   private boolean hasItemIncorrectVisibility(FormItemData item, List<FormItemData> prefilledFormItemData) {
+    // Get the ItemDefinition using the itemDefinitionId
     ItemDefinition itemDefinition = itemDefinitionRepository.findById(item.getFormItem().getItemDefinitionId())
         .orElseThrow(() -> new IllegalStateException("ItemDefinition not found for id: " + item.getFormItem().getItemDefinitionId()));
         
@@ -810,6 +816,7 @@ public class ApplicationServiceImpl implements ApplicationService {
    * @return
    */
   private boolean isItemHidden(FormItemData item, List<FormItemData> prefilledFormItemData) {
+    // Get the ItemDefinition using the itemDefinitionId
     ItemDefinition itemDefinition = itemDefinitionRepository.findById(item.getFormItem().getItemDefinitionId())
         .orElseThrow(() -> new IllegalStateException("ItemDefinition not found for id: " + item.getFormItem().getItemDefinitionId()));
         
@@ -825,6 +832,7 @@ public class ApplicationServiceImpl implements ApplicationService {
    * @return
    */
   private boolean isItemDisabled(FormItemData item, List<FormItemData> prefilledFormItemData) {
+    // Get the ItemDefinition using the itemDefinitionId
     ItemDefinition itemDefinition = itemDefinitionRepository.findById(item.getFormItem().getItemDefinitionId())
         .orElseThrow(() -> new IllegalStateException("ItemDefinition not found for id: " + item.getFormItem().getItemDefinitionId()));
         
@@ -866,6 +874,7 @@ public class ApplicationServiceImpl implements ApplicationService {
    */
   private String calculatePrefilledValue(RegistrarAuthenticationToken sess, FormItem item) { // again decide whether to pass principal as argument or retrieve it from the current session
 
+    // Get the ItemDefinition using the itemDefinitionId
     ItemDefinition itemDefinition = itemDefinitionRepository.findById(item.getItemDefinitionId())
         .orElseThrow(() -> new IllegalStateException("ItemDefinition not found for id: " + item.getItemDefinitionId()));
 
@@ -896,21 +905,24 @@ public class ApplicationServiceImpl implements ApplicationService {
     if (application.getIdmUserId() != null) {
       application.getFormItemData().stream()
           .filter(item -> {
+            // Get the ItemDefinition using the itemDefinitionId
             ItemDefinition itemDefinition = itemDefinitionRepository.findById(item.getFormItem().getItemDefinitionId())
                 .orElseThrow(() -> new IllegalStateException("ItemDefinition not found for id: " + item.getFormItem().getItemDefinitionId()));
             return itemDefinition.getType().equals(ItemType.LOGIN);
           })
           .forEach(loginItem -> {
+            // Get the ItemDefinition using the itemDefinitionId
             ItemDefinition itemDefinition = itemDefinitionRepository.findById(loginItem.getFormItem().getItemDefinitionId())
                 .orElseThrow(() -> new IllegalStateException("ItemDefinition not found for id: " + loginItem.getFormItem().getItemDefinitionId()));
                 
+            // Get the Destination using the destinationId
            Destination destination = destinationRepository.findById(itemDefinition.getDestinationId())
                 .orElseThrow(() -> new IllegalStateException("Destination not found for id: " + itemDefinition.getDestinationId()));
                 
             String perunLogin;
             try {
               // TODO overall the reserved logins logic might be too `perun-specific`
-              FormSpecification formSpec = formRepository.findById(application.getFormSpecificationId()).orElseThrow(() -> new EntityNotExistsException("FormSpecification", application.getFormSpecificationId()));
+              FormSpecification formSpec = formSpecificationRepository.findById(application.getFormSpecificationId()).orElseThrow(() -> new EntityNotExistsException("FormSpecification", application.getFormSpecificationId()));
               perunLogin = idmService.getAttribute(destination.getUrn(),
                   application.getIdmUserId(), formSpec.getGroupId(),
                   formSpec.getVoId());
@@ -924,8 +936,6 @@ public class ApplicationServiceImpl implements ApplicationService {
             if (!StringUtils.isEmpty(perunLogin)) {
               loginItemsToLeaveOut.add(loginItem);
               idmService.deletePassword(namespace, itemLogin);
-              System.out.println("Unreserving new login " + itemLogin + " in namespace " + namespace + " since user already " +
-                                     "has a login " + perunLogin + "in the same namespace.");
             }
           });
       application.getFormItemData().removeAll(loginItemsToLeaveOut);
@@ -935,14 +945,17 @@ public class ApplicationServiceImpl implements ApplicationService {
   private void releaseLogins(List<FormItemData> itemData) {
     itemData.stream()
         .filter(item -> {
+          // Get the ItemDefinition using the itemDefinitionId
           ItemDefinition itemDefinition = itemDefinitionRepository.findById(item.getFormItem().getItemDefinitionId())
               .orElseThrow(() -> new IllegalStateException("ItemDefinition not found for id: " + item.getFormItem().getItemDefinitionId()));
           return itemDefinition.getType().equals(ItemType.LOGIN);
         })
         .forEach(loginItem -> {
+          // Get the ItemDefinition using the itemDefinitionId
           ItemDefinition itemDefinition = itemDefinitionRepository.findById(loginItem.getFormItem().getItemDefinitionId())
               .orElseThrow(() -> new IllegalStateException("ItemDefinition not found for id: " + loginItem.getFormItem().getItemDefinitionId()));
               
+          // Get the Destination using the destinationId
           Destination destination = destinationRepository.findById(itemDefinition.getDestinationId())
               .orElseThrow(() -> new IllegalStateException("Destination not found for id: " + itemDefinition.getDestinationId()));
               
@@ -964,6 +977,7 @@ public class ApplicationServiceImpl implements ApplicationService {
   private void reserveLogins(List<FormItemData> itemData) {
 
     for (FormItemData formItemData : itemData) {
+      // Get the ItemDefinition using the itemDefinitionId
       ItemDefinition itemDefinition = itemDefinitionRepository.findById(formItemData.getFormItem().getItemDefinitionId())
           .orElseThrow(() -> new IllegalStateException("ItemDefinition not found for id: " + formItemData.getFormItem().getItemDefinitionId()));
           
@@ -975,6 +989,7 @@ public class ApplicationServiceImpl implements ApplicationService {
         // could be a lot of calls, at the same time this checks that the attribute actually exists
         // AttributeDefinition attrDef = idmService.getAttributeDefinition(formItemData.getFormItem().getDestinationIdmAttribute());
         
+        // Get the Destination using the destinationId
         Destination destination = destinationRepository.findById(itemDefinition.getDestinationId())
             .orElseThrow(() -> new IllegalStateException("Destination not found for id: " + itemDefinition.getDestinationId()));
             
@@ -987,6 +1002,7 @@ public class ApplicationServiceImpl implements ApplicationService {
           idmService.reserveLogin(namespace, login);
           itemData.stream()
               .filter(passwordItem -> {
+                // Get the ItemDefinition using the itemDefinitionId
                 ItemDefinition passwordItemDefinition = itemDefinitionRepository.findById(passwordItem.getFormItem().getItemDefinitionId())
                     .orElseThrow(() -> new IllegalStateException("ItemDefinition not found for id: " + passwordItem.getFormItem().getItemDefinitionId()));
                 return passwordItemDefinition.getType().equals(ItemType.PASSWORD);
@@ -1032,6 +1048,7 @@ public class ApplicationServiceImpl implements ApplicationService {
             if (app.getIdmUserId() != null && Objects.equals(app.getIdmUserId(), sess.getPrincipal().id())) {
               return true;
             }
+            // Load submission to check identity
             Submission submission = submissionRepository.findById(app.getSubmissionId())
                 .orElseThrow(() -> new DataInconsistencyException("Submission not found for application " + app.getId()));
             return Objects.equals(submission.getIdentityIssuer(), sess.getPrincipal().attribute(ISSUER_CLAIM)) &&
@@ -1082,7 +1099,7 @@ public class ApplicationServiceImpl implements ApplicationService {
   private Map<FormSpecification, FormSpecification.FormType> determineFormSpecification(List<Requirement> requirements) {
     Map<FormSpecification, FormSpecification.FormType> requiredForms = new HashMap<>();
     for (Requirement requirement : requirements) {
-      FormSpecification formSpecification = formRepository.findByGroupId(requirement.getGroupId())
+      FormSpecification formSpecification = formSpecificationRepository.findByGroupId(requirement.getGroupId())
                       .orElseThrow(() -> new EntityNotExistsException("FormSpecification", -1, "Form for group " + requirement.getGroupId() + " not found"));
       // TODO do we always display EXTENSION forms if user is already member of some groups?
 
@@ -1105,7 +1122,7 @@ public class ApplicationServiceImpl implements ApplicationService {
    */
   private List<Requirement> getPrerequisiteRequirements(Requirement requirement, List<Requirement> requirements) {
     // TODO do we want prerequisites of GROUP MEMBERSHIP or FORM SUBMISSION?
-    FormSpecification formSpecification = formRepository.findByGroupId(requirement.getGroupId())
+    FormSpecification formSpecification = formSpecificationRepository.findByGroupId(requirement.getGroupId())
                       .orElseThrow(() -> new EntityNotExistsException("FormSpecification", -1, "Form for group " + requirement.getGroupId() + " not found"));
 
     List<FormTransition> prerequisiteTransitions = formService.getPrerequisiteTransitions(formSpecification,

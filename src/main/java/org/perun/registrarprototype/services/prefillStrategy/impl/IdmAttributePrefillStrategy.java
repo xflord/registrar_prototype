@@ -7,7 +7,7 @@ import org.perun.registrarprototype.exceptions.IdmAttributeNotExistsException;
 import org.perun.registrarprototype.models.FormItem;
 import org.perun.registrarprototype.models.FormSpecification;
 import org.perun.registrarprototype.models.PrefillStrategyEntry;
-import org.perun.registrarprototype.persistance.FormRepository;
+import org.perun.registrarprototype.persistence.FormSpecificationRepository;
 import org.perun.registrarprototype.security.SessionProvider;
 import org.perun.registrarprototype.services.idmIntegration.IdMService;
 import org.perun.registrarprototype.services.prefillStrategy.PrefillStrategy;
@@ -21,8 +21,8 @@ public class IdmAttributePrefillStrategy implements PrefillStrategy {
 
   private final IdMService idmService;
   private final SessionProvider sessionProvider;
-  private final FormRepository formRepository;
-  public IdmAttributePrefillStrategy(IdMService idmService, SessionProvider sessionProvider, FormRepository formRepository) {
+  private final FormSpecificationRepository formRepository;
+  public IdmAttributePrefillStrategy(IdMService idmService, SessionProvider sessionProvider, FormSpecificationRepository formRepository) {
     this.sessionProvider = sessionProvider;
     this.idmService = idmService;
     this.formRepository = formRepository;

@@ -3,14 +3,14 @@ package org.perun.registrarprototype.idmIntegration.oauth;
 import cz.metacentrum.perun.openapi.PerunRPC;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.perun.registrarprototype.services.impl.EventServiceImpl;
+import org.perun.registrarprototype.persistence.FormSpecificationRepository;
+import org.perun.registrarprototype.services.EventService;
 import org.perun.registrarprototype.services.idmIntegration.perun.PerunIdMService;
 import org.perun.registrarprototype.services.idmIntegration.perun.oauth.BearerTokenInterceptor;
 import org.perun.registrarprototype.services.idmIntegration.perun.oauth.ClientAccessTokenService;
-import org.perun.registrarprototype.persistance.ItemDefinitionRepository;
-import org.perun.registrarprototype.persistance.DestinationRepository;
-import org.perun.registrarprototype.persistance.FormRepository;
-import org.perun.registrarprototype.persistance.SubmissionRepository;
+import org.perun.registrarprototype.persistence.ItemDefinitionRepository;
+import org.perun.registrarprototype.persistence.DestinationRepository;
+import org.perun.registrarprototype.persistence.SubmissionRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.client.RestClientTest;
 import org.springframework.boot.web.client.RestTemplateBuilder;
@@ -38,6 +38,9 @@ public class PerunOauthTest {
   @Autowired
   private ClientAccessTokenService clientAccessTokenService;
 
+  @Autowired
+  private EventService eventService;
+
   private PerunRPC perunRpc;
 
   @BeforeEach
@@ -58,10 +61,10 @@ public class PerunOauthTest {
 
     ItemDefinitionRepository itemDefinitionRepository = Mockito.mock(ItemDefinitionRepository.class);
     DestinationRepository destinationRepository = Mockito.mock(DestinationRepository.class);
-    FormRepository formRepository = Mockito.mock(FormRepository.class);
+    FormSpecificationRepository formRepository = Mockito.mock(FormSpecificationRepository.class);
     SubmissionRepository submissionRepository = Mockito.mock(SubmissionRepository.class);
     
-    PerunIdMService perunIdMService = new PerunIdMService(perunRpc, new EventServiceImpl(), itemDefinitionRepository, destinationRepository, formRepository, submissionRepository);
+    PerunIdMService perunIdMService = new PerunIdMService(perunRpc, eventService, itemDefinitionRepository, destinationRepository, formRepository, submissionRepository);
     perunIdMService.getUserIdByIdentifier("test-ext-source", "test-id");
 
     mockServer.verify();

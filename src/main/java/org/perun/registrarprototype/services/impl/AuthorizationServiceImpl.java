@@ -9,10 +9,10 @@ import org.perun.registrarprototype.models.FormSpecification;
 import org.perun.registrarprototype.models.ItemDefinition;
 import org.perun.registrarprototype.models.PrefillStrategyEntry;
 import org.perun.registrarprototype.models.Role;
-import org.perun.registrarprototype.persistance.DestinationRepository;
-import org.perun.registrarprototype.persistance.FormRepository;
-import org.perun.registrarprototype.persistance.PrefillStrategyEntryRepository;
-import org.perun.registrarprototype.persistance.SubmissionRepository;
+import org.perun.registrarprototype.persistence.DestinationRepository;
+import org.perun.registrarprototype.persistence.FormSpecificationRepository;
+import org.perun.registrarprototype.persistence.PrefillStrategyEntryRepository;
+import org.perun.registrarprototype.persistence.SubmissionRepository;
 import org.perun.registrarprototype.security.RegistrarAuthenticationToken;
 import org.perun.registrarprototype.services.AuthorizationService;
 
@@ -22,12 +22,12 @@ import org.springframework.stereotype.Service;
 @Service
 public class AuthorizationServiceImpl implements AuthorizationService {
 
-  private final FormRepository formRepository;
+  private final FormSpecificationRepository formRepository;
   private final DestinationRepository destinationRepository;
   private final PrefillStrategyEntryRepository prefillStrategyEntryRepository;
   private final SubmissionRepository submissionRepository;
 
-  public AuthorizationServiceImpl(FormRepository formRepository, DestinationRepository destinationRepository,
+  public AuthorizationServiceImpl(FormSpecificationRepository formRepository, DestinationRepository destinationRepository,
                                   PrefillStrategyEntryRepository prefillStrategyEntryRepository,
                                   SubmissionRepository submissionRepository) {
     this.formRepository = formRepository;

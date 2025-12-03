@@ -25,14 +25,14 @@ import org.perun.registrarprototype.models.FormItemData;
 import org.perun.registrarprototype.models.Identity;
 import org.perun.registrarprototype.models.ItemType;
 import org.perun.registrarprototype.models.Role;
+import org.perun.registrarprototype.persistence.FormSpecificationRepository;
 import org.perun.registrarprototype.services.idmIntegration.IdMService;
 import org.perun.registrarprototype.models.Destination;
 import org.perun.registrarprototype.models.FormSpecification;
 import org.perun.registrarprototype.models.ItemDefinition;
-import org.perun.registrarprototype.persistance.DestinationRepository;
-import org.perun.registrarprototype.persistance.FormRepository;
-import org.perun.registrarprototype.persistance.ItemDefinitionRepository;
-import org.perun.registrarprototype.persistance.SubmissionRepository;
+import org.perun.registrarprototype.persistence.DestinationRepository;
+import org.perun.registrarprototype.persistence.ItemDefinitionRepository;
+import org.perun.registrarprototype.persistence.SubmissionRepository;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Service;
@@ -57,7 +57,7 @@ public class KeycloakIdMService implements IdMService {
   
   private final ItemDefinitionRepository itemDefinitionRepository;
   private final DestinationRepository destinationRepository;
-  private final FormRepository formRepository;
+  private final FormSpecificationRepository formRepository;
   private final SubmissionRepository submissionRepository;
 
   public KeycloakIdMService(@Value("${idm.keycloak.realm}") String realmName,
@@ -66,7 +66,7 @@ public class KeycloakIdMService implements IdMService {
             @Value("${idm.keycloak.oauth.clientSecret}") String clientSecret,
             ItemDefinitionRepository itemDefinitionRepository,
             DestinationRepository destinationRepository,
-            FormRepository formRepository,
+            FormSpecificationRepository formRepository,
             SubmissionRepository submissionRepository) {
     this.itemDefinitionRepository = itemDefinitionRepository;
     this.destinationRepository = destinationRepository;
@@ -84,7 +84,6 @@ public class KeycloakIdMService implements IdMService {
 
   @Override
   public String getUserIdByIdentifier(String issuer, String identifier) {
-    System.out.println("getUserIdByIdentifier");
 
     // TODO should be surefire way to extract identity provider from jwt and find the user
     IdentityProviderRepresentation provider = keycloak.realm(this.realmName).identityProviders().findAll().stream()
@@ -125,14 +124,12 @@ public class KeycloakIdMService implements IdMService {
     // TODO this probably has to be custom per IdM, Keycloak does not support in-group roles,
     //  so authz has to be done based on group membership (ADMIN can probably be retrieved from role)
 
-    System.out.println("Calling getRegistrarRolesByUserId with parameter " + userId);
     Map<Role, Set<String>> regRoles = new HashMap<>();
     if (userId == null) {
       return regRoles;
     }
 
     List<GroupRepresentation> groups = keycloak.realm(this.realmName).users().get(userId).groups();
-    System.out.println("getRegistrarRolesByUserId with groups " + groups);
 
     regRoles.put(Role.FORM_MANAGER, new HashSet<>());
     regRoles.put(Role.FORM_APPROVER, new HashSet<>());
@@ -160,7 +157,6 @@ public class KeycloakIdMService implements IdMService {
 
     // TODO how to handle multivalued attributes
 //    return realmResource.users().get(userId).toRepresentation().getAttributes().get(attributeName).getFirst();
-    System.out.println(attributeName);
     UserResource userResource = realmResource.users().get(userId);
     if (userResource == null) {
       // TODO once we have userId we should consider that user always exists?
@@ -299,7 +295,6 @@ public class KeycloakIdMService implements IdMService {
       if (response.getStatus() == Response.Status.CREATED.getStatusCode()) {
         userId = CreatedResponseUtil.getCreatedId(response);
       } else {
-        System.out.println(response.readEntity(String.class));
         throw new RuntimeException("Unable to create user " + user.getUsername() + ", call failed with status " + response.getStatus());
       }
     }

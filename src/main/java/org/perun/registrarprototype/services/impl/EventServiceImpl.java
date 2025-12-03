@@ -1,25 +1,21 @@
 package org.perun.registrarprototype.services.impl;
 
-import org.perun.registrarprototype.events.Event;
-import org.perun.registrarprototype.services.AuditingService;
+import org.perun.registrarprototype.services.events.RegistrarEvent;
 import org.perun.registrarprototype.services.EventService;
-import org.perun.registrarprototype.services.NotificationService;
-import org.perun.registrarprototype.services.tempImpl.AuditingServiceDummy;
-import org.perun.registrarprototype.services.tempImpl.NotificationServiceDummy;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Component;
 
 @Component
 public class EventServiceImpl implements EventService {
 
-  private final NotificationService notificationService = new NotificationServiceDummy();
-  private final AuditingService auditingService = new AuditingServiceDummy();
+  private final ApplicationEventPublisher publisher;
 
-  public EventServiceImpl() {
+  public EventServiceImpl(ApplicationEventPublisher publisher) {
+    this.publisher = publisher;
   }
 
   @Override
-  public void emitEvent(Event event) {
-    this.notificationService.consoleNotificationService(event);
-    this.auditingService.logEvent(event);
+  public void emitEvent(RegistrarEvent event) {
+    this.publisher.publishEvent(event);
   }
 }

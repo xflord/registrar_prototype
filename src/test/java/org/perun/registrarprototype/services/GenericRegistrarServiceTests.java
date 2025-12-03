@@ -7,12 +7,14 @@ import org.perun.registrarprototype.models.ItemDefinition;
 import org.perun.registrarprototype.models.ItemType;
 import org.perun.registrarprototype.models.FormSpecification;
 import org.perun.registrarprototype.models.Submission;
-import org.perun.registrarprototype.persistance.ApplicationRepository;
-import org.perun.registrarprototype.persistance.DestinationRepository;
-import org.perun.registrarprototype.persistance.FormModuleRepository;
-import org.perun.registrarprototype.persistance.FormRepository;
-import org.perun.registrarprototype.persistance.ItemDefinitionRepository;
-import org.perun.registrarprototype.persistance.tempImpl.FormModuleRepositoryDummy;
+import org.perun.registrarprototype.persistence.ApplicationRepository;
+import org.perun.registrarprototype.persistence.DestinationRepository;
+import org.perun.registrarprototype.persistence.FormItemRepository;
+import org.perun.registrarprototype.persistence.FormModuleRepository;
+import org.perun.registrarprototype.persistence.FormSpecificationRepository;
+import org.perun.registrarprototype.persistence.ItemDefinitionRepository;
+import org.perun.registrarprototype.persistence.SubmissionRepository;
+import org.perun.registrarprototype.persistence.tempImpl.FormModuleRepositoryDummy;
 import org.perun.registrarprototype.security.SessionProvider;
 import org.perun.registrarprototype.services.config.TestConfig;
 import org.perun.registrarprototype.services.idmIntegration.IdMService;
@@ -26,7 +28,7 @@ import org.springframework.test.context.ActiveProfiles;
 @SpringBootTest
 @ImportAutoConfiguration(exclude = {OAuth2ClientAutoConfiguration.class}) // this is so that autowiring the oauth client does not break all the tests
 @Import(TestConfig.class)
-@ActiveProfiles( {"test", "basic-auth"} )
+@ActiveProfiles( {"test", "basic-auth", "jpa"} )
 public class GenericRegistrarServiceTests {
    @Autowired
    protected ApplicationService applicationService;
@@ -39,11 +41,15 @@ public class GenericRegistrarServiceTests {
    @Autowired
    protected ApplicationRepository applicationRepository;
    @Autowired
-   protected FormRepository formRepository;
+   protected FormSpecificationRepository formRepository;
+   @Autowired
+   protected FormItemRepository formItemRepository;
    @Autowired
    protected ItemDefinitionRepository itemDefinitionRepository;
    @Autowired
    protected DestinationRepository destinationRepository;
+   @Autowired
+   protected SubmissionRepository submissionRepository;
    protected FormModuleRepository formModuleRepository;
 
    private static int groupId = 1;
@@ -57,6 +63,8 @@ public class GenericRegistrarServiceTests {
         submission = new Submission();
         submission.setIdentityIssuer("testIssuer");
         submission.setIdentityIdentifier("testIdentifier");
+        submission.setTimestamp(java.time.LocalDateTime.now());
+        submission = submissionRepository.save(submission);
     }
 
     protected int getGroupId() {

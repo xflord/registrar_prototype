@@ -6,19 +6,13 @@ import org.perun.registrarprototype.models.Application;
 import org.perun.registrarprototype.models.FormItemData;
 import org.perun.registrarprototype.models.FormSpecification;
 import org.perun.registrarprototype.security.CurrentUser;
-import org.perun.registrarprototype.services.ApplicationService;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 @Component
 public class ExampleModule implements FormModule {
 
-  @Autowired
-  private ApplicationService applicationService;
-
   @Override
   public String getName() {
-    System.out.println(applicationService.getAllApplications());
     return "ExampleModule";
   }
 

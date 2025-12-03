@@ -9,6 +9,8 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.function.Function;
+import java.util.regex.Pattern;
+import java.util.regex.PatternSyntaxException;
 import java.util.stream.Collectors;
 import org.perun.registrarprototype.exceptions.DataInconsistencyException;
 import org.perun.registrarprototype.exceptions.EntityNotExistsException;
@@ -23,14 +25,14 @@ import org.perun.registrarprototype.models.FormTransition;
 import org.perun.registrarprototype.models.ItemDefinition;
 import org.perun.registrarprototype.models.PrefillStrategyEntry;
 import org.perun.registrarprototype.models.Requirement;
-import org.perun.registrarprototype.persistance.DestinationRepository;
-import org.perun.registrarprototype.persistance.FormItemRepository;
-import org.perun.registrarprototype.persistance.ApplicationRepository;
-import org.perun.registrarprototype.persistance.FormModuleRepository;
-import org.perun.registrarprototype.persistance.FormRepository;
-import org.perun.registrarprototype.persistance.FormTransitionRepository;
-import org.perun.registrarprototype.persistance.ItemDefinitionRepository;
-import org.perun.registrarprototype.persistance.PrefillStrategyEntryRepository;
+import org.perun.registrarprototype.persistence.DestinationRepository;
+import org.perun.registrarprototype.persistence.FormItemRepository;
+import org.perun.registrarprototype.persistence.ApplicationRepository;
+import org.perun.registrarprototype.persistence.FormModuleRepository;
+import org.perun.registrarprototype.persistence.FormSpecificationRepository;
+import org.perun.registrarprototype.persistence.FormTransitionRepository;
+import org.perun.registrarprototype.persistence.ItemDefinitionRepository;
+import org.perun.registrarprototype.persistence.PrefillStrategyEntryRepository;
 import org.perun.registrarprototype.security.RegistrarAuthenticationToken;
 import org.perun.registrarprototype.security.SessionProvider;
 import org.perun.registrarprototype.services.FormService;
@@ -41,7 +43,7 @@ import org.springframework.stereotype.Service;
 
 @Service
 public class FormServiceImpl implements FormService {
-  private final FormRepository formRepository;
+  private final FormSpecificationRepository formSpecificationRepository;
   private final FormModuleRepository formModuleRepository;
   private final ModulesManager modulesManager;
   private final FormItemRepository formItemRepository;
@@ -53,7 +55,7 @@ public class FormServiceImpl implements FormService {
   private final DestinationRepository destinationRepository;
   private final IdMService idmService;
 
-  public FormServiceImpl(FormRepository formRepository,
+  public FormServiceImpl(FormSpecificationRepository formRepository,
                          FormModuleRepository formModuleRepository, ModulesManager modulesManager,
                          FormItemRepository formItemRepository, FormTransitionRepository formTransitionRepository,
                          ApplicationRepository applicationRepository, SessionProvider sessionProvider,
@@ -61,7 +63,7 @@ public class FormServiceImpl implements FormService {
                          PrefillStrategyEntryRepository prefillStrategyEntryRepository,
                          DestinationRepository destinationRepository,
                          IdMService idmService) {
-    this.formRepository = formRepository;
+    this.formSpecificationRepository = formRepository;
     this.formModuleRepository = formModuleRepository;
     this.modulesManager = modulesManager;
     this.formItemRepository = formItemRepository;
@@ -80,13 +82,13 @@ public class FormServiceImpl implements FormService {
       throw new IllegalArgumentException("Group not found in underlying IdM system");
     }
 
-    return formRepository.save(new FormSpecification(-1, groupId, new ArrayList<>()));
+    return formSpecificationRepository.save(new FormSpecification(-1, groupId, new ArrayList<>()));
   }
 
   @Override
   public FormSpecification createForm(FormSpecification formSpecification, List<AssignedFormModule> modules) throws InsufficientRightsException {
     formSpecification.setId(-1);
-    formSpecification = formRepository.save(formSpecification);
+    formSpecification = formSpecificationRepository.save(formSpecification);
     setModules(sessionProvider.getCurrentSession(), formSpecification, modules);
     return formSpecification;
   }
@@ -103,22 +105,22 @@ public class FormServiceImpl implements FormService {
 
   @Override
   public void deleteForm(int formId) {
-    FormSpecification formSpecification = formRepository.findById(formId).orElseThrow(() -> new EntityNotExistsException("FormSpecification", formId));
+    FormSpecification formSpecification = formSpecificationRepository.findById(formId).orElseThrow(() -> new EntityNotExistsException("FormSpecification", formId));
 
-    formRepository.delete(formSpecification);
+    formSpecificationRepository.delete(formSpecification);
   }
 
   @Override
   public FormItem setFormItem(int formId, FormItem formItem) throws FormItemRegexNotValid {
-    FormSpecification formSpecification = formRepository.findById(formId).orElseThrow(() -> new EntityNotExistsException("FormSpecification", formId));
+    FormSpecification formSpecification = formSpecificationRepository.findById(formId).orElseThrow(() -> new EntityNotExistsException("FormSpecification", formId));
 
     // Validate regex if present
     ItemDefinition itemDefinition = itemDefinitionRepository.findById(formItem.getItemDefinitionId())
         .orElseThrow(() -> new EntityNotExistsException("ItemDefinition", formItem.getItemDefinitionId()));
     if (itemDefinition.getValidator() != null && !itemDefinition.getValidator().isEmpty()) {
       try {
-        java.util.regex.Pattern.compile(itemDefinition.getValidator());
-      } catch (java.util.regex.PatternSyntaxException e) {
+        Pattern.compile(itemDefinition.getValidator());
+      } catch (PatternSyntaxException e) {
         throw new FormItemRegexNotValid("Cannot compile regex: " + itemDefinition.getValidator(), formItem);
       }
     }
@@ -130,13 +132,13 @@ public class FormServiceImpl implements FormService {
     items.add(savedItem);
     formSpecification.setItems(items);
 
-    formRepository.update(formSpecification);
+    formSpecificationRepository.save(formSpecification);
     return savedItem;
   }
 
   @Override
   public void setFormItems(int formId, List<FormItem> items) throws FormItemRegexNotValid {
-    FormSpecification formSpecification = formRepository.findById(formId).orElseThrow(() -> new EntityNotExistsException("FormSpecification", formId));
+    FormSpecification formSpecification = formSpecificationRepository.findById(formId).orElseThrow(() -> new EntityNotExistsException("FormSpecification", formId));
 
     items.forEach(item -> {
                         item.setFormSpecificationId(formSpecification.getId());
@@ -145,7 +147,7 @@ public class FormServiceImpl implements FormService {
     );
 
     formSpecification.setItems(items);
-    formRepository.update(formSpecification);
+    formSpecificationRepository.save(formSpecification);
 
   }
 
@@ -196,14 +198,14 @@ public class FormServiceImpl implements FormService {
 
   @Override
   public List<FormSpecification> getAllFormsWithItems() {
-    List<FormSpecification> formSpecifications = formRepository.findAll();
+    List<FormSpecification> formSpecifications = formSpecificationRepository.findAll();
     formSpecifications.forEach(form -> form.setItems(formItemRepository.getFormItemsByFormId(form.getId())));
     return formSpecifications;
   }
 
   @Override
   public FormSpecification getFormById(int formId) {
-    return formRepository.findById(formId)
+    return formSpecificationRepository.findById(formId)
         .orElseThrow(() -> new EntityNotExistsException("FormSpecification", formId));
   }
 

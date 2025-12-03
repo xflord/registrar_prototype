@@ -42,9 +42,9 @@ public class ApplicationController {
   private final SessionProvider sessionProvider;
   private final FormService formService;
   private final AuthorizationService authorizationService;
-  private final org.perun.registrarprototype.persistance.SubmissionRepository submissionRepository;
+  private final org.perun.registrarprototype.persistence.SubmissionRepository submissionRepository;
 
-  public ApplicationController(ApplicationService applicationService, SessionProvider sessionProvider, FormService formService, AuthorizationService authorizationService, org.perun.registrarprototype.persistance.SubmissionRepository submissionRepository) {
+  public ApplicationController(ApplicationService applicationService, SessionProvider sessionProvider, FormService formService, AuthorizationService authorizationService, org.perun.registrarprototype.persistence.SubmissionRepository submissionRepository) {
       this.applicationService = applicationService;
       this.sessionProvider = sessionProvider;
       this.formService = formService;
@@ -274,15 +274,13 @@ public class ApplicationController {
     if (dto.getFormSpecificationId() == null) {
       throw new IllegalArgumentException("FormSpecification id cannot be null!");
     }
-    FormSpecification formSpec = formService.getFormById(dto.getFormSpecificationId());
-
     List<FormItemData> formItemData = null;
     if (dto.getFormItemData() != null) {
       formItemData = dto.getFormItemData().stream()
           .map(this::toFormItemData)
           .collect(Collectors.toList());
     }
-    return new ApplicationForm(formSpec.getId(), formItemData, dto.getType());
+    return new ApplicationForm(dto.getFormSpecificationId(), formItemData, dto.getType());
   }
 
   private SubmissionContext toSubmissionContext(SubmissionContextDTO dto) {
@@ -313,7 +311,7 @@ public class ApplicationController {
 
   private ApplicationFormDTO toApplicationFormDTO(ApplicationForm applicationForm) {
     if (applicationForm == null) {
-      throw new RuntimeException("ApplicationForm cannot be null");
+      return null;
     }
     ApplicationFormDTO dto = new ApplicationFormDTO();
     dto.setFormSpecificationId(applicationForm.getFormSpecificationId());

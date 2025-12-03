@@ -5,8 +5,8 @@ import java.util.Optional;
 import org.perun.registrarprototype.models.FormItem;
 import org.perun.registrarprototype.models.ItemDefinition;
 import org.perun.registrarprototype.models.PrefillStrategyEntry;
-import org.perun.registrarprototype.persistance.ItemDefinitionRepository;
-import org.perun.registrarprototype.persistance.PrefillStrategyEntryRepository;
+import org.perun.registrarprototype.persistence.ItemDefinitionRepository;
+import org.perun.registrarprototype.persistence.PrefillStrategyEntryRepository;
 import org.perun.registrarprototype.services.prefillStrategy.PrefillStrategy;
 import org.springframework.stereotype.Component;
 

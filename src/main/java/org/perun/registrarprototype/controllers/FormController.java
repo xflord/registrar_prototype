@@ -359,8 +359,6 @@ public class FormController {
   public ResponseEntity<PrincipalInfoDTO> me(@AuthenticationPrincipal CurrentUser principal) {
     RegistrarAuthenticationToken session = sessionProvider.getCurrentSession();
 
-    System.out.println(principal.getRoles());
-
     if (!session.isAuthenticated()) {
       return ResponseEntity.ok(new PrincipalInfoDTO(false));
     }
@@ -536,7 +534,7 @@ public class FormController {
     ItemDefinition existingDef = formService.getItemDefinitionById(dto.getItemDefinition().getId());
     if (!existingDef.isGlobal()) {
       if (existingDef.getFormSpecificationId() == null ||
-              !(existingDef.getFormSpecificationId() == dto.getFormId())) {
+              !(Objects.equals(existingDef.getFormSpecificationId(), dto.getFormId()))) {
         throw new IllegalArgumentException(
             "ItemDefinition with id " + existingDef.getId() +
                 " does not belong to FormSpecification " + dto.getFormId());

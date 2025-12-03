@@ -7,7 +7,7 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import org.codehaus.groovy.control.MultipleCompilationErrorsException;
 import org.perun.registrarprototype.models.ScriptModule;
-import org.perun.registrarprototype.persistance.ScriptModuleRepository;
+import org.perun.registrarprototype.persistence.ScriptModuleRepository;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.event.EventListener;
@@ -38,7 +38,6 @@ public class ModulesManager {
         .forEach((module) -> loadedModules.put(module.getName(), module));
 
     this.scriptModuleRepository.findAll().forEach((module) -> safeLoad(module.getName(), module.getScript()));
-    System.out.println("Loaded modules: " + loadedModules.keySet());
   }
 
   public synchronized void safeLoad(String name, String script) {
@@ -48,9 +47,7 @@ public class ModulesManager {
       context.getAutowireCapableBeanFactory().autowireBean(instance);
 
       if (instance instanceof FormModule module) {
-        System.out.println("Loaded module " + module.getName());
         loadedModules.put(module.getName(), module);
-        System.out.println(loadedModules.keySet());
       } else {
         throw new IllegalArgumentException("Script " + name + " does not implement FormModule interface.");
       }

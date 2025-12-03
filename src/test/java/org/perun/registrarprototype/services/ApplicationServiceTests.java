@@ -57,7 +57,8 @@ class ApplicationServiceTests extends GenericRegistrarServiceTests {
 
     Application createdApp = applicationRepository.findById(app.getId()).orElse(null);
 
-    assert createdApp == app;
+    assert createdApp != null;
+    assert createdApp.getId() == app.getId();
     assert createdApp.getState() == ApplicationState.SUBMITTED;
   }
 
@@ -77,7 +78,8 @@ class ApplicationServiceTests extends GenericRegistrarServiceTests {
 
     Application createdApp = applicationRepository.findById(app.getId()).orElse(null);
 
-    assert createdApp == app;
+    assert createdApp != null;
+    assert createdApp.getId() == app.getId();
     assert createdApp.getState() == ApplicationState.SUBMITTED;
 
     applicationService.approveApplication(sessionProvider.getCurrentSession(), createdApp.getId(), "");
@@ -155,6 +157,11 @@ class ApplicationServiceTests extends GenericRegistrarServiceTests {
     
     FormItem item1 = createFormItem(formSpecification.getId(), itemDef1, 1);
     FormItem updatedItem1 = formService.setFormItem(formSpecification.getId(), item1);
+
+    // Debug output
+    System.out.println("ItemDefinition: " + itemDef1);
+    System.out.println("Prefill strategy IDs: " + itemDef1.getPrefillStrategyIds());
+    System.out.println("Session attributes: " + sessionProvider.getCurrentSession().getPrincipal().getAttributes());
 
     List<FormItemData> data = applicationService.loadForm(sessionProvider.getCurrentSession(), formSpecification, FormSpecification.FormType.INITIAL);
 
