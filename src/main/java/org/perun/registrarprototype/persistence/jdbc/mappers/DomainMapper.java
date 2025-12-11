@@ -39,8 +39,6 @@ import org.perun.registrarprototype.persistence.jdbc.entities.PrefillStrategyRef
 import org.perun.registrarprototype.persistence.jdbc.entities.ScriptModuleEntity;
 import org.perun.registrarprototype.persistence.jdbc.entities.SourceStateRef;
 import org.perun.registrarprototype.persistence.jdbc.entities.SubmissionEntity;
-import org.perun.registrarprototype.persistence.jdbc.entities.SubmissionIdentityAttribute;
-import org.springframework.stereotype.Component;
 
 // TODO probably could be moved into the entity classes
 public class DomainMapper {
@@ -153,21 +151,13 @@ public class DomainMapper {
   }
   
   public static Submission toDomain(SubmissionEntity entity) {
-    // Parse identityAttributes from JSON string to Map
-    Map<String, String> identityAttributes = new HashMap<>();
-    if (entity.getIdentityAttributes() != null && !entity.getIdentityAttributes().isEmpty()) {
-      for (SubmissionIdentityAttribute attribute : entity.getIdentityAttributes()) {
-        identityAttributes.put(attribute.getAttributeKey(), attribute.getAttributeValue());
-      }
-    }
-    
     return new Submission(
         entity.getId() != null ? entity.getId() : 0,
         new ArrayList<>(), // Will be populated by the repository
         entity.getTimestamp(),
         entity.getSubmitterId(),
         entity.getSubmitterName(),
-        identityAttributes
+        entity.getIdentityAttributes()
     );
   }
   

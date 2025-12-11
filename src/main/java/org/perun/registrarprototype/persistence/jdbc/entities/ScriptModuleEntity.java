@@ -5,7 +5,7 @@ import org.springframework.data.relational.core.mapping.Column;
 import org.springframework.data.relational.core.mapping.Table;
 
 @Table("script_module")
-public class ScriptModuleEntity {
+public class ScriptModuleEntity extends AuditEntity {
   @Id
   @Column("id")
   private Integer id;

@@ -480,6 +480,7 @@ public class FormServiceImpl implements FormService {
 
         item.setParentId(resolveReferenceItemId(item.getParentId(), newIdMap));
         item.setHiddenDependencyItemId(resolveReferenceItemId(item.getHiddenDependencyItemId(), newIdMap));
+        // TODO in case of dependencies, add check that master is above slave (e,g, the ord number is higher for dependent items)
         item.setDisabledDependencyItemId(resolveReferenceItemId(item.getDisabledDependencyItemId(), newIdMap));
         // item.setOrdNum(updatedItem.getOrdNum());
 

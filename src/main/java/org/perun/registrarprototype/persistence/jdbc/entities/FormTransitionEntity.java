@@ -11,7 +11,7 @@ import org.springframework.data.relational.core.mapping.MappedCollection;
 import org.springframework.data.relational.core.mapping.Table;
 
 @Table("form_transition")
-public class FormTransitionEntity {
+public class FormTransitionEntity extends AuditEntity {
   @Id
   @Column("id")
   private Integer id;

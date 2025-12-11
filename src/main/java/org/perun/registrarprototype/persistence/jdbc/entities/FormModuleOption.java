@@ -4,7 +4,7 @@ import org.springframework.data.relational.core.mapping.Column;
 import org.springframework.data.relational.core.mapping.Table;
 
 @Table("form_module_options")
-public class FormModuleOption {
+public class FormModuleOption extends AuditEntity {
   @Column("assigned_form_module_id")
   private Integer assignedFormModuleId;
 

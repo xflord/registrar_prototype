@@ -6,7 +6,7 @@ import org.springframework.data.relational.core.mapping.Table;
 import java.time.LocalDateTime;
 
 @Table("decision")
-public class DecisionEntity {
+public class DecisionEntity extends AuditEntity {
   @Id
   @Column("id")
   private Integer id;

@@ -1,7 +1,9 @@
 package org.perun.registrarprototype.services.events;
 
+import java.time.Instant;
 import java.util.Collection;
 import java.util.Map;
+import org.perun.registrarprototype.security.CurrentUser;
 
 public abstract class RegistrarEvent {
 
@@ -9,6 +11,10 @@ public abstract class RegistrarEvent {
   protected boolean notifiable = false;
 
   protected String name = getClass().getSimpleName();
+
+  private final Instant occurredAt = Instant.now();
+  private CurrentUser actor;
+  private String correlationId;
 
   public String getEventName() {
     return name;
@@ -65,6 +71,26 @@ public abstract class RegistrarEvent {
     }
 
     return obj == null ? "0x" : obj.toString();
+  }
+
+  public Instant getOccurredAt() {
+    return occurredAt;
+  }
+
+  public CurrentUser getActor() {
+    return actor;
+  }
+
+  public void setActor(CurrentUser actor) {
+    this.actor = actor;
+  }
+
+  public String getCorrelationId() {
+    return correlationId;
+  }
+
+  public void setCorrelationId(String correlationId) {
+    this.correlationId = correlationId;
   }
 
   public boolean isAuditable() {

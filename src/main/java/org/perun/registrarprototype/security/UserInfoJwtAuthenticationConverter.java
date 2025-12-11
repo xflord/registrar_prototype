@@ -24,11 +24,11 @@ public class UserInfoJwtAuthenticationConverter implements Converter<Jwt, Abstra
     // Base attributes from JWT
     Map<String, Object> claims = new HashMap<>(jwt.getClaims());
 
-    // Optional: call userinfo
-    Map<String, Object> userInfo = userLookupService.getUserInfo(jwt);
-    if (userInfo != null) {
-      claims.putAll(userInfo);
-    }
+//    // Optional: call userinfo
+//    Map<String, Object> userInfo = userLookupService.getUserInfo(jwt);
+//    if (userInfo != null) {
+//      claims.putAll(userInfo);
+//    }
 
     String perunUserId = userLookupService.perunUserData(jwt);
 

@@ -30,8 +30,6 @@ public class CorrelationIdFilter extends OncePerRequestFilter {
     response.setHeader(CORRELATION_ID_HEADER, correlationId);
     request.setAttribute(CORRELATION_ID_HEADER, correlationId);
 
-    System.out.println(correlationId);
-
     MDC.put("correlationId", correlationId);
 
     try {

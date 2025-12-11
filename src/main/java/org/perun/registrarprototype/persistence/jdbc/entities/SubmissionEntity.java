@@ -1,14 +1,13 @@
 package org.perun.registrarprototype.persistence.jdbc.entities;
 
 import java.time.LocalDateTime;
-import java.util.List;
+import java.util.Map;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.relational.core.mapping.Column;
-import org.springframework.data.relational.core.mapping.MappedCollection;
 import org.springframework.data.relational.core.mapping.Table;
 
 @Table("submission")
-public class SubmissionEntity {
+public class SubmissionEntity extends AuditEntity {
   @Id
   @Column("id")
   private Integer id;
@@ -22,8 +21,8 @@ public class SubmissionEntity {
   private String identityIdentifier;
   @Column("identity_issuer")
   private String identityIssuer;
-  @MappedCollection(idColumn = "submission_id")
-  private List<SubmissionIdentityAttribute> identityAttributes;
+  @Column("identity_attributes")
+  private Map<String, String> identityAttributes;
 
   public SubmissionEntity() {
   }
@@ -76,12 +75,12 @@ public class SubmissionEntity {
     this.identityIssuer = identityIssuer;
   }
 
-  public List<SubmissionIdentityAttribute> getIdentityAttributes() {
+  public Map<String, String> getIdentityAttributes() {
     return identityAttributes;
   }
 
   public void setIdentityAttributes(
-      List<SubmissionIdentityAttribute> identityAttributes) {
+      Map<String, String> identityAttributes) {
     this.identityAttributes = identityAttributes;
   }
 }

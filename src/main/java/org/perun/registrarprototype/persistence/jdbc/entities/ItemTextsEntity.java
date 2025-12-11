@@ -5,7 +5,7 @@ import org.springframework.data.relational.core.mapping.Column;
 import org.springframework.data.relational.core.mapping.Table;
 
 @Table("item_texts")
-public class ItemTextsEntity {
+public class ItemTextsEntity extends AuditEntity {
   @Id
   @Column("id")
   private Integer id;

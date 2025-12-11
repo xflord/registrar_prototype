@@ -5,7 +5,7 @@ import org.springframework.data.relational.core.mapping.Column;
 import org.springframework.data.relational.core.mapping.Table;
 
 @Table("item_definition_form_types")
-public class FormTypeRef {
+public class FormTypeRef extends AuditEntity {
   @Column("item_definition_id")
   private Integer itemDefinitionId;
 

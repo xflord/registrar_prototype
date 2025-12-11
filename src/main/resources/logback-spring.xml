@@ -5,15 +5,16 @@
 
     <include resource="org/springframework/boot/logging/logback/defaults.xml"/>
     <property name="LOG_FILE" value="${LOG_FILE:-${LOG_PATH:-${LOG_TEMP:-${java.io.tmpdir:-/tmp}}/}spring.log}"/>
-    
+
     <!-- Set up profiles -->
     <springProfile name="dev">
         <root level="INFO">
             <appender-ref ref="CONSOLE" />
             <appender-ref ref="FILE" />
+            <appender-ref ref="AUDIT_FILE" />
         </root>
     </springProfile>
-    
+
     <springProfile name="!dev">
         <root level="INFO">
             <appender-ref ref="CONSOLE" />
@@ -25,4 +26,32 @@
             <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} %-5level [%thread] [%X{correlationId}] %logger{36} - %msg%n</pattern>
         </encoder>
     </appender>
+
+<!--    &lt;!&ndash; Systemd journal appender for audit logs &ndash;&gt;-->
+<!--    <appender class="org.gnieh.logback.SystemdJournalAppender" name="journal-audit">-->
+<!--        <syslogIdentifier>perun_audit</syslogIdentifier>-->
+<!--        <logLoggerName>true</logLoggerName>-->
+<!--        <encoder>-->
+<!--            <pattern>%msg</pattern>-->
+<!--        </encoder>-->
+<!--    </appender>-->
+
+    <!-- File appender for audit logs (as backup) -->
+    <appender name="AUDIT_FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <file>logs/audit.log</file>
+        <rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
+            <fileNamePattern>logs/audit.%d{yyyy-MM-dd}.%i.log</fileNamePattern>
+            <maxFileSize>100MB</maxFileSize>
+            <maxHistory>30</maxHistory>
+        </rollingPolicy>
+        <encoder>
+            <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} [AUDIT] [%X{correlationId}] %msg%n</pattern>
+        </encoder>
+    </appender>
+
+    <!-- Logger for audit events - writes to both journal and file -->
+    <logger name="org.perun.registrarprototype.services.impl.AuditingServiceImpl" level="INFO" additivity="false">
+<!--        <appender-ref ref="journal-audit"/>-->
+        <appender-ref ref="AUDIT_FILE"/>
+    </logger>
 </configuration>

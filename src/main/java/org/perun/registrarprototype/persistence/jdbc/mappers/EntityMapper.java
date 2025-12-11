@@ -19,6 +19,7 @@ import org.perun.registrarprototype.models.ScriptModule;
 import org.perun.registrarprototype.models.Submission;
 import org.perun.registrarprototype.persistence.jdbc.entities.ApplicationEntity;
 import org.perun.registrarprototype.persistence.jdbc.entities.AssignedFormModuleEntity;
+import org.perun.registrarprototype.persistence.jdbc.entities.AuditEventEntity;
 import org.perun.registrarprototype.persistence.jdbc.entities.DecisionEntity;
 import org.perun.registrarprototype.persistence.jdbc.entities.DestinationEntity;
 import org.perun.registrarprototype.persistence.jdbc.entities.FormItemDataEntity;
@@ -33,7 +34,7 @@ import org.perun.registrarprototype.persistence.jdbc.entities.PrefillStrategyOpt
 import org.perun.registrarprototype.persistence.jdbc.entities.ScriptModuleEntity;
 import org.perun.registrarprototype.persistence.jdbc.entities.SourceStateRef;
 import org.perun.registrarprototype.persistence.jdbc.entities.SubmissionEntity;
-import org.perun.registrarprototype.persistence.jdbc.entities.SubmissionIdentityAttribute;
+import org.perun.registrarprototype.services.events.RegistrarEvent;
 
 public class EntityMapper {
   public static ApplicationEntity toEntity(Application domain) {
@@ -225,18 +226,18 @@ public class EntityMapper {
     entity.setSubmitterName(domain.getSubmitterName());
     entity.setIdentityIdentifier(domain.getIdentityIdentifier());
     entity.setIdentityIssuer(domain.getIdentityIssuer());
+    entity.setIdentityAttributes(domain.getIdentityAttributes());
 
-    // Convert identityAttributes Map to JSON string
-    if (domain.getIdentityAttributes() != null) {
-      List<SubmissionIdentityAttribute>  attributes = new ArrayList<>();
-      domain.getIdentityAttributes().forEach((key, value) -> {
-        SubmissionIdentityAttribute attribute = new SubmissionIdentityAttribute();
-        attribute.setAttributeKey(key);
-        attribute.setAttributeValue(value);
-        attributes.add(attribute);
-      });
-      entity.setIdentityAttributes(attributes);
-    }
+    return entity;
+  }
+
+  public static AuditEventEntity toEntity(RegistrarEvent event) {
+    AuditEventEntity entity = new AuditEventEntity();
+    entity.setEventName(event.getClass().getSimpleName());
+    entity.setCorrelationId(event.getCorrelationId());
+    entity.setActor(event.getActor());
+    entity.setTimestamp(event.getOccurredAt());
+    entity.setContent(event);
 
     return entity;
   }

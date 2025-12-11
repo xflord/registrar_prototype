@@ -5,7 +5,7 @@ import org.springframework.data.relational.core.mapping.Column;
 import org.springframework.data.relational.core.mapping.Table;
 
 @Table("prefill_strategy_options")
-public class PrefillStrategyOption {
+public class PrefillStrategyOption extends AuditEntity {
   @Id
   @Column("id")
   private Integer id;

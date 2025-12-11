@@ -7,7 +7,11 @@ CREATE TABLE form_specification (
     vo_id VARCHAR(255),
     group_id VARCHAR(255) NOT NULL,
     auto_approve BOOLEAN DEFAULT FALSE,
-    auto_approve_extension BOOLEAN DEFAULT FALSE
+    auto_approve_extension BOOLEAN DEFAULT FALSE,
+    created_at timestamp,
+    created_by varchar(255),
+    modified_at timestamp,
+    modified_by varchar(255)
 );
 
 -- Destination (depends on form_specification)
@@ -16,6 +20,10 @@ CREATE TABLE destination (
     urn VARCHAR(255),
     form_specification_id INT,
     global BOOLEAN DEFAULT FALSE,
+    created_at timestamp,
+    created_by varchar(255),
+    modified_at timestamp,
+    modified_by varchar(255),
     FOREIGN KEY (form_specification_id) REFERENCES form_specification(id) ON DELETE CASCADE
 );
 
@@ -33,6 +41,10 @@ CREATE TABLE item_definition (
     disabled VARCHAR(50),
     default_value VARCHAR(500),
     global BOOLEAN DEFAULT FALSE,
+    created_at timestamp,
+    created_by varchar(255),
+    modified_at timestamp,
+    modified_by varchar(255),
     FOREIGN KEY (form_specification_id) REFERENCES form_specification(id) ON DELETE CASCADE,
     FOREIGN KEY (destination_id) REFERENCES destination(id) ON DELETE RESTRICT
 );
@@ -47,6 +59,10 @@ CREATE TABLE form_item (
     hidden_dependency_item_id INT,
     disabled_dependency_item_id INT,
     item_definition_id INT NOT NULL,
+    created_at timestamp,
+    created_by varchar(255),
+    modified_at timestamp,
+    modified_by varchar(255),
     FOREIGN KEY (form_id) REFERENCES form_specification(id) ON DELETE CASCADE,
     FOREIGN KEY (parent_id) REFERENCES form_item(id) ON DELETE SET NULL,
     FOREIGN KEY (hidden_dependency_item_id) REFERENCES form_item(id) ON DELETE SET NULL,
@@ -58,6 +74,10 @@ CREATE TABLE form_item (
 CREATE TABLE item_definition_form_types (
     item_definition_id INT NOT NULL,
     form_type VARCHAR(50) NOT NULL,
+    created_at timestamp,
+    created_by varchar(255),
+    modified_at timestamp,
+    modified_by varchar(255),
     PRIMARY KEY (item_definition_id, form_type),
     FOREIGN KEY (item_definition_id) REFERENCES item_definition(id) ON DELETE CASCADE
 );
@@ -70,6 +90,10 @@ CREATE TABLE item_texts (
     label TEXT,
     help TEXT,
     error TEXT,
+    created_at timestamp,
+    created_by varchar(255),
+    modified_at timestamp,
+    modified_by varchar(255),
     FOREIGN KEY (item_definition_id) REFERENCES item_definition(id) ON DELETE CASCADE,
     CONSTRAINT unique_item_locale UNIQUE (item_definition_id, locale)
 );
@@ -81,6 +105,10 @@ CREATE TABLE prefill_strategy_entry (
     type VARCHAR(50) NOT NULL,
     source_attribute VARCHAR(255),
     global BOOLEAN DEFAULT FALSE,
+    created_at timestamp,
+    created_by varchar(255),
+    modified_at timestamp,
+    modified_by varchar(255),
     FOREIGN KEY (form_specification_id) REFERENCES form_specification(id) ON DELETE CASCADE
 );
 
@@ -90,6 +118,10 @@ CREATE TABLE prefill_strategy_options (
     prefill_strategy_entry_id INT NOT NULL,
     option_key VARCHAR(255) NOT NULL,
     option_value TEXT,
+    created_at timestamp,
+    created_by varchar(255),
+    modified_at timestamp,
+    modified_by varchar(255),
     FOREIGN KEY (prefill_strategy_entry_id) REFERENCES prefill_strategy_entry(id) ON DELETE CASCADE,
     CONSTRAINT unique_strategy_option UNIQUE (prefill_strategy_entry_id, option_key)
 );
@@ -99,6 +131,10 @@ CREATE TABLE item_definition_prefill_strategies (
     item_definition_id INT NOT NULL,
     prefill_strategy_entry_id INT NOT NULL,
     position INT NOT NULL,
+    created_at timestamp,
+    created_by varchar(255),
+    modified_at timestamp,
+    modified_by varchar(255),
     PRIMARY KEY (item_definition_id, prefill_strategy_entry_id),
     FOREIGN KEY (item_definition_id) REFERENCES item_definition(id) ON DELETE CASCADE,
     FOREIGN KEY (prefill_strategy_entry_id) REFERENCES prefill_strategy_entry(id) ON DELETE RESTRICT,
@@ -113,6 +149,10 @@ CREATE TABLE form_transition (
     position INT NOT NULL,
     target_form_state VARCHAR(50) NOT NULL,
     transition_type VARCHAR(50) NOT NULL,
+    created_at timestamp,
+    created_by varchar(255),
+    modified_at timestamp,
+    modified_by varchar(255),
     FOREIGN KEY (source_form_specification_id) REFERENCES form_specification(id) ON DELETE CASCADE,
     FOREIGN KEY (target_form_specification_id) REFERENCES form_specification(id) ON DELETE CASCADE
 );
@@ -121,6 +161,10 @@ CREATE TABLE form_transition (
 CREATE TABLE form_transition_source_states (
     form_transition_id INT NOT NULL,
     source_state VARCHAR(50) NOT NULL,
+    created_at timestamp,
+    created_by varchar(255),
+    modified_at timestamp,
+    modified_by varchar(255),
     PRIMARY KEY (form_transition_id, source_state),
     FOREIGN KEY (form_transition_id) REFERENCES form_transition(id) ON DELETE CASCADE
 );
@@ -129,7 +173,11 @@ CREATE TABLE form_transition_source_states (
 CREATE TABLE script_module (
     id SERIAL PRIMARY KEY,
     name VARCHAR(255) NOT NULL UNIQUE,
-    script TEXT NOT NULL
+    script TEXT NOT NULL,
+    created_at timestamp,
+    created_by varchar(255),
+    modified_at timestamp,
+    modified_by varchar(255)
 );
 
 -- Assigned Form Modules (depends on form_specification)
@@ -140,6 +188,10 @@ CREATE TABLE assigned_form_module (
     position INT NOT NULL,
     module_name VARCHAR(255),
     script_module_id INT,
+    created_at timestamp,
+    created_by varchar(255),
+    modified_at timestamp,
+    modified_by varchar(255),
     FOREIGN KEY (form_id) REFERENCES form_specification(id) ON DELETE CASCADE,
     FOREIGN KEY (script_module_id) REFERENCES script_module(id) ON DELETE CASCADE,
     CONSTRAINT unique_form_module_position UNIQUE (form_id, position),
@@ -155,6 +207,10 @@ CREATE TABLE form_module_options (
     assigned_form_module_id INT NOT NULL,
     option_key VARCHAR(255) NOT NULL,
     option_value TEXT,
+    created_at timestamp,
+    created_by varchar(255),
+    modified_at timestamp,
+    modified_by varchar(255),
     FOREIGN KEY (assigned_form_module_id) REFERENCES assigned_form_module(id) ON DELETE CASCADE,
     CONSTRAINT unique_form_module_option UNIQUE (assigned_form_module_id, option_key)
 );
@@ -162,12 +218,16 @@ CREATE TABLE form_module_options (
 -- Submissions (no dependencies)
 CREATE TABLE submission (
     id SERIAL PRIMARY KEY,
-    timestamp TIMESTAMP NOT NULL,
+    timestamp TIMESTAMP NOT NULL DEFAULT now(),
     submitter_id VARCHAR(255),
     submitter_name VARCHAR(255),
     identity_identifier VARCHAR(255),
     identity_issuer VARCHAR(255),
-    identity_attributes TEXT
+    identity_attributes JSONB, -- TODO do we need to store this? technically duplicit in audit_log
+    created_at timestamp,
+    created_by varchar(255),
+    modified_at timestamp,
+    modified_by varchar(255)
 );
 
 -- Applications (depends on form_specification and submission)
@@ -179,6 +239,10 @@ CREATE TABLE application (
     state VARCHAR(50) NOT NULL,
     redirect_url VARCHAR(500),
     submission_id INT,
+    created_at timestamp,
+    created_by varchar(255),
+    modified_at timestamp,
+    modified_by varchar(255),
     FOREIGN KEY (form_specification_id) REFERENCES form_specification(id) ON DELETE CASCADE,
     FOREIGN KEY (submission_id) REFERENCES submission(id) ON DELETE SET NULL
 );
@@ -193,6 +257,10 @@ CREATE TABLE form_item_data (
     identity_attribute_value TEXT,
     idm_attribute_value TEXT,
     value_assured BOOLEAN DEFAULT FALSE,
+    created_at timestamp,
+    created_by varchar(255),
+    modified_at timestamp,
+    modified_by varchar(255),
     FOREIGN KEY (application_id) REFERENCES application(id) ON DELETE CASCADE,
     FOREIGN KEY (form_item_id) REFERENCES form_item(id) ON DELETE CASCADE
 );
@@ -203,17 +271,21 @@ CREATE TABLE decision (
     approver_id VARCHAR(255),
     approver_name TEXT,
     message TEXT,
-    timestamp TIMESTAMP,
+    timestamp TIMESTAMP NOT NULL DEFAULT now(),
     decision_type VARCHAR(255),
+    created_at timestamp,
+    created_by varchar(255),
+    modified_at timestamp,
+    modified_by varchar(255),
     FOREIGN KEY (application_id) REFERENCES application(id) ON DELETE CASCADE
 );
 
 CREATE TABLE audit_log (
     id SERIAL PRIMARY KEY,
     event_name varchar(255),
-    timestamp TIMESTAMP,
-    content JSONB,  --- the objects associated with the event
-    actor JSONB, --- a set of identity attributes? TODO
+    timestamp TIMESTAMP NOT NULL DEFAULT now(),
+    content JSONB,  --- the objects associated with the event TODO look up how valid `jsonb` actual is to use
+    actor JSONB, --- a set of identity attributes? TODO decide on what uniquely identifies user (e.g. have a separate users table, or just use identity iss/sub)
     correlation_id varchar(255)
 );
 

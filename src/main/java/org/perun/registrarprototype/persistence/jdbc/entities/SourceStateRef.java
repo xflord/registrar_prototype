@@ -5,7 +5,7 @@ import org.springframework.data.relational.core.mapping.Column;
 import org.springframework.data.relational.core.mapping.Table;
 
 @Table("form_transition_source_states")
-public class SourceStateRef {
+public class SourceStateRef extends AuditEntity {
   @Column("form_transition_id")
   private Integer formTransitionId;
 

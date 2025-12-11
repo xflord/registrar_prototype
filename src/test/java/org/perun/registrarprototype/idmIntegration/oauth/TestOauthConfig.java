@@ -3,6 +3,7 @@ package org.perun.registrarprototype.idmIntegration.oauth;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+import org.perun.registrarprototype.security.SessionProvider;
 import org.perun.registrarprototype.services.EventService;
 import org.perun.registrarprototype.services.impl.EventServiceImpl;
 import org.perun.registrarprototype.services.idmIntegration.perun.oauth.ClientAccessTokenService;
@@ -24,7 +25,7 @@ public class TestOauthConfig {
   }
 
   @Bean
-  public EventService eventService(ApplicationEventPublisher publisher) {
-    return new EventServiceImpl(publisher);
+  public EventService eventService(ApplicationEventPublisher publisher, SessionProvider sessionProvider) {
+    return new EventServiceImpl(publisher, sessionProvider);
   }
 }

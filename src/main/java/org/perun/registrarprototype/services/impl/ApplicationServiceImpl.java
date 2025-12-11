@@ -332,6 +332,8 @@ public class ApplicationServiceImpl implements ApplicationService {
       throw new IllegalArgumentException("User already has an open application in group: " + formSpecification.getGroupId());
     }
 
+    // TODO check that prerequisites are fulfilled?
+
 
     validateFilledFormData(applicationForm);
     normalizeFilledFormData(applicationForm);

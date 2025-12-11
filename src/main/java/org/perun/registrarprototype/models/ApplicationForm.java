@@ -2,6 +2,9 @@ package org.perun.registrarprototype.models;
 
 import java.util.List;
 
+/**
+ * A template of a filled form, containing prefilled values for form items
+ */
 public class ApplicationForm {
   private Integer formSpecificationId;
   private List<FormItemData> formItemData;

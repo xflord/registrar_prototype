@@ -5,7 +5,7 @@ import org.springframework.data.relational.core.mapping.Column;
 import org.springframework.data.relational.core.mapping.Table;
 
 @Table("destination")
-public class DestinationEntity {
+public class DestinationEntity extends AuditEntity {
   @Id
   @Column("id")
   private Integer id;

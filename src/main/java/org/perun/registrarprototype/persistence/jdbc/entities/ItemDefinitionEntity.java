@@ -14,7 +14,7 @@ import org.springframework.data.relational.core.mapping.MappedCollection;
 import org.springframework.data.relational.core.mapping.Table;
 
 @Table("item_definition")
-public class ItemDefinitionEntity {
+public class ItemDefinitionEntity extends AuditEntity {
 
   @Id
   @Column("id")

@@ -3,6 +3,7 @@ package org.perun.registrarprototype.persistence.jdbc;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 import org.perun.registrarprototype.models.Application;
 import org.perun.registrarprototype.models.Submission;
 import org.perun.registrarprototype.persistence.SubmissionRepository;
@@ -43,7 +44,7 @@ public class SubmissionRepositoryJdbc implements SubmissionRepository {
       // Load applications for this submission
       List<Application> applications = applicationJdbcCrudRepository.findBySubmissionId(id).stream()
           .map(DomainMapper::toDomain)
-          .collect(ArrayList::new, ArrayList::add, ArrayList::addAll);
+          .collect(Collectors.toList());
       submission.setApplications(applications);
       return Optional.of(submission);
     }
@@ -68,7 +69,7 @@ public class SubmissionRepositoryJdbc implements SubmissionRepository {
       // Load applications for this submission
       List<Application> applications = applicationJdbcCrudRepository.findBySubmissionId(entity.getId()).stream()
           .map(DomainMapper::toDomain)
-          .collect(ArrayList::new, ArrayList::add, ArrayList::addAll);
+          .collect(Collectors.toList());
       submission.setApplications(applications);
       submissions.add(submission);
     }

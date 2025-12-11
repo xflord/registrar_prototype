@@ -8,7 +8,7 @@ import org.springframework.data.relational.core.mapping.MappedCollection;
 import org.springframework.data.relational.core.mapping.Table;
 
 @Table("assigned_form_module")
-public class AssignedFormModuleEntity {
+public class AssignedFormModuleEntity extends AuditEntity {
   @Id
   @Column("id")
   private Integer id;

@@ -9,7 +9,7 @@ import org.springframework.data.relational.core.mapping.MappedCollection;
 import org.springframework.data.relational.core.mapping.Table;
 
 @Table("prefill_strategy_entry")
-public class PrefillStrategyEntryEntity {
+public class PrefillStrategyEntryEntity extends AuditEntity {
   @Id
   @Column("id")
   private Integer id;
